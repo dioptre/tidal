@@ -1,0 +1,9 @@
+{
+    "recommendations": [
+        "tidalcycles.vscode-tidalcycles"
+    ],
+    "unwantedRecommendations": [
+        "justusadam.language-haskell",
+        "haskell.haskell"
+    ]
+}

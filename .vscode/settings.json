@@ -1,0 +1,29 @@
+{
+    "files.associations": {
+        "*.tidal": "haskell"
+    },
+
+    "tidalcycles.ghciPath" : "ghci",
+    "tidalcycles.feedbackColor": "rgba(100,250,100,0.5)",
+    "tidalcycles.useStackGhci": false,
+    "tidalcycles.bootTidalPath": "/Users/andrewgrosser/Documents/tidal/BootTidal.hs",
+    "tidalcycles.codehelp.hover.level": "Full",
+    "tidalcycles.codehelp.completion.level": "Full",
+    "tidalcycles.showOutputInConsoleChannel": true,
+
+    "[haskell]": {
+        "editor.inlineSuggest.enabled": true,
+        "editor.quickSuggestions": {
+            "other": false,
+            "comments": false,
+            "strings": false
+        }
+    },
+
+    "github.copilot.enable": {
+        "*": true,
+        "haskell": false
+    },
+
+    "haskell.manageHLS": "PATH"
+}

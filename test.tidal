@@ -1,0 +1,14 @@
+d1 $ n "c'maj e'min c'min" # s "supermandolin pluck"
+d2 $ n "g2'maj f3'maj d5'min" # s "superpiano"
+d3 $ n "a b c" # s "supertron"
+d1 $ n "[0 11]/8" # "superfm" #octave 4
+  # amp1 1
+  # ratio2 2.5
+  # mod12 4
+  # egrate11 0.3 # eglevel11 1 -- slow attack
+  # egrate12 1  # eglevel12 0.1 -- fast decay to 1/2 amp
+  # egrate13 0.5 # eglevel13 0.8 -- 2nd amp swell
+  # egrate14 0.4 # eglevel14 0 -- decay of mod to 0
+
+d1 $ sound "jvbass(3,8)"
+anticipate 1 $ sound "bd sn" # delay "0.5" # room "0.3"

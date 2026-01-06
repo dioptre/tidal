@@ -1,0 +1,328 @@
+-- ===============================================
+-- PROFESSIONAL DRUM & BASS TRACK
+-- 174 BPM | Neurofunk Style
+-- Mix Engineering: Frequency separation, sidechain compression, stereo imaging
+-- ===============================================
+
+setcps (174/60/4)
+
+-- ===============================================
+-- MASTER CHAIN & GLOBAL FX
+-- ===============================================
+
+-- Global reverb bus (simulation)
+let verb x = x # room 0.3 # size 0.6 # dry 0.75
+    shortVerb x = x # room 0.15 # size 0.3 # dry 0.9
+    -- Sidechain compression simulation (volume ducking on kick hits)
+    sc x = x # gain (range 0.7 1.0 $ slow 4 saw)
+
+-- ===============================================
+-- DRUM PROGRAMMING - PROFESSIONAL LAYERING
+-- ===============================================
+
+-- KICK DRUM - Layered (Sub + Punch + Click)
+do
+  -- Sub kick: 40-60Hz fundamental, mono, centered
+  d1 $ s "bd:3"
+    # lpf 80 # lpq 0.3  -- Low-pass filter for pure sub
+    # gain 1.4
+    # crush 3  -- Slight bitcrush for grit
+    # pan 0.5  -- Centered mono
+
+  -- Punch kick: 100-200Hz body
+  d2 $ s "bd:8"
+    # hpf 80 # hpq 0.4
+    # lpf 500 # lpq 0.2
+    # gain 1.2
+    # shape 0.4  -- Saturation for warmth
+    # pan 0.5
+
+  -- Click/transient layer: 2-8kHz for attack
+  d3 $ s "click"
+    # hpf 2000 # hpq 0.3
+    # gain 0.8
+    # delay 0 # delaytime 0.001  -- Micro-delay for width
+    # pan (slow 16 $ range 0.45 0.55 sine)
+
+-- SNARE - Multi-layered (Body + Crack + Tail)
+do
+  -- Snare body: 200-400Hz fundamental
+  d4 $ s "sn:5"
+    # n (choose [5, 8, 12])  -- Sample variation
+    # begin 0 # end 0.3  -- Tight attack
+    # lpf 2000 # lpq 0.2
+    # gain 1.1
+    # room 0.2 # size 0.4  -- Plate reverb simulation
+    # pan 0.5
+
+  -- Snare crack: 2-5kHz snap
+  d5 $ s "sn:12"
+    # begin 0 # end 0.15
+    # hpf 1800 # hpq 0.3
+    # lpf 6000
+    # gain 0.9
+    # shape 0.6  -- Heavy saturation for crack
+
+  -- Clap layer for width
+  d6 $ s "clap"
+    # gain 0.7
+    # delay 0.3 # delaytime (1/16) # delayfb 0.3
+    # pan (slow 8 $ range 0.3 0.7 sine)  -- Stereo spread
+    # hpf 1000
+
+-- HI-HATS - Intricate programming with velocity humanization
+do
+  -- Closed hats: 8-12kHz sizzle, consistent 16th notes
+  d7 $ fast 4 $ s "hh27*16"
+    # gain (range 0.5 0.85 $ slow 4 perlin)  -- Volume variation
+    # lpf (range 8000 14000 $ slow 8 sine)  -- Filter movement
+    # hpf 6000  -- Cut mud
+    # pan (slow 16 $ range 0.3 0.7 sine)  -- Subtle stereo movement
+    # begin (range 0 0.05 $ fast 16 rand)  -- Sample start variation
+    # room 0.05 # size 0.2  -- Tight ambience
+
+  -- Open hats: Accent on offbeats
+  d8 $ s "hh:3*8"
+    # gain (struct "t f t!3 t!2 f t" $ 0.8)  -- Accent pattern
+    # lpf 16000
+    # hpf 8000
+    # pan (slow 4 $ range 0.2 0.8 tri)
+    # release 0.3  -- Longer decay
+
+  -- Shaker layer: 10-16kHz air
+  d9 $ fast 8 $ s "shaker*8"
+    # gain 0.4
+    # hpf 10000  -- Pure high-end shimmer
+    # pan (fast 4 $ range 0 1 rand)  -- Random stereo placement
+
+-- PERCUSSION - Drums breaks and fills
+do
+  -- Ride bell: Accent on musical phrases
+  d10 $ slow 2 $ s "cb"
+    # gain (struct "t f!3 t f!7 t!2 f t" $ 0.6)
+    # lpf 8000
+    # pan (range 0.6 0.8 $ slow 8 sine)
+    # room 0.3 # size 0.5
+
+  -- Crash cymbal: Every 16 bars
+  d11 $ slow 64 $ s "cym"
+    # gain 0.7
+    # lpf 10000
+    # delay 0.4 # delaytime (1/8) # delayfb 0.3
+    # pan 0.5
+    # accelerate (-2)  -- Pitch drop
+
+-- ===============================================
+-- BASS - REESE SYNTHESIS & SUB PROGRAMMING
+-- ===============================================
+
+do
+  -- Sub bass: 40-80Hz, sine wave character
+  -- Locked to root note, pure fundamental
+  d12 $ note "c1 c1 c1 af0 | c1 c1 bf0 af0"
+    # s "bass3"
+    # lpf 100 # lpq 0.2  -- Pure sub frequencies
+    # gain 1.5
+    # shape 0.2
+    # pan 0.5  -- Mono for maximum power
+    # legato 1  -- Full sustain
+    # release 0.05
+
+  -- Reese bass: 80-300Hz, detuned saw waves
+  -- Classic neurofunk modulated bass
+  d13 $ note "c2 c2 c2 af1 | c2 c2 bf1 af1"
+    # s "supermandolin"
+    # detune (slow 4 $ range 0.1 0.3 sine)  -- Chorus effect
+    # lpf (slow 8 $ range 200 600 $ sine)  -- Filter sweep
+    # lpq 0.15  -- Resonance for movement
+    # hpf 80  -- Remove sub conflict
+    # gain 1.0
+    # shape 0.6  -- Saturation for harmonics
+    # voice 4  -- Multiple oscillators
+    # pan (slow 16 $ range 0.4 0.6 sine)
+
+  -- Mid bass: 300-1kHz, growl and texture
+  d14 $ note "c3!3 af2 | c3!2 bf2 af2"
+    # s "supersaw"
+    # lpf (slow 4 $ range 400 1200 $ tri)
+    # lpq (range 0.1 0.4 $ slow 8 sine)  -- Resonance modulation
+    # hpf 300
+    # gain 0.85
+    # crush (range 3 6 $ slow 8 sine)  -- Bitcrush modulation for grit
+    # shape 0.7
+    # delay 0.15 # delaytime (1/16) # delayfb 0.2
+    # pan (slow 8 $ range 0.35 0.65 sine)
+
+-- ===============================================
+-- MUSICAL ELEMENTS - PADS & ATMOSPHERE
+-- ===============================================
+
+do
+  -- Pad: 200Hz-8kHz, stereo width, reverb heavy
+  d15 $ slow 8 $ note "c4'maj7 af3'maj7 | bf3'maj7 f3'maj7"
+    # s "superchip"
+    # lpf (slow 16 $ range 2000 6000 sine)
+    # hpf 200
+    # gain 0.5
+    # room 0.7 # size 0.8  -- Large hall reverb
+    # delay 0.4 # delaytime (1/8) # delayfb 0.5
+    # pan (slow 32 $ range 0.1 0.9 sine)  -- Wide stereo movement
+    # crush 2  -- Lo-fi texture
+    # voice 6  -- Rich unison
+
+  -- Stab: Rhythmic chord hits, 400Hz-4kHz
+  d16 $ fast 2 $ note "c5'min c5'min ~ ~ | ~ bf4'min ~ af4'min"
+    # s "superhoover"
+    # gain (struct "t!2 f!2 | f t f t" $ 0.9)
+    # lpf 4000 # lpq 0.3
+    # hpf 400
+    # attack 0.01 # release 0.2  -- Tight envelope
+    # shape 0.5
+    # room 0.3 # size 0.4
+    # pan (rand)  -- Random stereo placement
+
+  -- Arp: 16th note melodic element, 1-6kHz
+  d17 $ fast 4 $ note (scale "minor" "0 3 5 7 5 3 0 -5")
+    # s "supersquare"
+    # octave 5
+    # lpf (slow 8 $ range 2000 8000 $ sine)
+    # hpf 1000
+    # gain 0.6
+    # release 0.1  -- Staccato
+    # delay 0.3 # delaytime (1/16 * 1.5) # delayfb 0.4  -- Dotted 16th delay
+    # pan (fast 8 $ range 0.2 0.8 rand)
+
+-- ===============================================
+-- BREAKDOWN SECTION (32-48 bars)
+-- ===============================================
+
+do
+  -- Strip drums, keep atmospheric elements
+  -- Introduce riser and build tension
+
+  -- Riser: White noise sweep with filter automation
+  d18 $ slow 16 $ s "white"
+    # lpf (slow 16 $ range 200 16000 $ saw)  -- Filter sweep up
+    # hpf 200
+    # gain (slow 16 $ range 0 0.9 $ saw)  -- Volume automation
+    # pan 0.5
+
+  -- Sub drop: Low-end rumble
+  d19 $ slow 8 $ s "bass3"
+    # note "c1"
+    # lpf 60 # lpq 0.1
+    # gain 1.2
+    # accelerate (-1)  -- Pitch drop effect
+
+-- ===============================================
+-- DROP SECTION - FULL ENERGY
+-- ===============================================
+
+do
+  -- Reintroduce all drum layers
+  -- Add distortion bus for aggression
+
+  -- Impact/hit on drop
+  d20 $ slow 16 $ s "bd:0"
+    # gain 1.5
+    # shape 0.8  -- Heavy distortion
+    # pan 0.5
+    # coarse 16  -- Bit reduction
+
+  -- Vocal chop: 500Hz-4kHz, rhythmic
+  d21 $ fast 2 $ s "mash:4 mash:7 ~ mash:2"
+    # gain 0.7
+    # lpf (fast 4 $ range 1000 4000 $ tri)
+    # hpf 500
+    # speed (choose [1, 0.5, 2, 1.5])  -- Pitch variation
+    # delay 0.3 # delaytime (1/12) # delayfb 0.3  -- Triplet delay
+    # pan (fast 2 $ range 0.2 0.8 rand)
+    # crush 4  -- Gritty texture
+
+-- ===============================================
+-- FX & TRANSITIONS
+-- ===============================================
+
+do
+  -- Vinyl stop effect (every 32 bars)
+  d22 $ slow 32 $ s "bd:0"
+    # accelerate (-12)  -- Dramatic pitch drop
+    # gain 0.8
+
+  -- Reverse cymbal (builds into sections)
+  d23 $ slow 8 $ s "cym"
+    # speed (-1)  -- Reverse playback
+    # gain 0.6
+    # lpf (slow 8 $ range 16000 4000 $ saw)  -- Filter sweep down
+    # pan 0.5
+
+  -- Glitch stutter (occasional)
+  d24 $ s "bd(5,16)"
+    # gain 0.4
+    # crush 8  -- Heavy bit reduction
+    # speed (fast 16 $ range 0.5 2 $ rand)
+    # pan (fast 16 $ rand)
+
+-- ===============================================
+-- MASTERING CHAIN SIMULATION
+-- ===============================================
+
+do
+  -- Apply gentle compression via gain staging
+  -- EQ curve: Sub boost, mid scoop, high-end air
+
+  -- All drums ducking slightly on kick (sidechain)
+  d7 $ fast 4 $ s "hh27*16"
+    # gain (range 0.4 0.85 $ fast 4 $ saw)  -- Pumping effect
+
+  -- Stereo widener on high-frequency elements
+  d9 $ fast 8 $ s "shaker*8"
+    # gain 0.4
+    # hpf 10000
+    # pan (fast 16 $ range 0 1 $ rand)  -- Maximum width
+
+-- ===============================================
+-- ARRANGEMENT NOTES
+-- ===============================================
+
+-- STRUCTURE:
+-- Bars 1-8: Intro (Hi-hats, percussion, build pads)
+-- Bars 9-16: Intro with bass (Add sub and reese)
+-- Bars 17-32: Main drop (Full drums + bass + stabs)
+-- Bars 33-48: Breakdown (Strip drums, atmospheric)
+-- Bars 49-64: Second drop (Full arrangement + vocal chops)
+-- Bars 65-72: Outro (Strip elements gradually)
+
+-- PRODUCTION TIPS:
+-- 1. Sub bass must be mono (centered) for club systems
+-- 2. Kick and snare have 3-layer architecture for fullness
+-- 3. Hi-hats have humanization via gain/filter modulation
+-- 4. Bass uses frequency separation (sub/mid/high)
+-- 5. Stereo width increases with frequency
+-- 6. Sidechain compression on kick hits
+-- 7. Reverb/delay in context of 174 BPM timing
+-- 8. EQ cuts to prevent frequency masking
+-- 9. Saturation/distortion for harmonic excitement
+-- 10. Automation for dynamic interest
+
+-- FREQUENCY ALLOCATION:
+-- 40-60Hz: Sub kick + sub bass (MONO)
+-- 60-100Hz: Kick punch + bass fundamental
+-- 100-300Hz: Bass body + snare fundamental
+-- 300-1kHz: Mid bass growl + pad low-mids
+-- 1-4kHz: Snare crack + stabs + vocals
+-- 4-8kHz: Hi-hat body + cymbal wash
+-- 8-16kHz: Hi-hat sizzle + shaker air (WIDE STEREO)
+
+-- ===============================================
+-- MIX REFERENCE LEVELS (relative)
+-- ===============================================
+-- Kick: -6dB (loudest element)
+-- Sub bass: -8dB (second loudest)
+-- Snare: -10dB
+-- Bass layers: -12dB to -14dB
+-- Hi-hats: -16dB to -20dB (varying)
+-- Pads: -20dB (background)
+-- FX: -18dB to -24dB (context-dependent)
+
+

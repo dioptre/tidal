@@ -1,0 +1,6 @@
+:set -fno-warn-orphans -Wno-type-defaults -XMultiParamTypeClasses -XOverloadedStrings
+import Sound.Tidal.Boot
+tidalInst <- mkTidal
+instance Tidally where tidal = tidalInst
+:set prompt "tidal> "
+:set prompt-cont ""
