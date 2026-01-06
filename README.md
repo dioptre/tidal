@@ -1,3 +1,9 @@
+# Tidal Cycles
+
+## TL;DR
+
+This is a rapid start for people wanting to get started with Tidal esp on a Mac. All the files and a lot of getting started info in a single place. Thanks to tidalcycles.org. See test.tidal for a lot of examples.
+
 ### Install
 
 
@@ -23,6 +29,23 @@ export PATH="/Applications/SuperCollider.app/Contents/Resources:$PATH"
 #### MIDI/OSC (input and output)
 See https://tidalcycles.org/docs/configuration/MIDIOSC/midi
 also ./midi-osc-bridge.pd
+
+#### More samples
+
+- [Freesound](https://freesound.org/) - Free sounds
+- [BBC Sound Effects](https://sound-effects.bbcrewind.co.uk/) - Direct from the BBC (Note: Read the license)
+- [Legowelt Samples](http://legowelt.org/samples/) - Free samples from Legowelt by Legowelt himself
+- [Music Radar](https://www.musicradar.com/news/tech/free-music-samples-royalty-free-loops-hits-and-multis-to-download) - Extensive collection of royalty-free audio samples
+- [Reverb Drum Collection](https://reverb.com/software/samples-and-loops/reverb/3514-reverb-drum-machines-the-complete-collection) - Reverb Drum machines collection
+- [We Sound Effects](https://wesoundeffects.com/we-sound-effects-bundle-2020/) - Sizable collection (Note: Read the license)
+- [Young Guru Breaks](https://mgthefuture.com/product/305630) - Breakbeats curated by Young Guru
+- [Sounds from Space](http://www.svengrahn.pp.se/sounds/sounds.htm) - Celestial audio for experimental composition
+- [VSCO Orchestra](https://vis.versilstudios.com/vsco-community.html) - Live orchestra samples for live-coding
+- [Free Samples for All](https://www.reddit.com/r/samplesforall/) - Community-driven Reddit resource
+- [Looperman](https://www.looperman.com/) - Community-made bank of loops and accapellas
+- [SampleSwap](https://sampleswap.org/) - 16-bit wav samples, huge library
+- [99 Sounds](https://99sounds.org/) - More than 99 samples
+
 
 
 ### Running
