@@ -25,6 +25,12 @@ export PATH="/Applications/SuperCollider.app/Contents/Resources:$PATH"
 2. Ensure superdirt, vowel and dirt samples are installed
 3. Recompile superdirt, restart supercollider
 
+4. Then run in supercollider:
+
+```
+SuperDirt.start;
+```
+
 ### Debug Supercollider
 
 This didn't really help but leaving here for posterity.
