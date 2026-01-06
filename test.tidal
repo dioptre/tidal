@@ -876,4 +876,56 @@ d1 $ s "supersquare*<8 16 12>" # n "c3 <e3 g3> <c3 f3>"
   # pan (slow 8 $ sine)                                        -- Slow stereo movement
   # room (range 0.1 0.4 $ slow 11 $ sine)                     -- Subtle reverb modulation
 
+-- PSYDUB EXAMPLE - Deep bass, delays, and dub effects
+do
+  -- Heavy sub bass with filter sweeps
+  d1 $ slow 2 $ n "c1 [~ c1] f1 [~ g1]" # s "bass1:18"
+    # lpf (range 80 600 $ slow 8 $ sine)
+    # lpq 0.3
+    # shape 0.6
+    # legato 2
+    # gain 1.2
+    # room 0.3
+    # sz 0.8
+  -- Melodic delayed lead with psychedelic panning
+  d2 $ slow 4 $ n "<c5 [d5 f5] [g5 a5] [bf5 c6]>" # s "superpwm"
+    # voice (slow 6 $ range 0.3 0.8 $ sine)
+    # cutoff (range 800 4000 $ slow 5 $ saw)
+    # resonance 0.4
+    # delay (range 0.6 0.9 $ slow 7 $ sine)      -- Modulating delay amount
+    # delayt "<0.375 0.5 0.25 0.75>"              -- Polyrhythmic delay times
+    # delayfb 0.6                                  -- Heavy feedback
+    # pan (slow 3 $ sine)                          -- Slow pan
+    # room 0.6
+    # sz 0.9
+    # gain 0.8
+  -- Dub chords with echo
+  d3 $ sometimesBy 0.7 (# crush 5) $ slow 8 $ n "<c4'min7 f4'min7 g4'dom7 bf4'maj7>" # s "supermandolin"
+    # lpf 2000
+    # delay 0.7
+    # delayt 0.5
+    # delayfb 0.5
+    # room 0.7
+    # sz 0.95
+    # gain 0.7
+    # pan (slow 5 $ saw)
+  -- Kick with dub processing
+  d4 $ s "bd(3,8,<0 2>)"
+    # shape 0.5
+    # lpf 120
+    # delay "<0 0.8>"                             -- Delay on some kicks
+    # delayt 0.375
+    # delayfb 0.4
+    # gain 1.1
+  -- Psydub percussion with reverb wash
+  d5 $ degradeBy 0.3 $ s "~ cp ~ [cp cp?]"
+    # hpf (range 2000 8000 $ fast 2 $ sine)
+    # delay 0.8
+    # delayt "<0.25 0.5 0.125>"
+    # delayfb 0.7
+    # room 0.9
+    # sz 0.99
+    # pan (fast 4 $ sine)
+    # gain 0.6
+
 
