@@ -458,3 +458,5 @@ d1  $ s "[[bd sd], linnhats*8]"
     # warpseasteregg 1
 
 hush
+
+drawLine "a b*2 d"
