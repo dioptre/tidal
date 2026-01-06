@@ -1277,3 +1277,22 @@ Example: `d1 $ s "hh*16" # lpf (range 200 8000 $ slow (range 2 8 $ slow 4 sine) 
 
 **Perlin for Smooth Randomness**: Use `perlin` instead of `rand` for smoother, more musical random modulation.
 Example: `d1 $ s "bd*32" # speed (range 0.8 1.2 $ perlin) # lpf (range 400 4000 $ slow 2 perlin)`
+
+#### Convolution Reverb
+**Setup**: Add to `startup.scd`: `load("/Users/andrewgrosser/Documents/tidal/effects/convolveir/convolution-effect.scd");` and in Tidal: `:script /Users/andrewgrosser/Documents/tidal/effects/convolveir/convolution-params.hs`
+
+**52 Impulse Responses** (0-51): Core spaces (hall, church, cathedral), creative (tape, vehicles, vocals), bass-heavy EDM (dubstep/Bassnectar style). See [impulse-responses/ATTRIBUTION.md](impulse-responses/ATTRIBUTION.md).
+
+**Parameters**: `convolvemix` (wet/dry 0-1), `convolveir` (IR selection 0-51), `convolvedamp` (brightness 0-1), `convolvepredel` (pre-delay 0-0.2s), `convolvelevel` (output 0-2)
+
+**Basic Examples**:
+- `d1 $ s "bd sn" # convolve 0.5 # convolveir 0` — Simple hall reverb
+- `d1 $ s "bass*4" # note "c2 e2" # convolve 0.7 # convolveir "<42 43 44>"` — Cycling bass IRs
+- `d1 $ s "arpy*8" # convolve (range 0.2 0.8 $ slow 4 sine) # convolveir (segment 4 $ range 0 11 $ slow 8 saw)` — LFO modulation
+
+**Super IR System** — Create hybrid reverb spaces by convolving multiple IRs together:
+- `makeSuperIR [6, 42]` — Convolve cathedral + bass boost (2-way)
+- `superBass` — Preset: All bass IRs [42, 43, 44]
+- `superMega` — Preset: 30-way mega convolution
+- Watch SuperCollider Post window for processing status and new IR index
+- Example: `makeSuperIR [13, 14, 15]` creates tape stack → use with `# convolveir 52`

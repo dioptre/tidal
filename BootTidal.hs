@@ -36,5 +36,6 @@ let d17 = streamReplace tidal 16
     d24 = streamReplace tidal 23
 :}
 :script "/Users/andrewgrosser/Documents/tidal/mi-UGens/Setup/mi-ugens-params.hs"
+:script "/Users/andrewgrosser/Documents/tidal/effects/convolveir/convolution-params.hs"
 :set prompt "tidal> "
 :set prompt-cont ""

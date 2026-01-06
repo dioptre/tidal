@@ -460,3 +460,227 @@ d1  $ s "[[bd sd], linnhats*8]"
 hush
 
 drawLine "a b*2 d"
+
+
+-- ============================================
+-- CONVOLUTION REVERB QUICK START
+-- ============================================
+-- 52 Impulse Responses: 0-11 (core), 12-41 (creative), 42-51 (bass-heavy EDM)
+-- Parameters: convolvemix (wet/dry), convolveir (0-51), convolvedamp (brightness),
+--             convolvepredel (pre-delay), convolvelevel (output boost/cut)
+
+-- Test 1: Simple cathedral reverb
+d1 $ s "bd cp" # convolve 0.5 # convolveir 6
+
+-- Test 2: Bass-heavy dubstep space
+d1 $ s "bass*4" # note "c1" # convolve 0.8 # convolveir 42 # gain 1.2
+
+-- Test 3: Create a Super IR (2-way convolution)
+makeSuperIR [6, 42]
+-- Watch SuperCollider Post window for: "✓ Added at index: 52"
+-- Then use it:
+-- d1 $ s "bass*4" # note "c2" # convolve 0.9 # convolveir 52
+
+hush
+
+
+-- 80Hz bass boost (IR 42)
+d1 $ s "bass" # note "c" # convolve 0.1 # convolveir 7
+
+-- ADVANCED: TRIPLE LAYERED CONVOLUTION - 3 patterns with different IRs and LFO modulation
+-- Layer 1: Sub bass with bass-boost IR, slowly morphing
+d1 $ s "bass:3*4" # note "c1 c1 g1 g1"
+   # convolve (range 0.7 0.95 $ slow 16 sine)                  -- Deep wet mix, slow pulse
+   # convolveir "<42 43 44>"                                   -- Cycle bass-boost/extra-bass/deep (IRs 42-44)
+   # lpf 150 # resonance 0.4
+   # gain 1.1
+
+-- Layer 2: Mid bass with club/techno IRs, faster movement
+d2 $ s "bass:5*8" # note "c2 e2 f2 g2"
+   # convolve (range 0.3 0.9 $ slow 8 (sine * saw))            -- Complex modulation
+   # convolveir "<45 46 47 48>"                                -- Cycle club/music-club/techno/dance (IRs 45-48)
+   # lpf (range 200 2000 $ slow 6 sine)                        -- Filter sweep
+   # resonance 0.3
+   # pan (slow 4 saw)                                          -- Stereo movement
+   # gain 0.9
+
+-- Layer 3: High percussion with creative IRs, rapid changes
+d3 $ s "cp*4 hh*8"
+   # convolve (range 0.2 0.6 $ fast 2 square)                  -- Rhythmic convolution pulse
+   # convolveir (choose [13, 14, 15, 17, 18])                  -- Random creative IRs: cassette/tape/vehicles
+   # hpf 800
+   # pan (fast 8 sine)                                         -- Fast stereo
+   # gain 0.7
+
+-- Cycle through bass IRs (42-51)
+d1 $ s "bass*4" # note "c2 a1 f2 e2" # convolve 0.7 # convolveir "<42 43 44 45 46 47 48 49 50 51>"
+
+
+-- ============================================
+-- ALL CONVOLUTION PARAMETERS DEMO
+-- ============================================
+
+-- 1. CONVOLVE (wet/dry mix) - Basic parameter
+d1 $ s "bd cp" # convolve 0.5 # convolveir 6  -- 50% wet cathedral
+
+-- 2. CONVOLVEIR (IR selection) - Choose space (0-51)
+d1 $ s "bd cp" # convolve 0.5 # convolveir 0   -- Hall
+d1 $ s "bd cp" # convolve 0.5 # convolveir 42  -- Bass boost
+d1 $ s "bd cp" # convolve 0.5 # convolveir 13  -- Cassette
+
+-- 3. CONVOLVEDAMP (high frequency damping) - 0=dark, 1=bright
+d1 $ s "hh*8" # convolve 0.7 # convolveir 6
+   # convolvedamp 0.2    -- Dark, muffled reverb tail (800Hz cutoff)
+
+d1 $ s "hh*8" # convolve 0.7 # convolveir 6
+   # convolvedamp 0.9    -- Bright, airy reverb tail (16kHz+)
+
+-- Modulate damping with LFO
+d1 $ s "arpy*8" # convolve 0.6 # convolveir 6
+   # convolvedamp (range 0.1 0.9 $ slow 4 sine)  -- Breathing brightness
+
+-- 4. CONVOLVEPREDEL (pre-delay) - 0-0.2 seconds delay before reverb
+d1 $ s "cp*4" # convolve 0.8 # convolveir 6
+   # convolvepredel 0.05   -- 50ms pre-delay (clear separation)
+
+d1 $ s "sn*2" # convolve 0.7 # convolveir 0
+   # convolvepredel 0.15   -- 150ms pre-delay (huge space feel)
+
+-- Modulate pre-delay with LFO
+d1 $ s "bd*4" # convolve 0.6 # convolveir 6
+   # convolvepredel (range 0 0.1 $ slow 8 sine)  -- Moving space
+
+-- 5. CONVOLVELEVEL (output level) - 0-2 (default 1.0)
+d1 $ s "bass*4" # note "c2" # convolve 0.7 # convolveir 42
+   # convolvelevel 1.5     -- Boost reverb output by 50%
+
+d1 $ s "hh*16" # convolve 0.5 # convolveir 0
+   # convolvelevel 0.6     -- Subtle, quiet reverb
+
+-- Modulate level with LFO
+d1 $ s "arpy*8" # convolve 0.8 # convolveir 6
+   # convolvelevel (range 0.5 1.8 $ slow 6 saw)  -- Swelling reverb
+
+-- ============================================
+-- COMBINED PARAMETER EXAMPLES
+-- ============================================
+
+-- Example 1: Evolving Cathedral with all parameters
+d1 $ s "arpy*8" # n (irand 8)
+   # convolve (range 0.4 0.9 $ slow 8 sine)           -- Pulsing wet/dry
+   # convolveir 6                                      -- Cathedral
+   # convolvedamp (range 0.2 0.8 $ slow 6 saw)        -- Dark to bright
+   # convolvepredel (range 0 0.08 $ slow 12 square)   -- Pre-delay variation
+   # convolvelevel 1.3                                 -- Slightly boosted
+
+-- Example 2: Dubstep Bass with controlled reverb
+d1 $ s "bass*4" # note "c1 e1 f1 g1"
+   # convolve 0.7                                      -- Heavy wet
+   # convolveir "<42 43 44>"                           -- Cycle bass IRs
+   # convolvedamp 0.3                                  -- Keep it dark/heavy
+   # convolvepredel 0.02                               -- Tight pre-delay
+   # convolvelevel 1.6                                 -- Boost for impact
+   # lpf 200
+
+-- Example 3: Hi-hats with dynamic space
+d1 $ s "hh*16"
+   # convolve (range 0.3 0.7 $ fast 2 square)         -- Rhythmic convolution
+   # convolveir (choose [13,14,15])                    -- Random tape IRs
+   # convolvedamp (range 0.6 0.95 $ fast 4 sine)      -- Fast brightness sweep
+   # convolvepredel 0                                  -- No pre-delay
+   # convolvelevel (range 0.7 1.3 $ slow 3 saw)       -- Level variation
+
+-- Example 4: ALL PARAMETERS + LFO MODULATION
+d1 $ s "bass*8" # note "c2 e2 f2 g2"
+   # convolve (range 0.4 0.9 $ slow 8 sine)           -- LFO: wet/dry
+   # convolveir "<45 46 47 48>"                        -- Pattern: club IRs
+   # convolvedamp (range 0.2 0.8 $ slow 6 saw)        -- LFO: brightness
+   # convolvepredel (range 0 0.1 $ slow 12 square)    -- LFO: pre-delay
+   # convolvelevel (range 1.0 1.8 $ slow 10 sine)     -- LFO: output level
+   # lpf (range 300 2000 $ slow 5 sine)               -- Bonus filter LFO
+   # pan (slow 4 saw)
+
+
+-- ============================================
+-- makeSuperIR - FULLY AUTOMATIC Super IR Creation!
+-- ============================================
+-- Just call makeSuperIR from Tidal - everything is automatic!
+-- SuperCollider receives the indices, convolves them, and adds the result to the IR array.
+-- Watch the SuperCollider Post window to see the magic happen!
+
+-- Example 1: Cathedral + Bass boost (2-way convolution)
+makeSuperIR [6, 42]
+-- SC Post window shows:
+-- → Received IR index: 6 (total: 1)
+-- → Received IR index: 42 (total: 2)
+-- === Processing Super IR from 2 indices: [6, 42] ===
+-- Convolving 1/1: IR6 * IR42
+--   ✓ Convolved
+-- ✓✓✓ Super IR COMPLETE! Created from 2 IRs ✓✓✓
+-- ✓ Added at index: 52
+-- Use in Tidal: # convolveir 52
+
+-- Now use it:
+d1 $ s "bass*4" # note "c2" # convolve 0.9 # convolveir 52
+
+-- Example 2: Triple bass punch (3-way convolution)
+makeSuperIR [42, 43, 44]
+-- Creates hybrid of: 80Hz boost + BBE bass + Deep enhance
+-- Use with: # convolveir 53
+
+d1 $ s "kick*4" # convolve 0.8 # convolveir 53 # gain 1.2
+
+-- Example 3: Tape saturation stack
+makeSuperIR [13, 14, 15]
+-- Cassette + 15ips tape + Clean tape
+-- Use with: # convolveir 54
+
+d1 $ s "808*8" # note "c1 e1 g1 c2" # convolve 0.6 # convolveir 54
+
+-- Example 4: Presets (defined in convolution-params.hs)
+superMassive      -- Cathedral + bass (same as makeSuperIR [6, 42])
+superBass         -- Triple bass: [42, 43, 44]
+superVintage      -- Triple tape: [13, 14, 15]
+superClub         -- Club spaces: [45, 46, 47, 48]
+superMega         -- 30-way MEGA convolution! [42,43,44,45,46,47,48,49,50,51,0,1,2,3,4,5,6,7,8,9,10,11,13,14,15,17,18,27,33,35]
+
+-- Run a preset:
+superClub
+-- Watch SC Post window for processing, then use the reported index
+
+d1 $ s "bass*16" # note "c2" # convolve 0.9 # convolveir 55
+
+-- ============================================
+-- 30-WAY MEGA CONVOLUTION
+-- ============================================
+-- The ultimate super IR: convolves 30 carefully selected IRs together!
+-- This creates an incredibly complex and unique reverb space.
+
+superMega
+-- This convolves: [42,43,44,45,46,47,48,49,50,51,0,1,2,3,4,5,6,7,8,9,10,11,13,14,15,17,18,27,33,35]
+-- Processing takes ~15-30 seconds (watch SC Post window)
+-- Creates a hybrid of:
+--   - All 10 bass-heavy EDM IRs (42-51)
+--   - Core spaces: hall, church, room, plate, spring, chamber, cathedral, concert, studio, ambient, warehouse, space (0-11)
+--   - Creative tape saturation (13-15)
+--   - Vehicle acoustics (17-18)
+--   - Bottle hall (27)
+--   - Arena (33)
+--   - Vintage blues (35)
+
+-- Then use with massive bass:
+d1 $ s "bass*8" # note "c1 d1 f1 g1" # convolve 0.95 # convolveir 56 # gain 1.5 # lpf 400
+
+-- Or layer with other effects:
+d1 $ s "kick*4"
+   # convolve 0.8 # convolveir 56
+   # lpf (range 200 800 $ slow 8 sine)
+   # gain 1.3
+
+-- POWER USER: Create custom mega IRs
+-- Choose any combination of IRs (up to 30+)
+makeSuperIR [6, 7, 8, 42, 43, 44, 13, 14, 15, 27, 33, 35]
+-- 12-way convolution: Cathedrals + Bass + Tape + Creative spaces
+
+
+hush
