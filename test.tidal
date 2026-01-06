@@ -684,3 +684,174 @@ makeSuperIR [6, 7, 8, 42, 43, 44, 13, 14, 15, 27, 33, 35]
 
 
 hush
+
+d1 silence
+
+d1 $ sound "pluck:0 latibro:5 industrial:30 pluck:5 industrial:21 diphone:1 latibro:4 industrial:14"
+
+di $ sound "bd cp bd cp"
+d2 $ sound "hh hh hh hh hh hh hh hh"
+d3 $ sound "rave arp: 0"
+
+d1 $ sound "kc <metal:6 metal:0 metal:4 metal:5 metal:1> <feel:0 feel:2 feel:1> [kc kc bd bd]"
+
+d1 $ sound "[kc kc][[kcikc] [[kc kc] kc] kc]"
+d1 $ sound "kc kc . [kc kc] [[kc kc] kcl kc"
+
+d1 $ sound "[hh cp hh cp, bd kc kc bd kc, hh hh [sn sn sn] hh hh"
+
+d1 $ s "[909*8, hh*16, oc*3, 808/2]/2"
+
+d1 $ s "[808*2]"
+
+d1 $ s "[hh [hh*3] hh]*2 [909 [909*5] 909]"
+
+d1 $ rev (s "[hh [hh*3] hh]*2 [909 [909*5] 909]")
+
+d1 $ every 4 (rev) (s "arpy:0 arpy:1 arpy:2 arpy: 3" )
+-- every function
+--1. number
+--2. function
+--3. a pattern
+
+d1 $ s "tink*4. tink*2" #coarse "82 15.49"
+# delay "0.9"
+# delayt "0.9"
+# delayfb "0.1"
+
+d1 $ s "gtr:2"
+# leslie "0.5"
+# lrate "2"
+# lsize "1"
+
+d1 $ s "gtr:2"
+# fshift "10"
+# fshiftnote "2"
+
+d1 $ s "sax*10"
+# att "1"
+# hold "1"
+# rel "1"
+# speed "1"
+# room "0.9"
+# size "0.8"
+
+d1 $ s "sax*10"
+#att "0.0001"
+# hold "0.1"
+# rel "0.001"
+#speed "1 2 3 1 2 2.25 1.5 0.5 0.25"
+# room "0.9"
+# size "0.99"
+
+d1 $ s "sax/2"
+# tremr "250"
+# tremdp "1"
+
+d1 $ s "sax/2"
+# vowel '"<a e i o u>"
+
+d1 $ s "sax/4"
+# att "2"
+# hold "0.1"
+# rel "2"
+# room "1"
+# size "0.9"
+# speed "<1 2.25 0.5>"
+# tremdp "0.7"
+# tremr "8"
+# vowel "<a e i o u>"
+d2 $ s "[hh*16, [cp • [cp [[cp cp] cp]]] • cp]"
+# speed "<2 4 3 6 1 8>"
+d3 $ s "bd . bd[bd*8]"
+# speed "<2 4 3 6 1 8>"
+
+hush
+
+d1 $ s "[blip*16]/2"
+# speed "[1 0.15 1,75 2 4 3.5 3.25 0.25 2 0.75 3.5 6 4 3 2 1.75 1 2 1.75 2 4 3.75 3.25 1.25 2 1,75 3.5 6 4 3 2 1.55 ]/8"
+# room "1"
+# size "0.4"
+# delay "0.7"
+# delayfb "0.4"
+# delayt "0.9"
+# crush "4"
+# phasr "20"
+# phasdp "4"
+# lpf "5000"
+# 1pq "0.2 0.4"
+# amp "0.1"
+
+d2 $ s "[bass® . bass0:3 bass0:1 bass0:0]"
+# bpf "900"
+# crush "5 4 8"
+# amp "0.4"
+
+d3 $ s "[feel*16. feel*3. feel*8. feel*5 feel*5. feel*8]/3"
+# bpf "800"
+# bpq "25 40 50 60"
+# crush "5 7"
+# amp "0.4"
+
+d4 $ s "sax"
+# ring "1"
+# ringf "[600 400 300 200]/4"
+# ringdf "100"
+# speed "[1 2 3 4]/4"
+# amp "0.2"
+# cut "1"
+
+
+
+
+d1 $ s "peri: 8"
+d1 $ n "8 7 1 2 3 4 7 8 9 2 1 1 1 1 1 1 1" # s "peri"
+d1 $ s "peri:8 peri:7 peri:1 peri:2 peri:3 peri:4 peri:5 peri:6 peri:7 peri:8 peri:9 peri:2"
+
+
+d1 $ speed "<0.25 -0.5> <1.5 1.25 1.75>"
+# s "jungbass:3"
+# amp 0.2
+d2 $ crush "4 2 8 9 6 9" # s "ht"
+# lpf "<2000 4400 970 1000>"
+# lpq "<0.225 0.3 0.2>"
+# amp 0.1
+d3 $ s "psr*8" # n"<[0 5] [1 3 2] [4 5 7] [1]>"
+# hpf "<200 500 700 900>"
+# hpq "<0.3 0.2 0.4>"
+# amp 0.2
+
+d4 $ s "padlong/40"
+# speed 0.5
+# amp 0.3
+
+
+
+
+d1 $ s "click(5,6) click(5, [7 91/2)" # n "0 1"
+# crush "3"
+# hpf 2000
+# hpq 0.4
+d2 $ s "click(5,6) click(5, (7 9]/2)" # n "4"
+# crush "3"
+# hpf 6000
+# hpq 0.5
+d3 $ s "glitch(5,9)" # n "35 • 2 5 8"
+# crush "4"
+# amp "0.2"
+# delay "0.2"
+# delayfb "0.6"
+d4 $ s "cp(5,9)"
+# crush "7 6 8 9 6 3"
+# hpf "<2000 300 300 1000>"
+# hpq "<0.4 0.3 0.2>"
+# amp 0.1
+d5 $ s "cp (5,9)"
+# n "5"
+# crush "7 6 8 9 6 3"
+# hpf "<3000 6000>"
+# hpq "<0.2 0.3 0.4>"
+# amp 0.1
+d6 $ s "bd"
+# crush "<3 7 5 8>"
+setcps (160/60/4)
