@@ -532,7 +532,7 @@ Example: `p "tick" $ "0*4" # s "tick"`
 Example: `d1 $ s "bd ~ bd ~"`
 
 **Classic Pattern Names**: Standard `d1` to `d16` naming convention, each connected to its own effects track.
-Example: `d1 ...`
+Example: `d1 $ s "bd hh" -- d2 $ s "cp*4"`
 
 **Patterns by Number**: Use `p` followed by any number as alternative pattern declaration.
 Example: `p 1234 $ s "bd bd"`
@@ -554,16 +554,16 @@ Example: `panic`
 
 #### Pattern Structure
 **Pattern Structure**: Two patterns combine by default, taking structure from both and creating new events at intersections.
-Example: `"2 3" + "4 5 6"`
+Example: `d1 $ n ("2 3" + "4 5 6") # s "superpiano"`
 
 **Structure from the Left**: Use `|+` operator to inherit structural divisions exclusively from the first pattern.
-Example: `"2 3" |+ "4 5 6"`
+Example: `d1 $ n ("2 3" |+ "4 5 6") # s "superpiano"`
 
 **Structure from the Right**: The `+|` operator takes structural divisions only from the second pattern.
-Example: `"2 3" +| "4 5 6"`
+Example: `d1 $ n ("2 3" +| "4 5 6") # s "superpiano"`
 
 **All the Operators**: Comprehensive table of arithmetic operators for combining numerical patterns.
-Example: `|+|`, `|-|`, `|*|`, `|/|`
+Example: `d1 $ n "0 1 2 [3 5]" # sound "cpu" |+| n "<[4 5 3 2] [5 4 3] [6 5]>" # squiz 2`
 
 **Combining Control Patterns**: Named control patterns combine similarly to numerical patterns, with values merging when identical controls appear.
 Example: `d1 $ sound "drum" |+| n "2 3" |+| n "4 5 6"`
@@ -609,7 +609,7 @@ Example: `p "scroll" $ s "arpy:1 arpy:2 arpy:3 arpy:4 arpy:5"`
 Example: `d1 $ s "[bd(3,8), cp(2,8), hh(7,8), bass:1(7,16)]"`
 
 **Euclidian Sequence Offset**: Shift euclidian patterns left by specified number of steps using third parameter.
-Example: `(3,8,2)`
+Example: `d1 $ sound "bd(5,8,2)"`
 
 **Euclidian Variation: Distrib**: Provide rhythmic variation by selecting or distributing specific beats from euclidian patterns.
 Example: `d1 $ distrib [5, 9,16] $ sound "east:2"`
@@ -739,103 +739,103 @@ Example: `d1 $ s "superfm" # n 0 # octave "<4 5 6>" # amp1 1 # amp3 1`
 
 #### Audio Effects
 **Octer**: Generates octave harmonics and sub-harmonics using frequency multiplication techniques.
-Example: `octer, octersub, octersubsub`
+Example: `d1 $ s "bd*4" # octer 0.5 # octersub 0.3`
 
 **Frequency Shifter**: Implements single sideband amplitude modulation to shift frequencies.
-Example: `fshift, fshiftnote, fshiftphase`
+Example: `d1 $ s "arpy*4" # fshift 200 # fshiftphase 0.5`
 
 **Ring Modulation**: Applies amplitude modulation at a specified frequency to create metallic tones.
-Example: `ring, ringf, ringdf`
+Example: `d1 $ s "bd*4" # ring 0.8 # ringf 200`
 
 **Tremolo**: Modulates amplitude at a set rate and depth for volume wobbling effects.
-Example: `tremolodepth, tremolorate`
+Example: `d1 $ s "arpy*8" # tremolorate 4 # tremolodepth 0.8`
 
 **Delay**: Creates echo effects with adjustable timing, feedback, and cycle-relative locking.
-Example: `delay, delaytime, delayfeedback, lock`
+Example: `d1 $ sound "bd sn" # delay 0.5 # delaytime 0.25 # delayfeedback 0.6`
 
 **Reverb**: Simulates acoustic spaces using room size and depth parameters.
-Example: `dry, room, size`
+Example: `d1 $ s "bd sn cp" # room 0.4 # size 0.8 # dry 0.7`
 
 **Leslie**: Emulates rotating speaker cabinet effects with adjustable rotation speed.
-Example: `leslie, lrate, lsize`
+Example: `d1 $ s "arpy*4" # leslie 0.8 # lrate 6 # lsize 0.5`
 
 **Phaser**: Creates swooshing effects through phase shifting at adjustable rates and depths.
-Example: `phaserrate, phaserdepth`
+Example: `d1 $ s "bd*8" # phaserrate 4 # phaserdepth 0.8`
 
 **Spectral Delay**: Applies frequency-dependent delays to individual spectral components.
-Example: `xsdelay, tsdelay`
+Example: `d1 $ s "arpy*4" # xsdelay 0.5 # tsdelay 0.3`
 
 **Magnitude Freeze**: Preserves current spectral magnitudes while advancing phase information.
-Example: `freeze`
+Example: `d1 $ s "arpy*8" # freeze 1`
 
 **ASR Envelope**: Controls sound onset, sustain, and release timing in seconds.
-Example: `attack, hold, release`
+Example: `d1 $ s "superpiano" # note "c d e" # attack 0.1 # hold 0.5 # release 1`
 
 **Legato**: Adjusts overlap duration between successive synthesizer notes for smoother transitions.
-Example: `legato (values 0.5-1.5)`
+Example: `d1 $ s "sax:5" # legato 1 # note "c d e f"`
 
 **DJ Filter**: Sweeps between low-pass and high-pass filtering across a single parameter range.
-Example: `djf (0 to 1)`
+Example: `d2 $ s "sax(3,8)" # legato 1 # djf 0.7 # room 0.4`
 
 **Lowpass Filter**: Removes high frequencies above a specified cutoff point with adjustable resonance.
-Example: `cutoff, resonance`
+Example: `d1 $ s "moog*16" # n "<0 1 2>" # legato 1 # cutoff (range 200 2400 $ saw) # resonance 0.2`
 
 **Highpass Filter**: Removes low frequencies below a specified cutoff with resonance control.
-Example: `hcutoff, hresonance`
+Example: `d1 $ s "arpy*8" # hcutoff 2000 # hresonance 0.3`
 
 **Bandpass Filter**: Isolates frequencies around a center point with resonance adjustment.
-Example: `bandf, bandq`
+Example: `d1 $ s "bd*8" # bandf 1000 # bandq 10`
 
 **Vowel**: Applies formant filtering to simulate vowel sounds using character patterns.
-Example: `d1 $ s "gtr*5" #vowel "a e i o u"`
+Example: `d1 $ s "gtr*5" # vowel "a e i o u"`
 
 **Spectral Comb Filter**: Creates comb filtering effects with unified teeth and width control.
-Example: `comb`
+Example: `d1 $ s "arpy*8" # comb 0.5`
 
 **Spectral High Pass Filter**: Removes low frequencies from spectral data across full range.
-Example: `hbrick (0.0 to 1.0)`
+Example: `d1 $ s "bd*8" # hbrick 0.3`
 
 **Spectral Low Pass Filter**: Removes high frequencies from spectral data across full range.
-Example: `lbrick (0.0 to 1.0)`
+Example: `d1 $ s "arpy*8" # lbrick 0.7`
 
 **Distort**: Applies crunchy distortion with prominent high-frequency harmonics.
-Example: `distort`
+Example: `d1 $ s "arpy*8" # distort 0.8`
 
 **Triode**: Introduces tube-like distortion characteristic using a single parameter.
-Example: `triode`
+Example: `d1 $ s "bd*4" # triode 2`
 
 **Shape**: Amplifies signal with nonlinear waveshaping between zero and one.
-Example: `shape (0 to 1)`
+Example: `d1 $ sound "bd*32" # shape (slow 2 sine)`
 
 **Squiz**: Pitch-raising algorithm cutting and stretching signal fragments unpredictably.
-Example: `squiz (try multiples of 2)`
+Example: `d1 $ n "0 0 [3 4] 5" # s "cpu" # squiz "7 3 1 5 3 4 3"`
 
 **Bin Shifting**: Stretches and repositions frequency bins as a crude frequency scaling tool.
-Example: `binshift`
+Example: `d1 $ s "arpy*8" # binshift 0.5`
 
 **Bin Scrambling**: Randomizes spectral bin positions within a controlled range.
-Example: `scram`
+Example: `d1 $ s "arpy*8" # scram 0.7`
 
 **Crush**: Reduces bit-depth from full resolution down to extremely degraded audio quality.
-Example: `crush (1 to 16)`
+Example: `d1 $ n "0 0 [3 4] 5" # s "cpu" # crush "3 8"`
 
 **Coarse**: Simulates audio resampling by dividing playback rate into integer fractions.
-Example: `coarse (1, 2, 3, etc.)`
+Example: `d1 $ s "arpy*8" # coarse "8 16 32"`
 
 **Waveloss**: Drops audio segments at zero-crossings to create destructive artifacts.
-Example: `waveloss, mode`
+Example: `d1 $ s "bd*8" # waveloss 50`
 
 **Krush**: Combines bit-crushing with low-pass filtering in integrated effect.
-Example: `krush, kcutoff`
+Example: `d1 $ s "arpy*8" # krush 4 # kcutoff 2000`
 
 **Magnitude Smearing**: Spreads spectral magnitudes across frequency domain with adjustable intensity.
-Example: `smear`
+Example: `d1 $ s "arpy*8" # smear 0.5`
 
 **Spectral Conformer**: Applies complex plane transformation to phase vocoder bins for artifacts.
-Example: `real, imag`
+Example: `d1 $ s "arpy*8" # real 0.5 # imag 0.3`
 
 **Spectral Enhance**: Boosts spectral components for clarified frequency content.
-Example: `enhance`
+Example: `d1 $ s "arpy*8" # enhance 0.7`
 
 #### Controls
 **Controls**: Control functions transform string and number patterns into control patterns that govern sound behavior.
@@ -1092,6 +1092,7 @@ Example: `d1 $ off 0.125 (# crush 2) $ sound "bd"`
 Example: `d1 $ rotL 4 $ seqP [(0, 12, sound "bd bd*2")]`
 
 **rotR**: Shifts pattern forward temporally (opposite of rotL).
+Example: `d1 $ rotR 2 $ n "0 1 2 3" # s "arpy"`
 
 **spin**: Distributes multiple offset copies across stereo channels.
 Example: `d1 $ spin 4 $ sound "drum*3 tabla:4"`
@@ -1112,7 +1113,7 @@ Example: `d1 $ swingBy (1/3) 4 $ sound "hh*8"`
 Example: `d1 $ ghost $ sound "~ sn"`
 
 **inside**: Applies operation within subdivided cycle portions.
-Example: `inside 2 rev "0 1 2 3 4 5 6 7"`
+Example: `d1 $ inside 2 rev $ n "0 1 2 3 4 5 6 7" # s "arpy"`
 
 **outside**: Applies operation across multiple cycles before compression.
 Example: `d1 $ outside 4 (rev) $ cat [s "bd"]`
@@ -1122,25 +1123,25 @@ Example: `d1 $ echo 4 0.2 0.5 $ sound "bd sn"`
 
 #### Harmony & Melody
 **scale**: Interprets note patterns into specific named scales.
-Example: `n (scale "ritusen" "0 .. 7") # sound "superpiano"`
+Example: `d1 $ n (scale "ritusen" "0 .. 7") # sound "superpiano"`
 
 **toScale**: Applies unnamed scales directly without naming them first.
-Example: `n (toScale [0,2,3,5,7,8,10] "0 1 2 3 4 5 6 7")`
+Example: `d1 $ n (toScale [0,2,3,5,7,8,10] "0 1 2 3 4 5 6 7") # s "superpiano"`
 
 **arpeggiate**: Spreads chord notes sequentially over time.
-Example: `n (arpg "'major7 [0,4,7,11]") # sound "superpiano"`
+Example: `d1 $ n (arpg "'major7 [0,4,7,11]") # sound "superpiano"`
 
 **arp**: Arpeggiation with directional modes (up, down, diverge, etc.).
-Example: `n (arp "<up down diverge>" "<a'm9'8 e'7sus4'8>")`
+Example: `d1 $ arp "updown thumbup" $ n "<c'maj'4 e'min7'4>" # s "superpiano"`
 
 **rolled**: Simulates downward guitar strumming across notes.
-Example: `rolled $ n "<a'm9'8 e'7sus4'8>" # sound "superpiano"`
+Example: `d1 $ rolled $ n "<a'm9'8 e'7sus4'8>" # sound "superpiano"`
 
 **Chord Inversions**: Raises lowest N notes up an octave.
-Example: `n "c'min9'i2"`
+Example: `d1 $ n "c'min9'i2" # s "superpiano"`
 
 **metatune**: Reads WAV file pitch metadata for accurate sample tuning.
-Example: `note "<d4 c4 a3 bf3>" # s "bass1:18" # metatune 1`
+Example: `d1 $ note "<d4 c4 a3 bf3>" # s "bass1:18" # metatune 1`
 
 #### Samplers
 **amp**: Controls sound volume using a linear scaling method with a default value of 0.4.
@@ -1191,7 +1192,7 @@ Example: `d1 $ sound "bd*32" # speed (perlin + 0.5)`
 Example: `d1 $ sometimes (# crush 2) $ n "0 1 [~ 2] 3" # sound "arpy"`
 
 **sometimesBy**: Allows precise probability specification (0-1 range).
-Example: `sometimesBy 0.93 (# speed 2)`
+Example: `d1 $ sometimesBy 0.3 (# crush 4) $ n "0 ~ 3 1 5 2 ~ 5" # sound "cpu"`
 
 **choose**: Emits a stream of randomly chosen values from the given list.
 Example: `d1 $ sound "drum ~ drum drum" # n (choose [0,2,3])`
