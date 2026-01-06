@@ -855,3 +855,25 @@ d5 $ s "cp (5,9)"
 d6 $ s "bd"
 # crush "<3 7 5 8>"
 setcps (160/60/4)
+
+-- YOI WAVE FROM SAW with LFO cutoff/resonance and downsampling
+d1 $ s "supersquare*8" # n "c3"
+  # cutoff (range 200 3000 $ slow 4 $ sine)     -- LFO modulates cutoff
+  # resonance (range 0.1 0.7 $ slow 3 $ sine)   -- LFO modulates resonance peak
+  # shape 0.8                                    -- Add some distortion for "yoi" character
+  # crush 6                                      -- Downsampling/bitcrush
+  # legato 1
+  # voice (slow 2 $ range 0 0.5 $ saw)         -- Modulate waveform shape from saw to square
+
+-- YOI WAVE - IRREGULAR MODULATION VERSION
+d1 $ s "supersquare*<8 16 12>" # n "c3 <e3 g3> <c3 f3>"
+  # cutoff (range 150 4000 $ (slow 3.7 sine * slow 5.2 saw))  -- Complex irregular LFO
+  # resonance (range 0.05 0.85 $ slow 2.8 $ (sine + saw) / 2) -- Mixed waveform LFO
+  # shape (range 0.4 0.95 $ slow 7 $ square)                  -- Pulsing distortion
+  # crush "<4 6 8 5>"                                          -- Varying bitcrush depth
+  # legato "<1 0.5 2>"                                         -- Irregular note lengths
+  # voice (slow 4.3 $ range 0.2 0.7 $ (saw * sine))          -- Complex wave morphing
+  # pan (slow 8 $ sine)                                        -- Slow stereo movement
+  # room (range 0.1 0.4 $ slow 11 $ sine)                     -- Subtle reverb modulation
+
+
