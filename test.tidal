@@ -12,3 +12,34 @@ d1 $ n "[0 11]/8" # "superfm" #octave 4
 
 d1 $ sound "jvbass(3,8)"
 anticipate 1 $ sound "bd sn" # delay "0.5" # room "0.3"
+
+d1 $ n (slow 2 $ fmap (*7) $ run 8)
+  # s "supergong"
+  # decay "[1 0.2]/4"
+  # voice "[0.5 0]/8"
+
+
+d1 $ s "moog" # n "<0 1 2>" # legato 1 # cutoffbus 1 (segment 32 $ range 200 2400 $ saw) # resonance 0.2
+
+d1 $ s "bd*8" # pan (slow 4 $ sine)
+d1 $ s "moog*16" # n "<0 1 2>" # legato 1 # cutoff (range 200 2400 $ saw) # resonance 0.2
+
+d1 $ n "0 .. 3" # sound "arpy"
+
+d1 $ slow 2 $ n "0 1 2 3 3 2 1 0" # sound "arpy"
+d1 $ palindrome $ n (run 4) # sound "arpy"
+
+d1 $ sound "[voodoo voodoo:3, arpy arpy:4 arpy:2]"
+
+d1 $ sound "[voodoo voodoo:3, arpy arpy:4 arpy:2]"
+d1 $ sound "{voodoo voodoo:3, arpy arpy:4 arpy:2}"
+d1 $ sound "[drum bd hh bd, can can:2 can:3 can:4 can:2]"
+d1 $ sound "{drum bd hh bd, can can:2 can:3 can:4 can:2}"
+d1 $ sound "[bd sn, can:2 can:3 can:1, arpy arpy:1 arpy:2 arpy:3 arpy:5]"
+d1 $ sound "{bd sn, can:2 can:3 can:1, arpy arpy:1 arpy:2 arpy:3 arpy:5}"
+
+d1 $ sound "bd(5,8)"
+
+d1 $ sound "bd(5,8,2)"
+
+d1 $ n "2" # s "tabla:13" 
