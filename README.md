@@ -2,7 +2,7 @@
 
 ## TL;DR
 
-This is a rapid start for people wanting to get started with Tidal esp on a Mac. All the files and a lot of getting started info in a single place. Thanks to tidalcycles.org. See test.tidal for a lot of examples.
+This is a rapid start for people wanting to get started with Tidal esp on a Mac. All the files and a lot of getting started info in a single place. Thanks to tidalcycles.org. See ./test.tidal for a lot of examples. This is more of a complete setup than a piece-meal introduction through the official docs.
 
 ### Install
 
@@ -28,7 +28,7 @@ export PATH="/Applications/SuperCollider.app/Contents/Resources:$PATH"
 
 #### MIDI/OSC (input and output)
 See https://tidalcycles.org/docs/configuration/MIDIOSC/midi
-also ./midi-osc-bridge.pd
+also ./midi-osc-bridge.pd and https://puredata.info/
 
 #### More samples
 
