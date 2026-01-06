@@ -146,16 +146,15 @@ SuperDirt.start;
 Server.default.status
 ```
 
-#### Setup Additional Synth MI-UGENS
+### Setup Additional Synth MI-UGENS
 
-
-##### Automatic Installation (Debian/Ubuntu/Mint)
+#### Automatic Installation (Debian/Ubuntu/Mint)
 
 For Debian, Ubuntu, and Mint systems, mi-UGens can be installed using the Ansible Tidal installer.
 
-##### Manual Installation
+#### Manual Installation
 
-### Step 1: Install the UGens
+##### Step 1: Install the UGens
 
 1. Download the latest release of mi-UGens for your operating system
 2. Extract the archive and move the top-level `mi-UGens/` directory to your SuperCollider Extensions folder:
@@ -166,7 +165,7 @@ For Debian, Ubuntu, and Mint systems, mi-UGens can be installed using the Ansibl
 
 > **Tip**: Find your SuperCollider Extensions folder by running `Platform.userExtensionDir` in SuperCollider. The path will be printed to the post window.
 
-### Step 2: Create Synthdef File
+##### Step 2: Create Synthdef File
 
 Create a new file named `mi-ugens.scd` in your SuperCollider synthdefs folder:
 
@@ -176,7 +175,7 @@ Create a new file named `mi-ugens.scd` in your SuperCollider synthdefs folder:
 
 [Insert the synthdef contents here]
 
-### Step 3: Create Parameter Definitions File
+##### Step 3: Create Parameter Definitions File
 
 Create a new file named `mi-ugens-params.hs` in your SuperCollider synthdefs folder:
 
@@ -186,7 +185,7 @@ Create a new file named `mi-ugens-params.hs` in your SuperCollider synthdefs fol
 
 [Insert the parameter definitions here]
 
-### Step 4: Configure SuperCollider Startup
+##### Step 4: Configure SuperCollider Startup
 
 Edit your SuperCollider startup file:
 
@@ -204,7 +203,7 @@ load("FULL_PATH_TO_mi-ugens.scd");
 
 > **Note for Windows Users**: Use double backslashes in the path, e.g., `load("C:\\Users\\<youruser>\\...");`
 
-### Step 5: Configure Global Effects
+##### Step 5: Configure Global Effects
 
 Add the following code after the orbit definitions (around `~d10 = ~dirt.orbits[9]; ~d11 = ~dirt.orbits[10]; ~d12 = ~dirt.orbits[11];`):
 
@@ -215,13 +214,13 @@ Add the following code after the orbit definitions (around `~d10 = ~dirt.orbits[
     var verb = GlobalDirtEffect(\global_mi_verb, [\verbwet, \verbtime, \verbdamp, \verbhp, \verbfreeze, \verbdiff, \verbgain]);
     x.globalEffects = x.globalEffects
       .addFirst(clouds)
-      .addFirst(verb); 
-    x.initNodeTree;    
-};                     
+      .addFirst(verb);
+    x.initNodeTree;
+};
 // end define global effects for mutable instruments effects
 ```
 
-### Step 6: Import Parameters (Optional)
+##### Step 6: Import Parameters (Optional)
 
 You can import the mi-UGens parameter definitions in two ways:
 
@@ -242,7 +241,7 @@ This should be followed by:
 :set prompt-cont ""
 ```
 
-### Step 7: Restart SuperCollider
+##### Step 7: Restart SuperCollider
 
 Restart SuperCollider to apply all changes.
 
@@ -252,7 +251,7 @@ Restart SuperCollider to apply all changes.
 xattr -d com.apple.quarantine *
 ```
 
-## Troubleshooting
+### Troubleshooting
 
 - Ensure all file paths are correct for your operating system
 - Double-check that SuperCollider can find the Extensions folder using `Platform.userExtensionDir`
