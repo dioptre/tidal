@@ -20,6 +20,10 @@ export PATH="/Applications/SuperCollider.app/Contents/MacOS:$PATH"
 export PATH="/Applications/SuperCollider.app/Contents/Resources:$PATH"
 ```
 
+#### MIDI/OSC (input and output)
+See https://tidalcycles.org/docs/configuration/MIDIOSC/midi
+also ./midi-osc-bridge.pd
+
 
 ### Running
 
