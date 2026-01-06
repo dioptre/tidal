@@ -621,7 +621,7 @@ makeSuperIR [6, 42]
 -- Use in Tidal: # convolveir 52
 
 -- Now use it:
-d1 $ s "bass*4" # note "c2" # convolve 0.9 # convolveir 52
+d1 $ s "bass*4" # note "c2" # convolve 0.1 # convolveir 52
 
 -- Example 2: Triple bass punch (3-way convolution)
 makeSuperIR [42, 43, 44]
