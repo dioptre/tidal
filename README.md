@@ -1258,3 +1258,22 @@ Example: `d1 $ sound "sax" # legato 1 # squizbus 1 "1 2 5 1.5" # lpfbus 2 "400 2
 
 **Control busses and MIDI**: Explains mapping MIDI CC numbers to control busses for real-time parameter control.
 Example: `d1 $ n "<d6'm9 g6'dom7'ii>" # s "superhoover" # djfbus 1 (cF 0.5 "21")`
+
+#### LFOs (Low Frequency Oscillators)
+**Using LFOs for Modulation**: Apply oscillators to any parameter to create movement and evolving textures.
+Example: `d1 $ s "bd*8" # pan sine # lpf (range 200 5000 $ slow 2 saw)`
+
+**Multiple LFOs on Different Parameters**: Layer multiple oscillators on different parameters simultaneously.
+Example: `d1 $ s "arpy*8" # pan sine # lpf (range 200 8000 $ slow 3 tri) # speed (range 0.8 1.2 $ fast 2 square)`
+
+**Combining LFOs on One Parameter**: Add or multiply oscillators together for complex modulation.
+Example: `d1 $ s "bass*4" # lpf (range 400 4000 $ sine + (slow 3 square))`
+
+**Oscillator Math**: Combine oscillators using arithmetic operators for creative modulation.
+Example: `d1 $ s "cp*16" # lpf (range 200 8000 $ sine * saw) # pan ((slow 4 sine) + (fast 8 tri))`
+
+**Meta-Modulation**: Use one oscillator to modulate the speed of another oscillator.
+Example: `d1 $ s "hh*16" # lpf (range 200 8000 $ slow (range 2 8 $ slow 4 sine) rand)`
+
+**Perlin for Smooth Randomness**: Use `perlin` instead of `rand` for smoother, more musical random modulation.
+Example: `d1 $ s "bd*32" # speed (range 0.8 1.2 $ perlin) # lpf (range 400 4000 $ slow 2 perlin)`
