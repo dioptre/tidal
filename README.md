@@ -75,7 +75,8 @@ s.reboot { // server options are only updated on reboot
 );
 
 ```
-5. Then run/restart supercollider & run super dirt:
+5. Add more synths from https://tidalcycles.org/docs/reference/mi-ugens-installation 
+6. Then run/restart supercollider & run super dirt:
 
 ```
 SuperDirt.start;
@@ -350,3 +351,113 @@ Server.default.status
 - lo (8)
 - rash (72)
 - snare (90)
+
+#### MI-UGENS
+
+# mi-UGens Installation Guide
+
+## Automatic Installation (Debian/Ubuntu/Mint)
+
+For Debian, Ubuntu, and Mint systems, mi-UGens can be installed using the Ansible Tidal installer.
+
+## Manual Installation
+
+### Step 1: Install the UGens
+
+1. Download the latest release of mi-UGens for your operating system
+2. Extract the archive and move the top-level `mi-UGens/` directory to your SuperCollider Extensions folder:
+
+   - **Linux**: `~/.local/share/SuperCollider/Extensions/mi-UGens`
+   - **Windows**: `C:\Users\<youruser>\AppData\Local\SuperCollider\Extensions\mi-UGens`
+   - **macOS**: `~/Library/Application Support/SuperCollider/Extensions/mi-UGens`
+
+> **Tip**: Find your SuperCollider Extensions folder by running `Platform.userExtensionDir` in SuperCollider. The path will be printed to the post window.
+
+### Step 2: Create Synthdef File
+
+Create a new file named `mi-ugens.scd` in your SuperCollider synthdefs folder:
+
+- **Linux**: `~/.local/share/SuperCollider/synthdefs/mi-ugens.scd`
+- **Windows**: `C:\Users\<youruser>\AppData\Local\SuperCollider\synthdefs\mi-ugens.scd`
+- **macOS**: `~/Library/Application Support/SuperCollider/synthdefs/mi-ugens.scd`
+
+[Insert the synthdef contents here]
+
+### Step 3: Create Parameter Definitions File
+
+Create a new file named `mi-ugens-params.hs` in your SuperCollider synthdefs folder:
+
+- **Linux**: `~/.local/share/SuperCollider/synthdefs/mi-ugens-params.hs`
+- **Windows**: `C:\Users\<youruser>\AppData\Local\SuperCollider\synthdefs/mi-ugens-params.hs`
+- **macOS**: `~/Library/Application Support/SuperCollider/synthdefs/mi-ugens-params.hs`
+
+[Insert the parameter definitions here]
+
+### Step 4: Configure SuperCollider Startup
+
+Edit your SuperCollider startup file:
+
+- **Linux**: `~/.conf/SuperCollider/startup.scd`
+- **Windows**: `C:\Users\<youruser>\AppData\Local\SuperCollider\startup.scd`
+- **macOS**: `~/Library/Application Support/SuperCollider/startup.scd`
+
+Add the following code after the `~dirt = SuperDirt(2, s);` line:
+
+```supercollider
+// load mi-ugens.scd synthdefs
+load("FULL_PATH_TO_mi-ugens.scd");
+// end load mi-ugens.scd synthdefs
+```
+
+> **Note for Windows Users**: Use double backslashes in the path, e.g., `load("C:\\Users\\<youruser>\\...");`
+
+### Step 5: Configure Global Effects
+
+Add the following code after the orbit definitions (around `~d10 = ~dirt.orbits[9]; ~d11 = ~dirt.orbits[10]; ~d12 = ~dirt.orbits[11];`):
+
+```supercollider
+// define global effects for mutable instruments effects
+~dirt.orbits.do { |x|
+    var clouds = GlobalDirtEffect(\global_mi_clouds, [\cloudspitch, \cloudspos, \cloudssize, \cloudsdens, \cloudstex, \cloudswet, \cloudsgain, \cloudsspread, \cloudsrvb, \cloudsfb, \cloudsfreeze, \cloudsmode, \cloudslofi]);
+    var verb = GlobalDirtEffect(\global_mi_verb, [\verbwet, \verbtime, \verbdamp, \verbhp, \verbfreeze, \verbdiff, \verbgain]);
+    x.globalEffects = x.globalEffects
+      .addFirst(clouds)
+      .addFirst(verb); 
+    x.initNodeTree;    
+};                     
+// end define global effects for mutable instruments effects
+```
+
+### Step 6: Import Parameters (Optional)
+
+You can import the mi-UGens parameter definitions in two ways:
+
+**Option A**: Import manually in your Tidal session
+
+**Option B**: Add to your BootTidal.hs file
+
+Add the following `:script` directive after the `setR` and `setB` definitions:
+
+```haskell
+:script FULL_PATH_TO_mi-ugens-params.hs
+```
+
+This should be followed by:
+
+```haskell
+:set prompt "tidal>"
+:set prompt-cont ""
+```
+
+### Step 7: Restart SuperCollider
+
+Restart SuperCollider to apply all changes.
+
+> **Note for macOS Users**: You may see a security dialog preventing the UGens from running. See [this post](https://discourse.tidalcycles.org/) for workarounds and fixes.
+
+## Troubleshooting
+
+- Ensure all file paths are correct for your operating system
+- Double-check that SuperCollider can find the Extensions folder using `Platform.userExtensionDir`
+- On macOS, you may need to adjust security settings to allow the UGens to run
+- Make sure startup.scd is properly saved before restarting SuperCollider

@@ -43,3 +43,317 @@ d1 $ sound "bd(5,8)"
 d1 $ sound "bd(5,8,2)"
 
 d1 $ n "2" # s "tabla:13" 
+
+hush
+
+d1 $ n "0 0 [3 4] 5" # s "cpu" # squiz "7 3 1 5 3 4 3"
+
+d1 $ n "0 0 [3 4] 5" # s "cpu" # crush "3 8"
+
+d1 $ sound "[hh*16, kick:8 snare:4 [~ kick:8] snare]" # gain "[1 1.2]*8"
+
+d1 $ sound "numbers:1 numbers:2 numbers:3 numbers:4" # pan "0 0.5 1"
+
+d1 $ sound "kurt:4 kurt:4"
+
+d1 $ slow 2 $ n "0 2 [3 5] [4 7]" # sound "cpu"
+
+d1 $ slow "0.5 <1 2>" $
+    n "{0 2 [3 5] [4 <7 6>], 0*2 3*3 0}" # sound "cpu"
+    # squiz "<8 1 2>"
+    # speed 2
+
+d1 $ n "0 1 2 3" # sound "numbers" |<| n "4 5"
+
+d1 $ n "0 1 2 [3 5]" # sound "cpu"
+  |+| n "<[4 5 3 2] [5 4 3] [6 5]>"
+  # squiz 2
+
+d1 $ every 3 (fast 2) $ sound "bd sd ~ cp"
+
+d1 $ every 4 rev $ every 2 (hurry 2) $ every 3 (# squiz 5) $ sound "bd sd [~ bd] [cp bd*2]"
+
+d2 $ jux rev $ sound "sax(3,8)" # legato 1 # n 3 # note "<[9 7] 5 [9 12]>" # djf 0.7 # sz 0.4 # room 0.4
+
+d1 $ jux rev $ speed "<1 0.5 0.75>(<3 5>,8)" # sound "bev" # cut 1 # room 0.4 # sz 0.9 # gain 1.3
+
+
+d1 $ splice 8 ("0 1 2 3 4 5") $ sound "break:4" # gain 1.1
+d2 $ sound "kick snare*2 clap:4" # speed 2
+
+d1 $ slow 2 $ loopAt 2 $ chop 4 $ sound "break:8 break:9"
+
+d1 $ slow 2 $ loopAt 2 $ striate 32 $ sound "break:8 break:9"
+
+d1 $ loopAt 16 $ striate 32 $ sound "bev"
+
+d1 $ slow 4 $ jux rev $ loopAt 16 $ striate 128 $ sound "bev*4"
+
+d1 $ sound "bd*32" # shape (slow 2 sine)
+
+d1 $ sound "drum:5(5,8,<0 4>)" # lpf (range 200 8000 rand) # lpq 0.2
+
+d1 $ sound (struct "t t ~ t" $ choose ["bd", "arpy", "kick"])
+
+d1 $ sound (randcat ["kick snare:4 [~ kick] snare:5",
+                     "kick snare:4 . hc(5,8)",
+                     "snare:3(9,16)"
+                    ]
+           )
+
+
+
+d1 $ sound (randcat ["kick snare:4 [~ kick] snare:5", "kick snare:4 . hc(5,8)"])
+
+d1 $ stripe 2 $ n "0 4*2 ~ 4 2 4 5 ~" # sound "cpu2" # squiz 2
+
+d1 $ degrade $ sound "bd*8"
+
+d1 $ sound "bd*8?"
+
+d1 $ degradeBy 0.6 $ sound "bd*8"
+
+d1 $ sometimes (# crush 4) $ n "0 ~ 3 1 5 2 ~ 5" # sound "cpu"
+
+d1 $ sometimesBy 0.3 (# crush 4) $ n "0 ~ 3 1 5 2 ~ 5" # sound "cpu"
+
+d1 $ note "csssssss g" # s "superpiano"
+
+d1 $ note "c5 c6 c4 c6" # s "superpiano"
+
+d1 $ note "c a f e" # sound "dbass" # n "<0 1 2>"
+
+d1 $ n "c a f e" # sound "rash" |+ n 24 |+ n "<0 2 7 12>"
+
+d1 $ note "c a f e" # sound "superpiano" # octave "<4 6 3>"
+
+d1 $ n "<g'maj b'maj c'maj c'min>" # s "supermandolin" # room 0.6 # sz 0.9
+
+d1 $ qtrigger $ jux ((|- n "12") . rev) $ struct "t(5,8,<0 4>)" $ n "<g'maj b'maj c'maj c'min>" # s "supermandolin" # room 0.6 # sz 0.9
+
+import Sound.Tidal.Chords
+
+chordList
+
+-- Try some out:
+d1 $ n "c'sevenFlat9 a'm9sharp5" # sound "supermandolin"
+
+-- Here's the raw data:
+chordTable
+
+-- What happened to 1, 3, 6, 8, and 10?
+-- You can get to them by adding 's' for 'sharp', to add 1 to a note:
+-- Again, this all ends up being turned into plain note numbers. These
+-- two patterns are the same:
+d1 $ n "c'sevenFlat9 a'm9sharp5" # sound "supermandolin"
+
+d1 $ n "[0,4,7,10,13] [9,10,23]" # sound "supermandolin"
+
+d1 $ arp "updown thumbup" $ n "<c'maj'4 e'min7'4>" # s "superpiano"
+
+d1 $ jux rev $ arp "<updown thumbup pinkyupdown converge diverge>" $ n "<c4'maj'6 e4'min7'8 g5'maj'5 a5'maj'4>" # s "superpiano" # room 0.3 # sz 0.7
+
+-- custom synth
+--https://www.youtube.com/watch?v=ZM8OEcjlkzo
+
+-- SynthDef(\test, {
+--  |out,sustain=1,freq=440,speed=1,begin=0,end=1,pan,accelerate,offset,clamp=1|
+--  var line, env, volume, tone, outAudio;
+--  freq=freq*speed;
+--  line = Line.ar(begin,end,sustain/speed,doneAction: Done.freeSelf);
+--  env = Env.new(levels: [0, 1, 0.9, 0], times: [0.1, 0.5, 1], curve: [-5, 0, -5]);
+--  volume = IEnvGen.ar(env, line);
+--  tone = (Pulse.ar(freq,line)+Pulse.ar(freq*1.01,line)+Pulse.ar(freq*0.99,line))/3;
+--  outAudio = RLPF.ar(tone*volume, 20000*clamp*volume,0.3);
+--  OffsetOut.ar(out,DirtPan.ar(outAudio, ~dirt.numChannels, pan, volume));
+-- }).add;
+
+
+d1 $ off "0.25" (|+ n 7) $ n "c e" # sound "supermandolin"
+
+d1 $ n (scale "ritusen" $ "0 [7 2] 3 2" |+ (irand 3)) # sound "superpiano"
+
+scaleList
+
+d1 $ ur 16 "[bdsd, ~ claps, ~ [bass bass:crunch] ~ bass]"
+  [("bdsd", sound "bd [~ sd] bd sd" # squiz 2),
+   ("claps", sound "clap:4*2 clap:4*3"
+     # delay 0.8 # dt "t" # dfb 0.4
+     # orbit 4 # speed 4
+   ),
+   ("bass", struct "t(3,8)" $ sound "dbass" # shape 0.7 # speed "[1, ~ 2]")
+  ]
+  [("crunch", (# crush 3))
+  ]
+
+d1 $ every 3 (rev) $ every 3 (chop 8) $
+  sound "bd [~ sd] bd sd" # squiz 2
+
+d1 $ 0.25 <~ (n "[0 [1 0] 6*2 [3 4*2], 8(5,8)]" # sound "cpu2")
+
+d1 $ ("<0 0.25 0.75>" ~>) $ n "[0 [1 0] 6*2 [3 4*2], 8(5,8)]" # sound "cpu2" # crush 4
+
+d1 $ struct "t f t t f t f f" $ sound "snare:4"
+d1 $ struct "t(3,8)" $ sound "snare:4"
+
+d1 $ stack [struct "t(3,8)" $ sound "kick:4",
+            struct "f(3,8)" $ sound "snare:4"
+           ]
+
+d1 $ stitch "t(3,8)" (sound "kick:4") (sound "snare:4")
+
+d1 $ stitch "t(<3 5>,<8 8 8 6>,<0 2 4>)" (sound "kick:4") (sound "hc")
+d1 $ sound (stitch "t(<3 5>,<8 8 8 6>,<0 2 4>)" "kick:4" "hc")
+
+drawLine $ struct "<1 0>(3,8)" "a"
+
+d1 $ stitch "t f t [t f]*2 f ~ t f" (sound "kick:4") (sound "hc") # room 0.2 # sz 0.8
+
+d1 $ sew "t f" (sound "kick") (sound "clap:4")
+
+d1 $ chunk 4 (hurry 2) $ n "0 .. 7" # sound "cpu"
+
+d1 $ sew (iter 4 "t f")
+  (chunk 4 (hurry 2) $ n "0 .. 7" # sound "cpu")
+  (n "0 .. 7" # sound "cpu2" # speed 1.5 # squiz 2)
+
+fit :: Int -> [a] -> Pattern Int -> Pattern a
+d1 $ n (fit 0 [9,10,11,12,13,14] "0 1 2 3") # s "alphabet"
+
+d2 $ n "0 ~ 2 [3*2 4*2]" # sound "cpu" # speed 2
+
+d1 $ note (fit 2 [0,2,7,5,12] "0 ~ 1 [2 3]") # sound "supermandolin" # legato 2 # gain 1.3
+
+d1 $ cat [sound "bd*2 sn", sound "arpy jvbass*2", sound "drum*2"]
+
+d1 $ whenmod 5 3 (striate 3) $ stack [ 
+  sound "bd bd*2", 
+  sound "hh*2 [sn cp] cp future*4", 
+  sound "arpy" +| n "0 .. 15"
+] # speed "[[1 0.8], [1.5 2]*2]/3"
+
+
+d1 $ iter 4 $ sound "bd hh sn cp"
+
+d1 $ jux rev $ chunk 4 (fast 2 . (|- n 12)) $ off 0.25 (|+ 7) $ struct (iter 4 "t(5,8)")
+  $ n (scale "major" "0 .. 7") # sound "superpiano"
+
+d1 $ jux rev $ chunk 4 (fast 2 . (|- n 12)) $ off 0.25 (|+ 7) $ struct (iter 4 "t(5,8)")
+  $ n (scale "bhairav" "0 .. 7") # sound "superpiano"
+
+chordL
+
+d1 $ stack
+  [ note "<d4 c4 a3 bf3>" # s "bass1:18" # legato 1 # metatune 1
+  , note "[~ d5'min'o]*4" # s "superpiano" # release 0.4
+  ] # cps 0.35
+
+d1 $ bite 4 "0 1*2 2*2 [~ 3]" $ n "0 .. 7" # sound "drum"
+
+d1 $ chew 4 "0 1*2 2*2 [~ 3]" $ n "0 .. 7" # sound "drum"
+
+d1 $ smash 6 [2,3,4] $ sound "ho ho:2 ho:3 hc"
+
+
+saw = sig $ \t -> mod' (fromRational t) 1
+
+let pats =
+      [
+        ("a", stack [n "c4 c5 g4 f4 f5 g4 e5 g4" # s "superpiano" # gain "0.7",
+                     n "[c3,g4,c4]" # s "superpiano"# gain "0.7"
+                    ]
+        ),
+        ("b", stack [n "d4 c5 g4 f4 f5 g4 e5 g4" # s "superpiano" # gain "0.7",
+                     n "[d3,a4,d4]" # s "superpiano"# gain "0.7"
+                    ]
+        ),
+        ("c", stack [n "f4 c5 g4 f4 f5 g4 e5 g4" # s "superpiano" # gain "0.7",
+                     n "[f4,c5,f4]" # s "superpiano"# gain "0.7"
+                    ]
+        )
+      ]
+in
+d1 $ ur 12 "a b c" pats []
+
+
+let pats =
+      [
+        ("a", stack [n "c4 c5 g4 f4 f5 g4 e5 g4" # s "superpiano" # gain "0.7",
+                     n "[c3,g4,c4]" # s "superpiano"# gain "0.7"
+                    ]
+        ),
+        ("b", stack [n "d4 c5 g4 f4 f5 g4 e5 g4" # s "superpiano" # gain "0.7",
+                     n "[d3,a4,d4]" # s "superpiano"# gain "0.7"
+                    ]
+        ),
+        ("c", stack [n "f4 c5 g4 f4 f5 g4 e5 g4" # s "superpiano" # gain "0.7",
+                     n "[f4,c5,f4]" # s "superpiano"# gain "0.7"
+                    ]
+        )
+      ]
+    fx = [("reverb", (# (room 0.8 # sz 0.99 # orbit 1))),
+          ("faster", fast 2)
+         ]
+in
+d1 $ ur 12 "a b:reverb c:faster" pats fx
+
+let pats = [("drums", s "drum cp*2"),
+            ("melody", s "arpy:2 arpy:3 arpy:5"),
+            ("craziness", s "cp:4*8" # speed ( sine + 0.5))
+           ]
+    fx = [("higher", (# speed 2))]
+in
+d1 $ ur 8 "[drums, melody] [drums,craziness,melody] melody:higher" pats fx
+
+
+d1 $ seqP [
+  (0, 12, sound "bd bd*2"),
+  (4, 12, sound "hh*2 [sn cp] cp future*4"),
+  (8, 12, sound (samples "arpy*8" (run 16)))
+]
+
+d1 $ qtrigger $ seqP [
+  (0, 12, sound "bd bd*2"),
+  (4, 12, sound "hh*2 [sn cp] cp future*4"),
+  (8, 12, sound (samples "arpy*8" (run 16)))
+]
+
+d1 $ qtrigger $ seqPLoop [
+  (0, 12, sound "bd bd*2"),
+  (4, 12, sound "hh*2 [sn cp] cp future*4"),
+  (8, 12, sound (samples "arpy*8" (run 16)))
+]
+
+d1  $ s "omi" <| note "a [~ g] [c b] [g gs]" 
+    # octave "<3 4 5 6 7 8>"
+    # sustain "{1 2 1}%8"
+
+d1  $ s "braids" <| note "a [~ g] [c b] [g gs]" 
+    # octave "<3 4 5 6 7 8>"
+    # sustain "{1 2 1}%8"
+    # model (slow 48 $ run 48)
+    # timbre (slow 3 sine)
+    # color (saw)
+    
+-- The Euclidean Algorithm Generates Traditional Musical Rhythms by Toussaint
+-- (2,5) : A thirteenth century Persian rhythm called Khafif-e-ramal.
+-- (3,4) : The archetypal pattern of the Cumbia from Colombia, as well as a Calypso rhythm from Trinidad.
+-- (3,5,2) : Another thirteenth century Persian rhythm by the name of Khafif-e-ramal, as well as a Rumanian folk-dance rhythm.
+-- (3,7) : A Ruchenitza rhythm used in a Bulgarian folk-dance.
+-- (3,8) : The Cuban tresillo pattern.
+-- (4,7) : Another Ruchenitza Bulgarian folk-dance rhythm.
+-- (4,9) : The Aksak rhythm of Turkey.
+-- (4,11) : The metric pattern used by Frank Zappa in his piece titled Outside Now.
+-- (5,6) : Yields the York-Samai pattern, a popular Arab rhythm.
+-- (5,7) : The Nawakhat pattern, another popular Arab rhythm.
+-- (5,8) : The Cuban cinquillo pattern.
+-- (5,9) : A popular Arab rhythm called Agsag-Samai.
+-- (5,11) : The metric pattern used by Moussorgsky in Pictures at an Exhibition.
+-- (5,12) : The Venda clapping pattern of a South African children’s song.
+-- (5,16) : The Bossa-Nova rhythm necklace of Brazil.
+-- (7,8) : A typical rhythm played on the Bendir (frame drum).
+-- (7,12) : A common West African bell pattern.
+-- (7,16,14) : A Samba rhythm necklace from Brazil.
+-- (9,16) : A rhythm necklace used in the Central African Republic.
+-- (11,24,14) : A rhythm necklace of the Aka Pygmies of Central Africa.
+-- (13,24,5) : Another rhythm necklace of the Aka Pygmies of the upper Sangha.
