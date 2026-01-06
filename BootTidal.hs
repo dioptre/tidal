@@ -23,5 +23,17 @@ instance Tidally where tidal = tidalInst
 -- You can also add your own aliases in this file. For example:
 -- fastsquizzed pat = fast 2 $ pat # squiz 1.5
 
+-- Extended channels d17-d24 for more complex arrangements
+:{
+let d17 = streamReplace tidal 16
+    d18 = streamReplace tidal 17
+    d19 = streamReplace tidal 18
+    d20 = streamReplace tidal 19
+    d21 = streamReplace tidal 20
+    d22 = streamReplace tidal 21
+    d23 = streamReplace tidal 22
+    d24 = streamReplace tidal 23
+:}
+
 :set prompt "tidal> "
 :set prompt-cont ""

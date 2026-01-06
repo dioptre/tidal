@@ -12,16 +12,20 @@ setcps (174/60/4)
 
 -- Global reverb bus (simulation)
 let verb x = x # room 0.3 # size 0.6 # dry 0.75
-    shortVerb x = x # room 0.15 # size 0.3 # dry 0.9
-    -- Sidechain compression simulation (volume ducking on kick hits)
-    sc x = x # gain (range 0.7 1.0 $ slow 4 saw)
+let shortVerb x = x # room 0.15 # size 0.3 # dry 0.9
+-- Sidechain compression simulation (volume ducking on kick hits)
+let sc x = x # gain (range 0.7 1.0 $ slow 4 saw)
 
 -- ===============================================
--- DRUM PROGRAMMING - PROFESSIONAL LAYERING
+-- ALL PATTERNS IN ONE DO BLOCK
 -- ===============================================
 
--- KICK DRUM - Layered (Sub + Punch + Click)
 do
+  -- ===============================================
+  -- DRUM PROGRAMMING - PROFESSIONAL LAYERING
+  -- ===============================================
+
+  -- KICK DRUM - Layered (Sub + Punch + Click)
   -- Sub kick: 40-60Hz fundamental, mono, centered
   d1 $ s "bd:3"
     # lpf 80 # lpq 0.3  -- Low-pass filter for pure sub
@@ -44,8 +48,7 @@ do
     # delay 0 # delaytime 0.001  -- Micro-delay for width
     # pan (slow 16 $ range 0.45 0.55 sine)
 
--- SNARE - Multi-layered (Body + Crack + Tail)
-do
+  -- SNARE - Multi-layered (Body + Crack + Tail)
   -- Snare body: 200-400Hz fundamental
   d4 $ s "sn:5"
     # n (choose [5, 8, 12])  -- Sample variation
@@ -70,8 +73,7 @@ do
     # pan (slow 8 $ range 0.3 0.7 sine)  -- Stereo spread
     # hpf 1000
 
--- HI-HATS - Intricate programming with velocity humanization
-do
+  -- HI-HATS - Intricate programming with velocity humanization
   -- Closed hats: 8-12kHz sizzle, consistent 16th notes
   d7 $ fast 4 $ s "hh27*16"
     # gain (range 0.5 0.85 $ slow 4 perlin)  -- Volume variation
@@ -95,8 +97,7 @@ do
     # hpf 10000  -- Pure high-end shimmer
     # pan (fast 4 $ range 0 1 rand)  -- Random stereo placement
 
--- PERCUSSION - Drums breaks and fills
-do
+  -- PERCUSSION - Drums breaks and fills
   -- Ride bell: Accent on musical phrases
   d10 $ slow 2 $ s "cb"
     # gain (struct "t f!3 t f!7 t!2 f t" $ 0.6)
@@ -112,11 +113,10 @@ do
     # pan 0.5
     # accelerate (-2)  -- Pitch drop
 
--- ===============================================
--- BASS - REESE SYNTHESIS & SUB PROGRAMMING
--- ===============================================
+  -- ===============================================
+  -- BASS - REESE SYNTHESIS & SUB PROGRAMMING
+  -- ===============================================
 
-do
   -- Sub bass: 40-80Hz, sine wave character
   -- Locked to root note, pure fundamental
   d12 $ note "c1 c1 c1 af0 | c1 c1 bf0 af0"
@@ -153,11 +153,10 @@ do
     # delay 0.15 # delaytime (1/16) # delayfb 0.2
     # pan (slow 8 $ range 0.35 0.65 sine)
 
--- ===============================================
--- MUSICAL ELEMENTS - PADS & ATMOSPHERE
--- ===============================================
+  -- ===============================================
+  -- MUSICAL ELEMENTS - PADS & ATMOSPHERE
+  -- ===============================================
 
-do
   -- Pad: 200Hz-8kHz, stereo width, reverb heavy
   d15 $ slow 8 $ note "c4'maj7 af3'maj7 | bf3'maj7 f3'maj7"
     # s "superchip"
@@ -181,6 +180,8 @@ do
     # room 0.3 # size 0.4
     # pan (rand)  -- Random stereo placement
 
+  -- Extended channels d17-d24 (now available after BootTidal.hs modification)
+
   -- Arp: 16th note melodic element, 1-6kHz
   d17 $ fast 4 $ note (scale "minor" "0 3 5 7 5 3 0 -5")
     # s "supersquare"
@@ -192,11 +193,10 @@ do
     # delay 0.3 # delaytime (1/16 * 1.5) # delayfb 0.4  -- Dotted 16th delay
     # pan (fast 8 $ range 0.2 0.8 rand)
 
--- ===============================================
--- BREAKDOWN SECTION (32-48 bars)
--- ===============================================
+  -- ===============================================
+  -- BREAKDOWN SECTION (32-48 bars)
+  -- ===============================================
 
-do
   -- Strip drums, keep atmospheric elements
   -- Introduce riser and build tension
 
@@ -214,11 +214,10 @@ do
     # gain 1.2
     # accelerate (-1)  -- Pitch drop effect
 
--- ===============================================
--- DROP SECTION - FULL ENERGY
--- ===============================================
+  -- ===============================================
+  -- DROP SECTION - FULL ENERGY
+  -- ===============================================
 
-do
   -- Reintroduce all drum layers
   -- Add distortion bus for aggression
 
@@ -239,11 +238,10 @@ do
     # pan (fast 2 $ range 0.2 0.8 rand)
     # crush 4  -- Gritty texture
 
--- ===============================================
--- FX & TRANSITIONS
--- ===============================================
+  -- ===============================================
+  -- FX & TRANSITIONS
+  -- ===============================================
 
-do
   -- Vinyl stop effect (every 32 bars)
   d22 $ slow 32 $ s "bd:0"
     # accelerate (-12)  -- Dramatic pitch drop
@@ -262,24 +260,6 @@ do
     # crush 8  -- Heavy bit reduction
     # speed (fast 16 $ range 0.5 2 $ rand)
     # pan (fast 16 $ rand)
-
--- ===============================================
--- MASTERING CHAIN SIMULATION
--- ===============================================
-
-do
-  -- Apply gentle compression via gain staging
-  -- EQ curve: Sub boost, mid scoop, high-end air
-
-  -- All drums ducking slightly on kick (sidechain)
-  d7 $ fast 4 $ s "hh27*16"
-    # gain (range 0.4 0.85 $ fast 4 $ saw)  -- Pumping effect
-
-  -- Stereo widener on high-frequency elements
-  d9 $ fast 8 $ s "shaker*8"
-    # gain 0.4
-    # hpf 10000
-    # pan (fast 16 $ range 0 1 $ rand)  -- Maximum width
 
 -- ===============================================
 -- ARRANGEMENT NOTES
@@ -325,4 +305,9 @@ do
 -- Pads: -20dB (background)
 -- FX: -18dB to -24dB (context-dependent)
 
-
+-- ===============================================
+-- TO START THE TRACK, EVALUATE THE ENTIRE FILE
+-- OR USE hush TO SILENCE ALL CHANNELS
+-- Use solo 1 or solo 2 to hear individual channels
+-- Use unmute to reactivate all channels
+-- ===============================================
