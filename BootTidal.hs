@@ -35,6 +35,6 @@ let d17 = streamReplace tidal 16
     d23 = streamReplace tidal 22
     d24 = streamReplace tidal 23
 :}
-
+:script "/Users/andrewgrosser/Documents/tidal/mi-UGens/Setup/mi-ugens-params.hs"
 :set prompt "tidal> "
 :set prompt-cont ""

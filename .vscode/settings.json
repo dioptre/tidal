@@ -3,7 +3,7 @@
         "*.tidal": "haskell"
     },
 
-    "tidalcycles.ghciPath" : "ghci",
+    "tidalcycles.ghciPath" : "/Users/andrewgrosser/.ghcup/bin/ghci",
     "tidalcycles.feedbackColor": "rgba(100,250,100,0.5)",
     "tidalcycles.useStackGhci": false,
     "tidalcycles.bootTidalPath": "/Users/andrewgrosser/Documents/tidal/BootTidal.hs",

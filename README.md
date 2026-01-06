@@ -55,6 +55,7 @@ s.reboot { // server options are only updated on reboot
 	s.waitForBoot {
 		~dirt.stop; // stop any old ones, avoid duplicate dirt (if it is nil, this won't do anything)
 		~dirt = SuperDirt(2, s); // two output channels, increase if you want to pan across more channels
+		load("/Users/andrewgrosser/Library/Application Support/SuperCollider/synthdefs/mi-ugens.scd");
 		~dirt.loadSoundFiles;
 		~dirt.loadSoundFiles("/Users/andrewgrosser/Documents/tidal/samples-extra/*");   // load samples (path containing a wildcard can be passed in)
 		// for example: ~dirt.loadSoundFiles("/Users/myUserName/Dirt/samples/*");
@@ -68,11 +69,20 @@ s.reboot { // server options are only updated on reboot
 			~d7 = ~dirt.orbits[6]; ~d8 = ~dirt.orbits[7]; ~d9 = ~dirt.orbits[8];
 			~d10 = ~dirt.orbits[9]; ~d11 = ~dirt.orbits[10]; ~d12 = ~dirt.orbits[11];
 		);
+		~dirt.orbits.do { |x|
+            var clouds = GlobalDirtEffect(\global_mi_clouds, [\cloudspitch, \cloudspos, \cloudssize, \cloudsdens, \cloudstex, \cloudswet, \cloudsgain, \cloudsspread, \cloudsrvb, \cloudsfb, \cloudsfreeze, \cloudsmode, \cloudslofi]);
+            var verb = GlobalDirtEffect(\global_mi_verb, [\verbwet, \verbtime, \verbdamp, \verbhp, \verbfreeze, \verbdiff, \verbgain]);
+            x.globalEffects = x.globalEffects
+              .addFirst(clouds)
+              .addFirst(verb); 
+            x.initNodeTree;    
+        };    
 	};
 
 	s.latency = 0.3; // increase this if you get "late" messages
 };
 );
+
 
 ```
 5. Add more synths from https://tidalcycles.org/docs/reference/mi-ugens-installation 
@@ -453,7 +463,11 @@ This should be followed by:
 
 Restart SuperCollider to apply all changes.
 
-> **Note for macOS Users**: You may see a security dialog preventing the UGens from running. See [this post](https://discourse.tidalcycles.org/) for workarounds and fixes.
+> **Note for macOS Users**: You may see a security dialog preventing the UGens from running. See [this post](https://discourse.tidalcycles.org/) for workarounds and fixes. Try this from the extensions subdirectory.
+
+```
+xattr -d com.apple.quarantine *
+```
 
 ## Troubleshooting
 

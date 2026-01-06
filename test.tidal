@@ -334,7 +334,7 @@ d1  $ s "braids" <| note "a [~ g] [c b] [g gs]"
     # model (slow 48 $ run 48)
     # timbre (slow 3 sine)
     # color (saw)
-    
+
 -- The Euclidean Algorithm Generates Traditional Musical Rhythms by Toussaint
 -- (2,5) : A thirteenth century Persian rhythm called Khafif-e-ramal.
 -- (3,4) : The archetypal pattern of the Cumbia from Colombia, as well as a Calypso rhythm from Trinidad.
