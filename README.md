@@ -12,6 +12,8 @@ ls ~/.pulsar/packages/tidalcycles/node_modules/osc-min/Applications/SuperCollide
 cabal install tidal
 ```
 
+Get this if you use vs code https://marketplace.visualstudio.com/items?itemName=tidalcycles.vscode-tidalcycles
+
 Add this to .zshrc
 ```
 export PATH="/Applications/SuperCollider.app/Contents/MacOS:$PATH"
