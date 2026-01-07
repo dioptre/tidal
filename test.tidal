@@ -1072,7 +1072,8 @@ d1 $ s "frog:0(5,8)"
 # cutoff (range 200 1000 $ (slow 4.5 sine * slow 6.3 sine))               -- Smooth dual sine LFO
 # resonance (range 0.3 0.7 $ slow 3.2 $ sine)                             -- Gentle resonance sweep
 # shape (range 0.5 0.75 $ slow 8 $ sine)                                  -- Warm distortion
-# crush 5                                                                  -- Subtle bitcrush texture
+# crush 5     
+-- # coarse 8                                                             -- Subtle bitcrush texture
 # legato "<2>"                                                     -- Smooth note lengths
 # voice (slow 5 $ range 0.25 0.6 $ sine)                                  -- Gentle wave morphing
 # pan (slow 12 $ sine)                                                     -- Slow stereo drift
