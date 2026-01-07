@@ -22,6 +22,7 @@ s.reboot { // server options are only updated on reboot
         load("/Users/andrewgrosser/Documents/tidal/effects/convolveir/convolution-effect.scd");
 		~dirt.loadSoundFiles;
 		~dirt.loadSoundFiles("/Users/andrewgrosser/Documents/tidal/samples-extra/*");   // load samples (path containing a wildcard can be passed in)
+		~dirt.loadSoundFiles("/Users/andrewgrosser/Documents/tidal/sounds/bbc/*");
 		// for example: ~dirt.loadSoundFiles("/Users/myUserName/Dirt/samples/*");
 		// s.sync; // optionally: wait for samples to be read
 		~dirt.start(57120, 0 ! 12);   // start listening on port 57120, create two busses each sending audio to channel 0

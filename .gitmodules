@@ -1,0 +1,3 @@
+[submodule "sounds"]
+	path = sounds
+	url = git@github.com:dioptre/sounds.git
