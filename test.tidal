@@ -876,6 +876,140 @@ d1 $ s "supersquare*<8 16 12>" # n "c3 <e3 g3> <c3 f3>"
   # pan (slow 8 $ sine)                                        -- Slow stereo movement
   # room (range 0.1 0.4 $ slow 11 $ sine)                     -- Subtle reverb modulation
 
+-- YOI WAVE - SMOOTH BASS VERSION with modulation
+d1 $ s "supersquare*<8 12 16>" # n "<c2 [e2 g2] <f2 bf2> [c2 d2]>"
+  # cutoff (range 200 2000 $ (slow 4.5 sine * slow 6.3 sine))               -- Smooth dual sine LFO
+  # resonance (range 0.3 0.7 $ slow 3.2 $ sine)                             -- Gentle resonance sweep
+  # shape (range 0.5 0.75 $ slow 8 $ sine)                                  -- Warm distortion
+  # crush 5                                                                  -- Subtle bitcrush texture
+  # legato "<1.2 1 0.8>"                                                     -- Smooth note lengths
+  # voice (slow 5 $ range 0.25 0.6 $ sine)                                  -- Gentle wave morphing
+  # pan (slow 12 $ sine)                                                     -- Slow stereo drift
+  # room (range 0.2 0.4 $ slow 16 $ sine)                                   -- Subtle reverb movement
+  # lpf (range 300 800 $ slow 7 $ sine)                                     -- Low-pass for bass focus
+  # gain 1.15                                                                -- Boost for presence
+  # octave 2
+
+-- YOI WAVE - DEEP SUB BASS VERSION (lower frequencies)
+d1 $ s "supersquare*<8 12 16>" # n "<c1 [e1 g1] <f1 bf1> [c1 d1]>"
+  # cutoff (range 80 600 $ (slow 4.5 sine * slow 6.3 sine))                 -- Lower cutoff range for deep bass
+  # resonance (range 0.4 0.75 $ slow 3.2 $ sine)                            -- Boosted resonance for presence
+  # shape (range 0.6 0.8 $ slow 8 $ sine)                                   -- Warm saturation
+  # crush 5                                                                  -- Subtle bitcrush texture
+  # legato "<1.5 1.2 1>"                                                     -- Longer notes for sub weight
+  # voice (slow 5 $ range 0.3 0.65 $ sine)                                  -- Wave morphing in low range
+  # pan (slow 16 $ sine)                                                     -- Very slow stereo movement
+  # room (range 0.15 0.3 $ slow 20 $ sine)                                  -- Subtle reverb
+  # lpf (range 120 350 $ slow 9 $ sine)                                     -- Very low-pass for sub focus
+  # gain 1.3                                                                 -- Extra gain for sub presence
+  # octave 1                                                                 -- Sub bass octave (40-80Hz range)
+
+-- YOI WAVE - DEEP SUB BASS with mi-UGens (rings resonator + ripples filter + mu distortion)
+d1 $ s "supersquare*<8 12 16>" # n "<c1 [e1 g1] <f1 bf1> [c1 d1]>"
+  # cutoff (range 80 600 $ (slow 4.5 sine * slow 6.3 sine))                 -- Lower cutoff range
+  # resonance (range 0.4 0.75 $ slow 3.2 $ sine)                            -- Boosted resonance
+  # shape (range 0.6 0.8 $ slow 8 $ sine)                                   -- Warm saturation
+  # crush 5                                                                  -- Bitcrush texture
+  # legato "<1.5 1.2 1>"                                                     -- Longer notes
+  # voice (slow 5 $ range 0.3 0.65 $ sine)                                  -- Wave morphing
+  # pan (slow 16 $ sine)                                                     -- Slow stereo movement
+  # gain 1.1                                                                 -- Adjusted for mi-UGens processing
+  # octave 1
+  # rings 60 (slow 11 $ range 0.3 0.8 $ sine) 0.6 (slow 7 $ range 0.4 0.9 $ sine) 0.85  -- Resonator adds harmonic richness
+  # ringsmodel 1                                                             -- Sympathetic string model
+  # ringspoly 1                                                              -- Polyphonic mode
+  # ripplescf (slow 6 $ range 0.2 0.6 $ sine)                               -- Analog filter sweep
+  # ripplesreson (range 0.5 0.85 $ slow 5 $ sine)                           -- Filter resonance modulation
+  # ripplesdrive (range 1 3 $ slow 9 $ sine)                                -- Analog drive for warmth
+  # mu (range 3 6 $ slow 13 $ sine)                                         -- Low frequency distortion/saturation
+
+-- YOI WAVE - CLOUDS (granular texture processor)
+d1 $ s "supersquare*<8 12 16>" # n "<c2 [e2 g2] <f2 bf2> [c2 d2]>"
+  # cutoff (range 200 1800 $ (slow 4.5 sine * slow 6.3 sine))               -- Smooth dual sine LFO
+  # resonance (range 0.3 0.65 $ slow 3.2 $ sine)                            -- Gentle resonance
+  # shape (range 0.5 0.7 $ slow 8 $ sine)                                   -- Moderate distortion
+  # crush 5                                                                  -- Bitcrush texture
+  # legato "<1.2 1 0.8>"                                                     -- Smooth note lengths
+  # voice (slow 5 $ range 0.3 0.6 $ sine)                                   -- Wave morphing
+  # pan (slow 12 $ sine)                                                     -- Stereo movement
+  # gain 0.9                                                                 -- Adjusted for clouds processing
+  # octave 2
+  # clouds (slow 7 $ range 0.3 0.7 $ sine) (slow 9 $ range 0.4 0.8 $ sine) (slow 11 $ range 0.05 0.15 $ sine) 0.1  -- Granular magic
+  # cloudsblend (slow 13 $ range 0.6 0.95 $ sine) (slow 5 $ range 0.2 0.4 $ sine) 0.33 (slow 17 $ range 0.6 0.9 $ sine)  -- Blend controls
+
+-- YOI WAVE - BRAIDS (macro oscillator with multiple synthesis models)
+d1 $ s "braids*<8 12 16>" # note "<c2 [e2 g2] <f2 bf2> [c2 d2]>"
+  # legato "<1.2 1 0.8>"                                                     -- Smooth note lengths
+  # model (slow 32 $ run 48)                                                 -- Slowly cycle through all 48 synthesis models
+  # timbre (slow 5 $ range 0.3 0.8 $ sine)                                  -- Timbre modulation
+  # color (slow 7 $ range 0.2 0.9 $ (sine * saw))                           -- Color/tone modulation
+  # pan (slow 12 $ sine)                                                     -- Stereo movement
+  # crush 5                                                                  -- Bitcrush for character
+  # cutoff (range 300 2000 $ slow 6 $ sine)                                 -- Filter sweep
+  # resonance (range 0.3 0.6 $ slow 4 $ sine)                               -- Filter resonance
+  # gain 0.95                                                                -- Balanced level
+  # room (range 0.2 0.4 $ slow 16 $ sine)                                   -- Subtle reverb
+
+-- YOI WAVE - PLAITS (macro oscillator with 16 synthesis engines)
+d1 $ s "plaits*<8 12 16>" # note "<c2 [e2 g2] <f2 bf2> [c2 d2]>"
+  # legato "<1.2 1 0.8>"                                                     -- Smooth note lengths
+  # engine (slow 16 $ segment 16 $ run 16)                                  -- Cycle through all 16 engines
+  # timbre (slow 5 $ range 0.3 0.8 $ sine)                                  -- Timbre control
+  # harm (slow 7 $ range 0.2 0.8 $ saw)                                     -- Harmonics modulation
+  # morph (slow 9 $ range 0.3 0.85 $ (sine * saw))                          -- Morphing between modes
+  # level (slow 6 $ range 0.6 0.95 $ sine)                                  -- Level modulation
+  # pan (slow 12 $ sine)                                                     -- Stereo movement
+  # crush 5                                                                  -- Bitcrush
+  # cutoff (range 300 2200 $ slow 8 $ sine)                                 -- Filter sweep
+  # gain 0.9                                                                 -- Balanced level
+  # room (range 0.2 0.45 $ slow 14 $ sine)                                  -- Reverb wash
+
+-- YOI WAVE - TIDES (tidal modulator as oscillator/LFO)
+d1 $ s "tides*<8 12 16>" # note "<c2 [e2 g2] <f2 bf2> [c2 d2]>"
+  # legato "<1.2 1 0.8>"                                                     -- Smooth note lengths
+  # mode (slow 32 $ segment 4 "<0 1 2 3>")                                  -- Cycle through 4 modes
+  # shift (slow 5 $ range 0.2 0.8 $ sine)                                   -- Frequency shift/modulation
+  # tidesshape (slow 7 $ range 0.3 0.9 $ sine)                              -- Waveform shape
+  # tidessmooth (range 0.3 0.9 $ slow 8 $ sine)                             -- Smoothness control
+  # slope (slow 9 $ range 0.2 0.8 $ saw)                                    -- Slope modulation
+  # pan (slow 12 $ sine)                                                     -- Stereo movement
+  # crush 5                                                                  -- Bitcrush
+  # cutoff (range 250 1800 $ slow 6 $ sine)                                 -- Filter sweep
+  # resonance (range 0.3 0.65 $ slow 4 $ sine)                              -- Filter resonance
+  # gain 1.0                                                                 -- Balanced level
+  # room (range 0.25 0.4 $ slow 15 $ sine)                                  -- Subtle reverb
+
+-- YOI WAVE - VERB (with miVerb global reverb effect)
+d1 $ s "supersquare*<8 12 16>" # n "<c2 [e2 g2] <f2 bf2> [c2 d2]>"
+  # cutoff (range 300 1800 $ (slow 4.5 sine * slow 6.3 sine))               -- Smooth dual sine LFO
+  # resonance (range 0.3 0.65 $ slow 3.2 $ sine)                            -- Gentle resonance
+  # shape (range 0.5 0.7 $ slow 8 $ sine)                                   -- Moderate distortion
+  # crush 5                                                                  -- Bitcrush texture
+  # legato "<1.2 1 0.8>"                                                     -- Smooth note lengths
+  # voice (slow 5 $ range 0.3 0.6 $ sine)                                   -- Wave morphing
+  # pan (slow 12 $ sine)                                                     -- Stereo movement
+  # gain 0.85                                                                -- Lower for verb space
+  # octave 2
+  # verb (slow 11 $ range 0.7 0.95 $ sine) (slow 13 $ range 0.8 0.95 $ sine) (slow 7 $ range 0.05 0.2 $ sine) (slow 9 $ range 0.15 0.3 $ sine)  -- miVerb: time, damping, input gain, diffusion
+
+-- YOI WAVE - EXTREME DISTORTION & CHAOS VERSION
+d1 $ degradeBy 0.2 $ every 3 (rev) $ every 5 (fast "<2 1.5>")
+  $ s "supersquare*<7 13 11 16 9>" # n "<c3 [e3 fs3] <g3 bf3> [c3 d3 f3]>"
+  # cutoff (range 100 5000 $ (slow 2.7 sine * slow 4.3 square + slow 6.1 saw) / 2)  -- Chaotic triple LFO
+  # resonance (range 0.2 0.95 $ slow 1.9 $ (sine * square))                         -- Aggressive resonance
+  # shape (range 0.7 1.0 $ slow 5.3 $ (saw + square) / 2)                          -- Heavy distortion
+  # distort (range 0.3 0.8 $ slow 3.1 $ sine)                                       -- Extra distortion layer
+  # crush (choose [2, 3, 4, 5, 7, 9])                                               -- Random extreme bitcrush
+  # coarse (choose [1, 2, 4, 8, 16, 32])                                            -- Harsh downsampling
+  # legato "<0.3 1.5 0.7 2 0.5>"                                                    -- Erratic note lengths
+  # voice (slow 3.7 $ range 0.1 0.9 $ (saw * sine + square) / 2)                   -- Extreme wave morphing
+  # squiz "<0 2 4 8 16>"                                                             -- Pitch glitching
+  # pan (fast 3 $ (sine * saw))                                                      -- Chaotic panning
+  # room (range 0.05 0.5 $ slow 7.7 $ square)                                       -- Jumping reverb
+  # hpf (range 20 400 $ slow 11 $ saw)                                              -- Filter out lows randomly
+  # gain (range 0.9 1.1 $ fast 8 $ sine)                                            -- Volume fluctuation
+  # speed "<1 0.99 1.01 0.98>"                                                      -- Detuning drift
+
 -- PSYDUB EXAMPLE - Deep bass, delays, and dub effects
 do
   -- Heavy sub bass with filter sweeps
@@ -928,4 +1062,5 @@ do
     # pan (fast 4 $ sine)
     # gain 0.6
 
+hush
 
