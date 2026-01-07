@@ -4,6 +4,8 @@
 
 This is a rapid start for people wanting to get started with Tidal esp on a Mac. All the files and a lot of getting started info in a single place. Thanks to tidalcycles.org. See ./test.tidal for a lot of examples. This is more of a complete setup than a piece-meal introduction through the official docs.
 
+Put the repo in ~/Documents/tidal and change my name to yours in all references.
+
 ### Install
 
 
