@@ -1062,5 +1062,10 @@ do
     # pan (fast 4 $ sine)
     # gain 0.6
 
+
+d1 $ s "frog(5,8)" # begin 0.1 # end 0.12 # speed 0.1
+
+
+d1 silence
 hush
 
