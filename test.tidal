@@ -1095,6 +1095,11 @@ d5 $ s "gtr:2*10"
 # speed (cat [choose [1, 2, 3, 4, 5]] <> "1 2 2.25 1.5 0.5 0.25")
 # room "0.9"
 # size "0.99"
+-- # gain 0.7
+
+d5 silence
+d4 silence
+d2 silence
 
 d1 silence
 hush
