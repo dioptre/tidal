@@ -1086,19 +1086,24 @@ d2 "hh hh hh hh hh [hh hh hh]"
 
 d3 "bass ~ ~"
 
-d4 "kick:4"
+d1 $ stack
+  [ note "<d4 c4 a3 bf3>" # s "bass1:18" # legato 1 # metatune 1
+  , note "[~ d5'min'o]*4" # s "gtr" # release 0.4
+  ] # gain 0.9
 
-d5 $ s "gtr:2*10" 
+
+d5 $ s "tabla:1*10" 
 #att "0.0001"
 # hold "0.1"
 # rel "0.001"
 # speed (cat [choose [1, 2, 3, 4, 5]] <> "1 2 2.25 1.5 0.5 0.25")
 # room "0.9"
 # size "0.99"
--- # gain 0.7
+# gain 1.3
 
 d5 silence
 d4 silence
+d3 silence
 d2 silence
 
 d1 silence
