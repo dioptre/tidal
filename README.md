@@ -123,6 +123,13 @@ s.reboot { // server options are only updated on reboot
 SuperDirt.start;
 ```
 
+### Recording
+
+```
+s.record;
+s.stopRecording;
+```	
+
 ### Debug Supercollider
 
 This didn't really help but leaving here for posterity.
