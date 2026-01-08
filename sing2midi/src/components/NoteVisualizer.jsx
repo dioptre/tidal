@@ -391,7 +391,11 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, onNotesChange
     const minMidi = Math.min(...allMidiNotes) - 2;
     const maxMidi = Math.max(...allMidiNotes) + 2;
     const midiRange = maxMidi - minMidi || 12;
-    const noteHeight = (height / midiRange) * 0.8;
+
+    // Apply zoom and pan transformations (same as drawNotes)
+    const midiRangeAdjusted = isRecording ? midiRange : (midiRange / zoomY);
+    const minMidiAdjusted = isRecording ? minMidi : (minMidi + panOffsetY);
+    const noteHeight = (height / midiRangeAdjusted) * 0.8;
 
     // Find note that contains this position (only check ML notes for interaction)
     for (let i = 0; i < mlNotes.length; i++) {
@@ -399,8 +403,8 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, onNotesChange
       const noteStart = note.startTime;
       const noteEnd = note.startTime + note.duration;
 
-      // Calculate note's vertical bounds
-      const noteY = height - ((note.midiNote - minMidi) / midiRange) * height;
+      // Calculate note's vertical bounds using adjusted MIDI range
+      const noteY = height - ((note.midiNote - minMidiAdjusted) / midiRangeAdjusted) * height;
       const noteTop = noteY - noteHeight / 2;
       const noteBottom = noteY + noteHeight / 2;
 
@@ -426,12 +430,12 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, onNotesChange
     const noteStart = note.startTime;
     const noteEnd = note.startTime + note.duration;
 
-    // Get canvas dimensions for time scale
+    // Get canvas dimensions for time scale (with zoom applied)
     const rect = canvas.getBoundingClientRect();
     const width = rect.width;
     const maxTime = Math.max(...notes.map(n => (n.startTime || 0) + (n.duration || 0)));
     const totalTime = Math.max(maxTime, 5);
-    const timeScale = width / totalTime;
+    const timeScale = isRecording ? (width / totalTime) : ((width / totalTime) * zoomX); // Apply zoom
 
     // Calculate time threshold for edge detection (8-10px in time units)
     const edgeThreshold = 10 / timeScale; // 10px converted to time
