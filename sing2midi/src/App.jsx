@@ -26,10 +26,15 @@ export default function App() {
   const [settingsPanelVisible, setSettingsPanelVisible] = useState(false); // Settings panel visibility
   const [isProcessing, setIsProcessing] = useState(false); // Processing state after recording stops
   const [lastAudioBlob, setLastAudioBlob] = useState(null); // Store the last recorded audio blob
+  const [hoverNote, setHoverNote] = useState(null); // Note being hovered over
+  const [undoStack, setUndoStack] = useState([]); // Undo history
+  const [fftData, setFftData] = useState(null); // FFT data for raw mode visualization
   const pitchDetectorRef = useRef(null);
   const audioContextRef = useRef(null);
   const audioElementRef = useRef(null); // For playing recorded audio
+  const playbackTimeoutRef = useRef(null); // For stopping playback timeout
   const spinnerRotation = useRef(new Animated.Value(0)).current;
+  const saveTimeoutRef = useRef(null); // For debounced save
 
   // Animate spinner rotation
   useEffect(() => {
@@ -116,6 +121,13 @@ export default function App() {
     } else {
       console.log('Not recording, ignoring live detection');
       setCurrentLiveNote(null);
+    }
+  };
+
+  const handleFFTData = (dataArray) => {
+    // Update FFT data for raw mode visualization
+    if (isRecording && !voiceMode) {
+      setFftData(dataArray);
     }
   };
 
@@ -215,6 +227,24 @@ export default function App() {
   };
 
   const handlePlayback = async () => {
+    // Stop if already playing
+    if (isPlaying) {
+      // Clear timeout
+      if (playbackTimeoutRef.current) {
+        clearTimeout(playbackTimeoutRef.current);
+        playbackTimeoutRef.current = null;
+      }
+
+      // Close and recreate audio context to stop all oscillators
+      if (audioContextRef.current) {
+        await audioContextRef.current.close();
+        audioContextRef.current = null;
+      }
+
+      setIsPlaying(false);
+      return;
+    }
+
     if (notes.length === 0) {
       alert('No notes to play!');
       return;
@@ -229,10 +259,8 @@ export default function App() {
 
     setIsPlaying(true);
 
-    // Create or reuse audio context
-    if (!audioContextRef.current) {
-      audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
-    }
+    // Create new audio context
+    audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
     const audioContext = audioContextRef.current;
 
     // Sort notes by start time
@@ -271,8 +299,9 @@ export default function App() {
     const totalDuration = (lastNote.startTime + lastNote.duration) * 1000;
 
     // Reset playing state after playback completes
-    setTimeout(() => {
+    playbackTimeoutRef.current = setTimeout(() => {
       setIsPlaying(false);
+      playbackTimeoutRef.current = null;
     }, totalDuration);
   };
 
@@ -364,15 +393,99 @@ export default function App() {
     console.log(`Session loaded: ${restoredNotes.length} notes restored`);
   };
 
+  // Handle note changes from visualizer (drag, create, delete)
+  const handleNotesChange = (updatedNotes) => {
+    // Save current state to undo stack
+    setUndoStack(prev => [...prev, notes]);
+
+    // Update notes
+    setNotes(updatedNotes);
+
+    // Regenerate patterns with debounce
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    saveTimeoutRef.current = setTimeout(() => {
+      const mlNotes = updatedNotes.filter(n => n.isML);
+      if (mlNotes.length > 0) {
+        const tidalPattern = TidalGenerator.generatePattern(mlNotes);
+        const strudelPattern = TidalGenerator.generateStrudelPattern(mlNotes);
+        const noteNamesList = TidalGenerator.generateNoteNames(mlNotes);
+
+        setTidalCode(tidalPattern);
+        setStrudelCode(strudelPattern);
+        setNoteNames(noteNamesList);
+
+        console.log('Patterns regenerated after note edit');
+
+        // Auto-save session
+        if (lastAudioBlob) {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const sessionData = {
+              notes: mlNotes,
+              tidalCode: tidalPattern,
+              strudelCode: strudelPattern,
+              noteNames: noteNamesList,
+              audioBase64: reader.result,
+              voiceMode: voiceMode,
+            };
+            Storage.saveSession(sessionData);
+            console.log('Session auto-saved after edit');
+          };
+          reader.readAsDataURL(lastAudioBlob);
+        }
+      }
+    }, 1000); // 1 second debounce
+  };
+
+  // Handle undo
+  const handleUndo = () => {
+    if (undoStack.length === 0) return;
+
+    const previousNotes = undoStack[undoStack.length - 1];
+    setUndoStack(prev => prev.slice(0, -1));
+    setNotes(previousNotes);
+
+    // Regenerate patterns immediately
+    const mlNotes = previousNotes.filter(n => n.isML);
+    if (mlNotes.length > 0) {
+      const tidalPattern = TidalGenerator.generatePattern(mlNotes);
+      const strudelPattern = TidalGenerator.generateStrudelPattern(mlNotes);
+      const noteNamesList = TidalGenerator.generateNoteNames(mlNotes);
+
+      setTidalCode(tidalPattern);
+      setStrudelCode(strudelPattern);
+      setNoteNames(noteNamesList);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.visualizerContainer}>
-        <NoteVisualizer notes={notes} isRecording={isRecording} debugShowComparison={DEBUG_SHOW_COMPARISON} />
+        <NoteVisualizer
+          notes={notes}
+          isRecording={isRecording}
+          debugShowComparison={DEBUG_SHOW_COMPARISON}
+          onNotesChange={handleNotesChange}
+          hoverNote={hoverNote}
+          onHoverNoteChange={setHoverNote}
+          fftData={fftData}
+          voiceMode={voiceMode}
+        />
 
         {/* Live note overlay - top left during recording */}
         {isRecording && currentLiveNote && (
           <View style={styles.liveNoteOverlay}>
             <Text style={styles.liveNoteText}>{currentLiveNote}</Text>
+          </View>
+        )}
+
+        {/* Hover note overlay - top left when not recording */}
+        {!isRecording && hoverNote && (
+          <View style={styles.liveNoteOverlay}>
+            <Text style={styles.liveNoteText}>{hoverNote}</Text>
           </View>
         )}
 
@@ -463,11 +576,19 @@ export default function App() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.button, styles.smallButton, styles.playButton, (notes.length === 0 || isPlaying) && styles.disabledButton]}
-            onPress={handlePlayback}
-            disabled={notes.length === 0 || isPlaying}
+            style={[styles.button, styles.smallButton, styles.undoButton, undoStack.length === 0 && styles.disabledButton]}
+            onPress={handleUndo}
+            disabled={undoStack.length === 0}
           >
-            <Text style={[styles.buttonText, styles.smallButtonText]}>{isPlaying ? 'Playing...' : '▷'}</Text>
+            <Text style={[styles.buttonText, styles.smallButtonText]}>↩️</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.button, styles.smallButton, styles.playButton, notes.length === 0 && styles.disabledButton]}
+            onPress={handlePlayback}
+            disabled={notes.length === 0}
+          >
+            <Text style={[styles.buttonText, styles.smallButtonText]}>{isPlaying ? '■' : '▷'}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -491,7 +612,7 @@ export default function App() {
             onPress={handleExportMIDI}
             disabled={notes.length === 0}
           >
-            <Text style={[styles.buttonText, styles.smallButtonText]}>MIDI</Text>
+            <Text style={[styles.buttonText, styles.smallButtonText]}>MIDI 🎶</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -499,7 +620,7 @@ export default function App() {
             onPress={() => showDialog('Note Names', noteNames || 'No notes available')}
             disabled={notes.length === 0}
           >
-            <Text style={[styles.buttonText, styles.smallButtonText]}>🎼</Text>
+            <Text style={[styles.buttonText, styles.smallButtonText]}>Notes 🎼</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -564,6 +685,7 @@ export default function App() {
         ref={pitchDetectorRef}
         onNoteDetected={handleNoteDetected}
         onLiveDetection={handleLiveDetection}
+        onFFTData={handleFFTData}
         onProcessingComplete={handleProcessingComplete}
         onAudioCaptured={handleAudioCaptured}
         voiceMode={voiceMode}
@@ -714,8 +836,11 @@ const styles = StyleSheet.create({
   clearButton: {
     backgroundColor: '#444444',
   },
+  undoButton: {
+    backgroundColor: '#8844ff',
+  },
   exportButton: {
-    backgroundColor: '#44ff44',
+    backgroundColor: '#0c500cff',
   },
   playButton: {
     backgroundColor: '#4488ff',
@@ -730,7 +855,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ff8844',
   },
   tidalButton: {
-    backgroundColor: '#44ff88',
+    backgroundColor: '#1b6b8dff',
   },
   strudelButton: {
     backgroundColor: '#ff4488',

@@ -72,6 +72,14 @@ class PitchDetector extends Component {
               isLive: true
             });
           }
+        } else {
+          // In raw mode, send FFT data for visualization
+          const bufferLength = this.analyser.frequencyBinCount;
+          const dataArray = new Uint8Array(bufferLength);
+          this.analyser.getByteFrequencyData(dataArray);
+
+          // Send FFT data to visualizer (throttled to every frame)
+          this.props.onFFTData?.(dataArray);
         }
       };
 
