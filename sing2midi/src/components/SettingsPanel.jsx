@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal, ScrollView } from 'react-native';
 import Storage from '../utils/Storage';
+import * as Colors from '../styles/colors';
 
 const SettingsPanel = ({ visible, onClose, onLoadSession }) => {
   const [sessions, setSessions] = useState([]);
@@ -152,12 +153,12 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   panel: {
-    backgroundColor: '#1a1a1a',
+    backgroundColor: Colors.BG_SECONDARY,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     maxHeight: '80%',
     borderWidth: 1,
-    borderColor: '#333333',
+    borderColor: Colors.BORDER_PRIMARY,
     borderBottomWidth: 0,
   },
   header: {
@@ -166,12 +167,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#333333',
+    borderBottomColor: Colors.BORDER_PRIMARY,
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#ffffff',
+    color: Colors.TEXT_PRIMARY,
+    fontFamily: Colors.FONT_UI,
   },
   closeButton: {
     width: 32,
@@ -179,11 +181,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 16,
-    backgroundColor: '#333333',
+    backgroundColor: Colors.SLATE_GRAY,
   },
   closeButtonText: {
     fontSize: 18,
-    color: '#ffffff',
+    color: Colors.TEXT_PRIMARY,
     fontWeight: 'bold',
   },
   storageInfo: {
@@ -192,24 +194,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 12,
-    backgroundColor: '#0a0a0a',
+    backgroundColor: Colors.BG_PRIMARY,
     borderBottomWidth: 1,
-    borderBottomColor: '#333333',
+    borderBottomColor: Colors.BORDER_PRIMARY,
   },
   storageInfoText: {
     fontSize: 13,
-    color: '#888888',
+    color: Colors.TEXT_SECONDARY,
+    fontFamily: Colors.FONT_TECHNICAL,
   },
   clearAllButton: {
     paddingHorizontal: 12,
     paddingVertical: 6,
-    backgroundColor: '#ff4444',
+    backgroundColor: Colors.STUDIO_RED,
     borderRadius: 6,
   },
   clearAllText: {
     fontSize: 12,
-    color: '#ffffff',
+    color: Colors.TEXT_PRIMARY,
     fontWeight: '600',
+    fontFamily: Colors.FONT_UI,
   },
   content: {
     padding: 20,
@@ -217,17 +221,18 @@ const styles = StyleSheet.create({
   },
   placeholderText: {
     fontSize: 16,
-    color: '#888888',
+    color: Colors.TEXT_SECONDARY,
     textAlign: 'center',
     marginTop: 40,
+    fontFamily: Colors.FONT_UI,
   },
   sessionCard: {
-    backgroundColor: '#0a0a0a',
+    backgroundColor: Colors.BG_PRIMARY,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#333333',
+    borderColor: Colors.BORDER_PRIMARY,
   },
   sessionHeader: {
     flexDirection: 'row',
@@ -237,14 +242,22 @@ const styles = StyleSheet.create({
   },
   sessionDate: {
     fontSize: 14,
-    color: '#ffffff',
+    color: Colors.TEXT_PRIMARY,
     fontWeight: '600',
+    fontFamily: Colors.FONT_UI,
   },
   deleteButton: {
     padding: 4,
+    width: 28,
+    height: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 4,
+    backgroundColor: '#000000',
   },
   deleteButtonText: {
     fontSize: 16,
+    opacity: 0.6,
   },
   sessionDetails: {
     flexDirection: 'row',
@@ -256,18 +269,20 @@ const styles = StyleSheet.create({
   },
   sessionStatValue: {
     fontSize: 18,
-    color: '#4488ff',
+    color: Colors.WAVEFORM_BLUE,
     fontWeight: 'bold',
     marginBottom: 2,
+    fontFamily: Colors.FONT_TECHNICAL,
   },
   sessionStatLabel: {
     fontSize: 11,
-    color: '#888888',
+    color: Colors.TEXT_SECONDARY,
+    fontFamily: Colors.FONT_UI,
   },
   sessionPreview: {
     fontSize: 12,
-    color: '#888888',
-    fontFamily: 'monospace',
+    color: Colors.TEXT_SECONDARY,
+    fontFamily: Colors.FONT_TECHNICAL,
     marginTop: 8,
   },
 });

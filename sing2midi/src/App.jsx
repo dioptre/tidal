@@ -7,6 +7,18 @@ import SettingsPanel from './components/SettingsPanel.jsx';
 import TidalGenerator from './utils/TidalGenerator';
 import MIDIExporter from './utils/MIDIExporter';
 import Storage from './utils/Storage';
+import * as Colors from './styles/colors';
+import {
+  ListMusicIcon,
+  PlayIcon,
+  SquareIcon,
+  KeyboardMusicIcon,
+  Trash2Icon,
+  RotateCcwIcon,
+  UploadIcon,
+  DownloadIcon,
+  WaveformIcon
+} from './components/Icons.jsx';
 
 // Debug mode: Show live detections (green) vs ML predictions (blue) side-by-side
 const DEBUG_SHOW_COMPARISON = true;
@@ -224,6 +236,8 @@ export default function App() {
     setTidalCode('');
     setStrudelCode('');
     setNoteNames('');
+    setLastAudioBlob(null);
+    setUndoStack([]);
   };
 
   const handlePlayback = async () => {
@@ -520,14 +534,14 @@ export default function App() {
               style={[styles.button, styles.recordButton]}
               onPress={handleStartRecording}
             >
-              <Text style={styles.buttonText}>Start Recording</Text>
+              <Text style={styles.buttonText}>● Start Recording</Text>
             </TouchableOpacity>
           ) : (
             <TouchableOpacity
               style={[styles.button, styles.stopButton]}
               onPress={handleStopRecording}
             >
-              <Text style={styles.buttonText}>Stop Recording</Text>
+              <Text style={styles.buttonText}>■ Stop Recording</Text>
             </TouchableOpacity>
           )}
 
@@ -536,29 +550,30 @@ export default function App() {
             onPress={() => setVoiceMode(!voiceMode)}
             disabled={isRecording}
           >
-            <Text style={[styles.buttonText, styles.smallButtonText]}>
-              {voiceMode ? '🎤 Voice' : '🤖 Raw'}
-            </Text>
+            <View style={styles.buttonWithIcon}>
+              {voiceMode ? (
+                <Image
+                  source={{ uri: '/assets/img/mic-vocal.png' }}
+                  style={[{ width: 18, height: 18 }, styles.whiteIcon]}
+                />
+              ) : (
+                <WaveformIcon size={18} />
+              )}
+              <Text style={[styles.buttonText, styles.smallButtonText]}>
+                {voiceMode ? 'Voice' : 'Raw'}
+              </Text>
+            </View>
           </TouchableOpacity>
         </View>
 
         {/* Second row: All other buttons */}
         <View style={[styles.buttonRow, styles.secondaryButtonRow]}>
-          <label htmlFor="file-upload" style={{
-            display: 'inline-block',
-            padding: '12px 20px',
-            backgroundColor: '#4444ff',
-            color: '#ffffff',
-            borderRadius: 8,
-            cursor: 'pointer',
-            fontWeight: '600',
-            fontSize: 14,
-            textAlign: 'center',
-            marginRight: 8,
-            opacity: 1
-          }}>
-            Upload
-          </label>
+          <TouchableOpacity
+            style={[styles.button, styles.smallButton, styles.uploadButton]}
+            onPress={() => document.getElementById('file-upload').click()}
+          >
+            <UploadIcon size={16} />
+          </TouchableOpacity>
           <input
             id="file-upload"
             type="file"
@@ -572,7 +587,7 @@ export default function App() {
             onPress={handleClear}
             disabled={notes.length === 0}
           >
-            <Text style={[styles.buttonText, styles.smallButtonText]}>🗑️</Text>
+            <Trash2Icon size={16} />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -580,7 +595,7 @@ export default function App() {
             onPress={handleUndo}
             disabled={undoStack.length === 0}
           >
-            <Text style={[styles.buttonText, styles.smallButtonText]}>↩️</Text>
+            <RotateCcwIcon size={16} />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -588,7 +603,7 @@ export default function App() {
             onPress={handlePlayback}
             disabled={notes.length === 0}
           >
-            <Text style={[styles.buttonText, styles.smallButtonText]}>{isPlaying ? '■' : '▷'}</Text>
+            {isPlaying ? <SquareIcon size={16} filled={true} /> : <PlayIcon size={16} />}
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -596,7 +611,7 @@ export default function App() {
             onPress={handlePlayAudio}
             disabled={!lastAudioBlob}
           >
-            <Text style={[styles.buttonText, styles.smallButtonText]}>{isPlayingAudio ? '■' : '▶'}</Text>
+            {isPlayingAudio ? <SquareIcon size={16} filled={true} /> : <PlayIcon size={16} filled={true} />}
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -604,7 +619,7 @@ export default function App() {
             onPress={handleDownloadAudio}
             disabled={!lastAudioBlob}
           >
-            <Text style={[styles.buttonText, styles.smallButtonText]}>⬇️</Text>
+            <DownloadIcon size={16} />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -612,7 +627,7 @@ export default function App() {
             onPress={handleExportMIDI}
             disabled={notes.length === 0}
           >
-            <Text style={[styles.buttonText, styles.smallButtonText]}>MIDI 🎶</Text>
+            <KeyboardMusicIcon size={16} />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -620,7 +635,7 @@ export default function App() {
             onPress={() => showDialog('Note Names', noteNames || 'No notes available')}
             disabled={notes.length === 0}
           >
-            <Text style={[styles.buttonText, styles.smallButtonText]}>Notes 🎼</Text>
+            <ListMusicIcon size={16} />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -631,8 +646,8 @@ export default function App() {
             <View style={styles.buttonWithIcon}>
               <Text style={[styles.buttonText, styles.smallButtonText]}>Tidal</Text>
               <Image
-                source={{ uri: '/assets/img/tidal-logo.svg' }}
-                style={styles.buttonIcon}
+                source={{ uri: '/assets/img/list-music.png' }}
+                style={[{ width: 16, height: 16 }, styles.whiteIcon]}
               />
             </View>
           </TouchableOpacity>
@@ -645,8 +660,8 @@ export default function App() {
             <View style={styles.buttonWithIcon}>
               <Text style={[styles.buttonText, styles.smallButtonText]}>Strudel</Text>
               <Image
-                source={{ uri: '/assets/img/strudel-icon.png' }}
-                style={styles.buttonIcon}
+                source={{ uri: '/assets/img/list-music.png' }}
+                style={[{ width: 16, height: 16 }, styles.whiteIcon]}
               />
             </View>
           </TouchableOpacity>
@@ -718,7 +733,7 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: Colors.BG_SECONDARY,
     padding: 20,
     height: '100vh',
     maxHeight: '100vh',
@@ -733,16 +748,16 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#ffffff',
+    color: Colors.TEXT_PRIMARY,
     marginBottom: 5,
   },
   subtitle: {
     fontSize: 14,
-    color: '#888888',
+    color: Colors.TEXT_SECONDARY,
   },
   visualizerContainer: {
     flex: 1,
-    backgroundColor: '#0a0a0a',
+    backgroundColor: Colors.BG_PRIMARY,
     borderRadius: 10,
     marginBottom: 10,
     overflow: 'hidden',
@@ -767,7 +782,7 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: 'bold',
     color: '#ffffff',
-    fontFamily: 'monospace',
+    fontFamily: Colors.FONT_TECHNICAL,
   },
   loadingOverlay: {
     position: 'absolute',
@@ -800,6 +815,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#ffffff',
     fontWeight: '600',
+    fontFamily: Colors.FONT_UI,
   },
   controls: {
     flexShrink: 0,
@@ -816,61 +832,66 @@ const styles = StyleSheet.create({
   button: {
     paddingHorizontal: 30,
     paddingVertical: 15,
-    borderRadius: 8,
+    borderRadius: 4,
     alignItems: 'center',
     justifyContent: 'center',
   },
   smallButton: {
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 8,
     minWidth: 60,
+    borderWidth: 1,
+    borderColor: Colors.SLATE_GRAY,
   },
   recordButton: {
-    backgroundColor: '#ff4444',
+    backgroundColor: Colors.BTN_RECORD,
     flex: 1,
   },
   stopButton: {
-    backgroundColor: '#ff4444',
+    backgroundColor: Colors.BTN_STOP,
     flex: 1,
   },
   clearButton: {
-    backgroundColor: '#444444',
+    backgroundColor: Colors.BG_SECONDARY,
   },
   undoButton: {
-    backgroundColor: '#8844ff',
+    backgroundColor: Colors.BG_SECONDARY,
   },
   exportButton: {
-    backgroundColor: '#0c500cff',
+    backgroundColor: Colors.BG_SECONDARY,
   },
   playButton: {
-    backgroundColor: '#4488ff',
+    backgroundColor: Colors.BG_SECONDARY,
   },
   playAudioButton: {
-    backgroundColor: '#44aaff',
+    backgroundColor: Colors.BG_SECONDARY,
   },
   downloadButton: {
-    backgroundColor: '#ff8844',
+    backgroundColor: Colors.BG_SECONDARY,
+  },
+  uploadButton: {
+    backgroundColor: Colors.BG_SECONDARY,
   },
   noteNamesButton: {
-    backgroundColor: '#ff8844',
+    backgroundColor: Colors.BG_SECONDARY,
   },
   tidalButton: {
-    backgroundColor: '#1b6b8dff',
+    backgroundColor: Colors.BG_SECONDARY,
   },
   strudelButton: {
-    backgroundColor: '#ff4488',
+    backgroundColor: Colors.BG_SECONDARY,
   },
   disabledButton: {
-    backgroundColor: '#2a2a2a',
+    backgroundColor: Colors.BTN_DISABLED,
     opacity: 0.5,
   },
   toggleButton: {
-    backgroundColor: '#555555',
+    backgroundColor: Colors.BTN_TOGGLE,
     marginLeft: 10,
     paddingHorizontal: 20,
   },
   toggleButtonActive: {
-    backgroundColor: '#8844ff',
+    backgroundColor: Colors.BTN_TOGGLE_ACTIVE,
   },
   buttonWithIcon: {
     flexDirection: 'row',
@@ -881,22 +902,26 @@ const styles = StyleSheet.create({
     width: 16,
     height: 16,
   },
+  whiteIcon: {
+    filter: 'brightness(0) invert(1)',
+  },
   buttonText: {
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '600',
+    fontFamily: Colors.FONT_UI,
   },
   smallButtonText: {
     fontSize: 14,
   },
   codeContainer: {
-    backgroundColor: '#0a0a0a',
+    backgroundColor: Colors.BG_PRIMARY,
     borderRadius: 10,
     padding: 15,
     maxHeight: 150,
   },
   codeLabel: {
-    color: '#888888',
+    color: Colors.TEXT_SECONDARY,
     fontSize: 12,
     marginBottom: 8,
   },
@@ -905,18 +930,18 @@ const styles = StyleSheet.create({
   },
   noteNamesText: {
     color: '#ffffff',
-    fontFamily: 'monospace',
+    fontFamily: Colors.FONT_TECHNICAL,
     fontSize: 14,
     fontWeight: '600',
   },
   codeText: {
     color: '#44ff44',
-    fontFamily: 'monospace',
+    fontFamily: Colors.FONT_TECHNICAL,
     fontSize: 14,
   },
   strudelText: {
     color: '#ff8844',
-    fontFamily: 'monospace',
+    fontFamily: Colors.FONT_TECHNICAL,
     fontSize: 14,
   },
   hamburgerButton: {
@@ -926,7 +951,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#4444ff',
+    backgroundColor: Colors.BTN_SECONDARY,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
@@ -940,5 +965,8 @@ const styles = StyleSheet.create({
     fontSize: 28,
     color: '#ffffff',
     fontWeight: 'bold',
+    lineHeight: 28,
+    marginTop: -2,
+    fontFamily: Colors.FONT_UI,
   },
 });

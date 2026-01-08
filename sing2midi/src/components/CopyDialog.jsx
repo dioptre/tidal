@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal, ScrollView } from 'react-native';
+import * as Colors from '../styles/colors';
 
 const CopyDialog = ({ visible, onClose, title, content }) => {
   const [showTooltip, setShowTooltip] = useState(false);
@@ -96,13 +97,13 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   dialog: {
-    backgroundColor: '#1a1a1a',
+    backgroundColor: Colors.BG_SECONDARY,
     borderRadius: 12,
     width: '90%',
     maxWidth: 600,
     maxHeight: '80%',
     borderWidth: 1,
-    borderColor: '#333333',
+    borderColor: Colors.BORDER_PRIMARY,
   },
   header: {
     flexDirection: 'row',
@@ -110,12 +111,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#333333',
+    borderBottomColor: Colors.BORDER_PRIMARY,
   },
   title: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#ffffff',
+    color: Colors.TEXT_PRIMARY,
+    fontFamily: Colors.FONT_UI,
   },
   closeButton: {
     width: 32,
@@ -123,11 +125,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 16,
-    backgroundColor: '#333333',
+    backgroundColor: Colors.SLATE_GRAY,
   },
   closeButtonText: {
     fontSize: 18,
-    color: '#ffffff',
+    color: Colors.TEXT_PRIMARY,
     fontWeight: 'bold',
   },
   contentScroll: {
@@ -136,8 +138,8 @@ const styles = StyleSheet.create({
   },
   content: {
     fontSize: 14,
-    color: '#ffffff',
-    fontFamily: 'monospace',
+    color: Colors.TEXT_PRIMARY,
+    fontFamily: Colors.FONT_TECHNICAL,
     lineHeight: 20,
     userSelect: 'text',
     cursor: 'text',
@@ -145,19 +147,20 @@ const styles = StyleSheet.create({
   footer: {
     padding: 20,
     borderTopWidth: 1,
-    borderTopColor: '#333333',
+    borderTopColor: Colors.BORDER_PRIMARY,
   },
   copyButton: {
-    backgroundColor: '#4488ff',
+    backgroundColor: Colors.BTN_SECONDARY,
     paddingVertical: 15,
     paddingHorizontal: 30,
     borderRadius: 8,
     alignItems: 'center',
   },
   copyButtonText: {
-    color: '#ffffff',
+    color: Colors.TEXT_PRIMARY,
     fontSize: 16,
     fontWeight: '600',
+    fontFamily: Colors.FONT_UI,
   },
   tooltip: {
     position: 'absolute',
@@ -167,13 +170,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   tooltipText: {
-    backgroundColor: '#44ff44',
-    color: '#000000',
+    backgroundColor: Colors.SIGNAL_GREEN,
+    color: Colors.STUDIO_BLACK,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 6,
     fontSize: 14,
     fontWeight: '600',
+    fontFamily: Colors.FONT_UI,
   },
 });
 

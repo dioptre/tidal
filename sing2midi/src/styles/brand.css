@@ -1,0 +1,57 @@
+/**
+ * STUDIO SESSION - Brand Color Palette
+ * Algorithmic Palette for Sound Recording & Audio Production
+ */
+
+:root {
+  /* Base Colors */
+  --studio-black: #0a0e27;
+  --deep-charcoal: #1a1f3a;
+  --slate-gray: #2a3f5f;
+  --graphite: #3a4a6f;
+  --studio-white: #e8eef5;
+
+  /* Primary Actions */
+  --signal-green: #2fb878;
+  --waveform-blue: #1e7fb8;
+  --deep-purple: #6b4ba8;
+  --studio-red: #c43e3e;
+
+  /* Accents */
+  --warm-amber: #d4891f;
+  --gold-meter: #e6b84d;
+  --cyan-monitor: #00b8d4;
+
+  /* Jewel Tones */
+  --emerald: #1fa880;
+  --sapphire: #0f5f9f;
+  --amethyst: #7c4fa8;
+
+  /* Earth Tones */
+  --warm-taupe: #6b5a50;
+  --clay: #8b7355;
+  --steel-blue: #4a6fa8;
+  --muted-plum: #5a4a6f;
+  --ash: #5f6a7f;
+
+  /* Semantic Colors */
+  --bg-primary: var(--studio-black);
+  --bg-secondary: var(--deep-charcoal);
+  --border-primary: var(--slate-gray);
+  --text-primary: var(--studio-white);
+  --text-secondary: var(--ash);
+
+  /* Button Colors */
+  --btn-record: var(--studio-red);
+  --btn-play: var(--waveform-blue);
+  --btn-stop: var(--studio-red);
+  --btn-clear: var(--slate-gray);
+  --btn-undo: var(--amethyst);
+  --btn-export: var(--signal-green);
+  --btn-download: var(--warm-amber);
+  --btn-upload: var(--sapphire);
+  --btn-toggle: var(--muted-plum);
+  --btn-toggle-active: var(--deep-purple);
+  --btn-secondary: var(--steel-blue);
+  --btn-disabled: var(--graphite);
+}
