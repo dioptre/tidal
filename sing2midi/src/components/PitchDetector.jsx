@@ -51,24 +51,27 @@ class PitchDetector extends Component {
           console.log('Audio RMS:', rms.toFixed(4));
         }
 
-        const detection = this.detectPitchAutocorrelation(inputData, this.audioContext.sampleRate);
+        // Only run live pitch detection in voice mode
+        if (this.props.voiceMode) {
+          const detection = this.detectPitchAutocorrelation(inputData, this.audioContext.sampleRate);
 
-        if (detection) {
-          const timestamp = (Date.now() - this.startTimeMs) / 1000;
-          this.liveDetections.push({
-            ...detection,
-            timestamp
-          });
+          if (detection) {
+            const timestamp = (Date.now() - this.startTimeMs) / 1000;
+            this.liveDetections.push({
+              ...detection,
+              timestamp
+            });
 
-          console.log('PitchDetector: Live detection -', detection.note, detection.frequency.toFixed(1), 'Hz');
+            console.log('PitchDetector: Live detection -', detection.note, detection.frequency.toFixed(1), 'Hz');
 
-          // Send live detection to visualizer
-          this.props.onLiveDetection?.({
-            note: detection.note,
-            frequency: detection.frequency,
-            timestamp,
-            isLive: true
-          });
+            // Send live detection to visualizer
+            this.props.onLiveDetection?.({
+              note: detection.note,
+              frequency: detection.frequency,
+              timestamp,
+              isLive: true
+            });
+          }
         }
       };
 
@@ -255,10 +258,12 @@ class PitchDetector extends Component {
     const notesWithPitchBends = addPitchBendsToNoteEvents(contours, noteEvents);
     let notes = noteFramesToTime(notesWithPitchBends, frames, 22050 / 256);
 
-    // If we have live detections, use them to smooth/filter the ML results
-    if (this.liveDetections.length > 0) {
-      console.log(`Smoothing ${notes.length} ML notes with ${this.liveDetections.length} live detections`);
+    // If voice mode is enabled and we have live detections, use them to smooth/filter the ML results
+    if (this.props.voiceMode && this.liveDetections.length > 0) {
+      console.log(`Voice mode ON: Smoothing ${notes.length} ML notes with ${this.liveDetections.length} live detections`);
       notes = this.smoothWithLiveDetections(notes);
+    } else if (!this.props.voiceMode) {
+      console.log(`Voice mode OFF: Using raw ONNX output (${notes.length} notes)`);
     }
 
     return notes;
@@ -924,6 +929,9 @@ class PitchDetector extends Component {
       // Convert audio chunks to blob
       const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
       console.log(`Audio blob size: ${audioBlob.size} bytes`);
+
+      // Send audio blob to parent if callback exists
+      this.props.onAudioCaptured?.(audioBlob);
 
       // Convert blob to AudioBuffer
       const arrayBuffer = await audioBlob.arrayBuffer();
