@@ -40,6 +40,7 @@ export const getAssetSource = (assetName) => {
   const assetMap = {
     'mic-vocal': 'assets/img/mic-vocal.png',
     'list-music': 'assets/img/list-music.png',
+    'keyboard-music': 'assets/img/keyboard-music.png',
     'guitar': 'assets/img/guitar.png',
     'strudel-icon': 'assets/img/strudel-icon.png',
     'tidal-logo': 'assets/img/tidal-logo.svg',

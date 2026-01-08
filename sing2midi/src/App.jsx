@@ -650,14 +650,6 @@ export default function App() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.button, styles.smallButton, styles.exportButton, notes.length === 0 && styles.disabledButton]}
-            onPress={handleExportMIDI}
-            disabled={notes.length === 0}
-          >
-            <KeyboardMusicIcon size={16} />
-          </TouchableOpacity>
-
-          <TouchableOpacity
             style={[styles.button, styles.smallButton, styles.noteNamesButton, notes.length === 0 && styles.disabledButton]}
             onPress={() => showDialog('Note Names', noteNames || 'No notes available')}
             disabled={notes.length === 0}
@@ -671,11 +663,11 @@ export default function App() {
             disabled={notes.length === 0}
           >
             <View style={styles.buttonWithIcon}>
-              <Text style={[styles.buttonText, styles.smallButtonText]}>Tidal</Text>
               <Image
                 source={getAssetSource('list-music')}
                 style={[{ width: 16, height: 16 }, styles.whiteIcon]}
               />
+              <Text style={[styles.buttonText, styles.smallButtonText]}>Tidal</Text>
             </View>
           </TouchableOpacity>
 
@@ -685,11 +677,25 @@ export default function App() {
             disabled={notes.length === 0}
           >
             <View style={styles.buttonWithIcon}>
-              <Text style={[styles.buttonText, styles.smallButtonText]}>Strudel</Text>
               <Image
                 source={getAssetSource('list-music')}
                 style={[{ width: 16, height: 16 }, styles.whiteIcon]}
               />
+              <Text style={[styles.buttonText, styles.smallButtonText]}>Strudel</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.button, styles.smallButton, styles.exportButton, notes.length === 0 && styles.disabledButton]}
+            onPress={handleExportMIDI}
+            disabled={notes.length === 0}
+          >
+            <View style={styles.buttonWithIcon}>
+              <Image
+                source={getAssetSource('keyboard-music')}
+                style={[{ width: 16, height: 16 }, styles.whiteIcon]}
+              />
+              <Text style={[styles.buttonText, styles.smallButtonText]}>MIDI</Text>
             </View>
           </TouchableOpacity>
 
