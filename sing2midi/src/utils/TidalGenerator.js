@@ -227,6 +227,60 @@ const TidalGenerator = {
     return groups;
   },
 
+  // Merge consecutive identical notes with @ notation
+  mergeConsecutiveNotes(patternArray) {
+    const result = [];
+    let i = 0;
+
+    while (i < patternArray.length) {
+      const current = patternArray[i];
+
+      // Skip rests and chords (anything with special characters)
+      if (current === '~' || current.includes('[') || current.includes(',')) {
+        result.push(current);
+        i++;
+        continue;
+      }
+
+      // Extract note name and duration multiplier
+      const match = current.match(/^([a-z]+\d+)(?:@(\d+))?$/);
+      if (!match) {
+        result.push(current);
+        i++;
+        continue;
+      }
+
+      const [, noteName, durationStr] = match;
+      let totalDuration = parseInt(durationStr || '1', 10);
+      let j = i + 1;
+
+      // Look ahead for consecutive identical notes
+      while (j < patternArray.length) {
+        const next = patternArray[j];
+        const nextMatch = next.match(/^([a-z]+\d+)(?:@(\d+))?$/);
+
+        if (nextMatch && nextMatch[1] === noteName) {
+          const nextDuration = parseInt(nextMatch[2] || '1', 10);
+          totalDuration += nextDuration;
+          j++;
+        } else {
+          break;
+        }
+      }
+
+      // Output merged note
+      if (totalDuration > 1) {
+        result.push(`${noteName}@${totalDuration}`);
+      } else {
+        result.push(noteName);
+      }
+
+      i = j;
+    }
+
+    return result;
+  },
+
   // Generate pattern with proper duration notation
   generatePatternSegmentWithDurations(notes) {
     if (notes.length === 0) return '';
@@ -361,7 +415,10 @@ const TidalGenerator = {
       }
     }
 
-    return result.join(' ');
+    // Merge consecutive identical notes (e.g., cs2@2 cs2@2 -> cs2@4)
+    const merged = this.mergeConsecutiveNotes(result);
+
+    return merged.join(' ');
   },
 
   generatePatternSegment(notes, originalNotes) {
