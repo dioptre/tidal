@@ -192,9 +192,47 @@ const TidalGenerator = {
     return Math.max(steps, 1);
   },
 
+  // Detect overlapping notes (polyphony)
+  groupOverlappingNotes(notes) {
+    if (notes.length === 0) return [];
+
+    // Sort notes by start time
+    const sorted = [...notes].sort((a, b) => a.startTime - b.startTime);
+
+    const groups = [];
+    let currentGroup = [sorted[0]];
+
+    for (let i = 1; i < sorted.length; i++) {
+      const currentNote = sorted[i];
+      const prevNote = currentGroup[currentGroup.length - 1];
+
+      // Check if notes overlap (current note starts before previous note ends)
+      // Use a small tolerance (50ms) to catch near-simultaneous notes
+      const tolerance = 0.05;
+      if (currentNote.startTime < prevNote.startTime + prevNote.duration - tolerance) {
+        // Notes overlap - add to current group
+        currentGroup.push(currentNote);
+      } else {
+        // No overlap - start new group
+        groups.push(currentGroup);
+        currentGroup = [currentNote];
+      }
+    }
+
+    // Add the last group
+    if (currentGroup.length > 0) {
+      groups.push(currentGroup);
+    }
+
+    return groups;
+  },
+
   // Generate pattern with proper duration notation
   generatePatternSegmentWithDurations(notes) {
     if (notes.length === 0) return '';
+
+    // Group overlapping notes for polyphony
+    const noteGroups = this.groupOverlappingNotes(notes);
 
     // Calculate average note duration to use as a reference (quarter note)
     const avgDuration = notes.reduce((sum, n) => sum + n.duration, 0) / notes.length;
@@ -202,15 +240,57 @@ const TidalGenerator = {
     const result = [];
     let fastNoteBuffer = []; // Buffer for consecutive fast notes
 
-    for (let i = 0; i < notes.length; i++) {
-      const note = notes[i];
+    for (let i = 0; i < noteGroups.length; i++) {
+      const group = noteGroups[i];
+
+      // Handle polyphonic group (multiple simultaneous notes)
+      if (group.length > 1) {
+        // Flush any buffered fast notes first
+        if (fastNoteBuffer.length > 0) {
+          result.push(`[${fastNoteBuffer.join(' ')}]`);
+          fastNoteBuffer = [];
+        }
+
+        // Create polyphonic chord with comma notation
+        const chordNotes = group.map(n => this.midiToTidalNote(n.midiNote));
+        // Use the duration of the longest note in the group
+        const maxDuration = Math.max(...group.map(n => n.duration));
+        const relativeDuration = maxDuration / avgDuration;
+
+        if (relativeDuration >= 1.5) {
+          const multiplier = Math.round(relativeDuration);
+          result.push(`[${chordNotes.join(',')}]@${multiplier}`);
+        } else {
+          result.push(`[${chordNotes.join(',')}]`);
+        }
+
+        // Check for gaps after this group
+        if (i < noteGroups.length - 1) {
+          const nextGroup = noteGroups[i + 1];
+          const gap = nextGroup[0].startTime - (group[0].startTime + maxDuration);
+
+          if (gap > avgDuration * 0.75) {
+            const restCount = Math.round(gap / avgDuration);
+            for (let r = 0; r < restCount && r < 3; r++) {
+              result.push('~');
+            }
+          }
+        }
+
+        continue;
+      }
+
+      // Single note - process normally
+      const note = group[0];
       const tidalNote = this.midiToTidalNote(note.midiNote);
       const relativeDuration = note.duration / avgDuration;
 
       // Check for gaps (rests) before this note
       if (i > 0) {
-        const prevNote = notes[i - 1];
-        const gap = note.startTime - (prevNote.startTime + prevNote.duration);
+        const prevGroup = noteGroups[i - 1];
+        const prevNote = prevGroup[0];
+        const prevMaxDuration = Math.max(...prevGroup.map(n => n.duration));
+        const gap = note.startTime - (prevNote.startTime + prevMaxDuration);
 
         // Only add rests for significant gaps (> 75% of avg note duration)
         // This prevents adding rests for small breath gaps between sung notes
