@@ -1,5 +1,22 @@
 import { Component } from 'react';
+import { Platform } from 'react-native';
 import { BasicPitch, addPitchBendsToNoteEvents, noteFramesToTime, outputToNotesPoly } from '@spotify/basic-pitch';
+
+// Import Web Audio API polyfill for React Native
+let AudioContext, OfflineAudioContext, AudioRecorder, RecorderAdapterNode, AudioManager;
+if (Platform.OS !== 'web') {
+  // On React Native, use react-native-audio-api polyfill
+  const AudioAPI = require('react-native-audio-api');
+  AudioContext = AudioAPI.AudioContext;
+  OfflineAudioContext = AudioAPI.OfflineAudioContext;
+  AudioRecorder = AudioAPI.AudioRecorder;
+  RecorderAdapterNode = AudioAPI.RecorderAdapterNode;
+  AudioManager = AudioAPI.AudioManager;
+} else {
+  // On web, use native Web Audio API
+  AudioContext = window.AudioContext || window.webkitAudioContext;
+  OfflineAudioContext = window.OfflineAudioContext;
+}
 
 // ML-based pitch detection using Spotify's Basic Pitch
 class PitchDetector extends Component {
@@ -7,12 +24,16 @@ class PitchDetector extends Component {
     super(props);
     this.audioContext = null;
     this.microphone = null;
-    this.mediaRecorder = null;
+    this.mediaRecorder = null; // For web
+    this.audioRecorder = null; // For React Native
+    this.recorderAdapter = null; // For React Native
     this.audioChunks = [];
+    this.recordedBuffers = []; // For React Native AudioRecorder
     this.startTimeMs = null;
     this.isRecording = false;
-    // Initialize Basic Pitch model
-    this.basicPitch = new BasicPitch('https://cdn.jsdelivr.net/npm/@spotify/basic-pitch@1.0.1/model/model.json');
+    // Lazy-load Basic Pitch model only when needed
+    this.basicPitch = null;
+    this.basicPitchModelPromise = null;
 
     // Real-time pitch detection
     this.analyser = null;
@@ -20,91 +41,274 @@ class PitchDetector extends Component {
     this.liveDetections = []; // Store live detections for smoothing
   }
 
-  start = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  // Lazy-load BasicPitch model to ensure fetch polyfill is ready
+  initBasicPitchModel = async () => {
+    if (this.basicPitch) {
+      console.log('BasicPitch model already loaded');
+      return this.basicPitch;
+    }
 
-      this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      this.microphone = this.audioContext.createMediaStreamSource(stream);
+    if (this.basicPitchModelPromise) {
+      console.log('BasicPitch model already loading, waiting...');
+      return this.basicPitchModelPromise;
+    }
 
-      // Set up real-time pitch detection with analyser
-      this.analyser = this.audioContext.createAnalyser();
-      this.analyser.fftSize = 2048;
-      this.microphone.connect(this.analyser);
+    console.log('Initializing BasicPitch model...');
+    console.log('fetch available:', typeof fetch !== 'undefined');
+    console.log('Platform:', Platform.OS);
 
-      // Use ScriptProcessor for real-time analysis
-      const bufferSize = 4096;
-      this.scriptProcessor = this.audioContext.createScriptProcessor(bufferSize, 1, 1);
-      this.analyser.connect(this.scriptProcessor);
-      this.scriptProcessor.connect(this.audioContext.destination);
+    this.basicPitchModelPromise = (async () => {
+      try {
+        let modelUrl;
 
-      let frameCount = 0;
-      this.scriptProcessor.onaudioprocess = (event) => {
-        if (!this.isRecording) return;
-
-        const inputData = event.inputBuffer.getChannelData(0);
-
-        // Log audio level every 10 frames to verify audio is being captured
-        frameCount++;
-        if (frameCount % 10 === 0) {
-          const rms = Math.sqrt(inputData.reduce((sum, val) => sum + val * val, 0) / inputData.length);
-          console.log('Audio RMS:', rms.toFixed(4));
-        }
-
-        // Only run live pitch detection in voice mode
-        if (this.props.voiceMode) {
-          const detection = this.detectPitchAutocorrelation(inputData, this.audioContext.sampleRate);
-
-          if (detection) {
-            const timestamp = (Date.now() - this.startTimeMs) / 1000;
-            this.liveDetections.push({
-              ...detection,
-              timestamp
-            });
-
-            console.log('PitchDetector: Live detection -', detection.note, detection.frequency.toFixed(1), 'Hz');
-
-            // Send live detection to visualizer
-            this.props.onLiveDetection?.({
-              note: detection.note,
-              frequency: detection.frequency,
-              timestamp,
-              isLive: true
-            });
+        if (Platform.OS === 'web') {
+          // On web, try to use local model file from node_modules
+          // This avoids the CDN and works with the bundler
+          try {
+            // Metro/Webpack should bundle this properly
+            modelUrl = require('@spotify/basic-pitch/model/model.json');
+            console.log('Using local model from node_modules:', modelUrl);
+          } catch (e) {
+            console.log('Failed to require local model, falling back to CDN:', e.message);
+            modelUrl = 'https://cdn.jsdelivr.net/npm/@spotify/basic-pitch@1.0.1/model/model.json';
           }
         } else {
-          // In raw mode, send FFT data for visualization
-          const bufferLength = this.analyser.frequencyBinCount;
-          const dataArray = new Uint8Array(bufferLength);
-          this.analyser.getByteFrequencyData(dataArray);
+          // React Native: Wait for TensorFlow.js backend to be ready
+          console.log('React Native detected, ensuring TensorFlow.js backend is ready...');
 
-          // Send FFT data to visualizer (throttled to every frame)
-          this.props.onFFTData?.(dataArray);
+          const tf = require('@tensorflow/tfjs');
+          require('@tensorflow/tfjs-react-native');
+
+          // Wait for TensorFlow backend to initialize
+          await tf.ready();
+          console.log('TensorFlow.js backend ready:', tf.getBackend());
+
+          // Use CDN model URL - TensorFlow.js will handle the download and cache it
+          // The model will be downloaded once and cached by TensorFlow.js
+          modelUrl = 'https://cdn.jsdelivr.net/npm/@spotify/basic-pitch@1.0.1/model/model.json';
+          console.log('Using CDN model for React Native (will be cached after first download)');
         }
-      };
 
-      // Set up MediaRecorder to capture audio
-      this.mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'audio/webm',
-      });
+        console.log('Loading BasicPitch model from:', modelUrl);
+        this.basicPitch = new BasicPitch(modelUrl);
+        console.log('BasicPitch model initialized successfully');
+
+        return this.basicPitch;
+      } catch (error) {
+        console.error('Failed to initialize BasicPitch model:', error);
+        console.error('Error details:', {
+          message: error.message,
+          stack: error.stack,
+          fetchAvailable: typeof fetch !== 'undefined',
+          platform: Platform.OS,
+          tfBackend: Platform.OS !== 'web' ? require('@tensorflow/tfjs').getBackend() : 'N/A'
+        });
+        throw error;
+      }
+    })();
+
+    return this.basicPitchModelPromise;
+  }
+
+  start = async () => {
+    try {
+      console.log('PitchDetector.start() called');
+      console.log('Platform:', Platform.OS);
+
+      // Initialize BasicPitch model first
+      console.log('Initializing BasicPitch model...');
+      try {
+        await this.initBasicPitchModel();
+        console.log('BasicPitch model ready');
+      } catch (error) {
+        console.error('Failed to initialize BasicPitch model:', error);
+        throw new Error(`BasicPitch initialization failed: ${error.message}`);
+      }
+
+      console.log('Creating AudioContext...');
+      // For React Native, create AudioContext with 44100 Hz for iOS compatibility
+      if (Platform.OS !== 'web') {
+        this.audioContext = new AudioContext({ sampleRate: 44100 });
+
+        // Create AudioRecorder for React Native (do this once during setup)
+        if (!this.audioRecorder) {
+          console.log('Creating AudioRecorder instance...');
+          this.audioRecorder = new AudioRecorder({
+            sampleRate: 44100,
+            numberOfChannels: 1,
+            bufferLengthInSamples: 44100, // 1 second buffers
+          });
+          console.log('AudioRecorder instance created');
+        }
+      } else {
+        this.audioContext = new AudioContext();
+      }
+      console.log('AudioContext created, sampleRate:', this.audioContext.sampleRate);
+
+      // Platform-specific microphone setup
+      let stream;
+      if (Platform.OS === 'web') {
+        // Web: Use getUserMedia
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        this.microphone = this.audioContext.createMediaStreamSource(stream);
+      } else {
+        // React Native: We don't need getUserMedia, AudioRecorder handles it
+        // Create a dummy microphone node (we'll use AudioRecorder instead)
+        this.microphone = null;
+      }
+
+      // Set up real-time pitch detection with analyser (Web only for now)
+      if (Platform.OS === 'web') {
+        this.analyser = this.audioContext.createAnalyser();
+        this.analyser.fftSize = 2048;
+        this.microphone.connect(this.analyser);
+
+        // Use ScriptProcessor for real-time analysis
+        const bufferSize = 4096;
+        this.scriptProcessor = this.audioContext.createScriptProcessor(bufferSize, 1, 1);
+        this.analyser.connect(this.scriptProcessor);
+        this.scriptProcessor.connect(this.audioContext.destination);
+      }
+
+      // Set up audio processing callback (Web only for now)
+      if (Platform.OS === 'web') {
+        let frameCount = 0;
+        this.scriptProcessor.onaudioprocess = (event) => {
+          if (!this.isRecording) return;
+
+          const inputData = event.inputBuffer.getChannelData(0);
+
+          // Log audio level every 10 frames to verify audio is being captured
+          frameCount++;
+          if (frameCount % 10 === 0) {
+            const rms = Math.sqrt(inputData.reduce((sum, val) => sum + val * val, 0) / inputData.length);
+            console.log('Audio RMS:', rms.toFixed(4));
+          }
+
+          // Only run live pitch detection in voice mode
+          if (this.props.voiceMode) {
+            const detection = this.detectPitchAutocorrelation(inputData, this.audioContext.sampleRate);
+
+            if (detection) {
+              const timestamp = (Date.now() - this.startTimeMs) / 1000;
+              this.liveDetections.push({
+                ...detection,
+                timestamp
+              });
+
+              console.log('PitchDetector: Live detection -', detection.note, detection.frequency.toFixed(1), 'Hz');
+
+              // Send live detection to visualizer
+              this.props.onLiveDetection?.({
+                note: detection.note,
+                frequency: detection.frequency,
+                timestamp,
+                isLive: true
+              });
+            }
+          } else {
+            // In raw mode, send FFT data for visualization
+            const bufferLength = this.analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+            this.analyser.getByteFrequencyData(dataArray);
+
+            // Send FFT data to visualizer (throttled to every frame)
+            this.props.onFFTData?.(dataArray);
+          }
+        };
+      }
+
+      // Set up recording - different approach for web vs React Native
+      if (Platform.OS === 'web') {
+        // Web: Use MediaRecorder
+        this.mediaRecorder = new MediaRecorder(stream, {
+          mimeType: 'audio/webm',
+        });
+
+        this.mediaRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            this.audioChunks.push(event.data);
+          }
+        };
+
+        this.mediaRecorder.onstop = async () => {
+          await this.processRecording();
+        };
+
+        // Start recording
+        this.mediaRecorder.start(100); // Collect data every 100ms
+      } else {
+        // React Native: Set up audio graph with AudioRecorder
+        // Based on: https://gist.github.com/mdydek/298bdb700e85127221a78bc56bf98c10
+        console.log('Setting up AudioRecorder with audio graph...');
+
+        // IMPORTANT: Deactivate first, then configure session
+        // From GitHub issue: needed to put setAudioSessionActivity(false) after setAudioSessionOptions
+        try {
+          await AudioManager.setAudioSessionActivity(false);
+          console.log('Audio session deactivated');
+        } catch (e) {
+          console.log('Ignoring audio session deactivation error:', e.message);
+        }
+
+        // Configure audio session for recording with mixing enabled
+        AudioManager.setAudioSessionOptions({
+          iosCategory: 'playAndRecord',
+          iosMode: 'default',
+          iosOptions: [
+            'defaultToSpeaker',
+            'allowBluetoothA2DP',
+            'mixWithOthers', // Allow sharing with other audio
+          ],
+        });
+
+        console.log('Audio session configured with mixing enabled');
+
+        // Activate audio session
+        const activated = await AudioManager.setAudioSessionActivity(true);
+        console.log('Audio session activation result:', activated);
+
+        // Ensure AudioContext is running
+        if (this.audioContext.state === 'suspended') {
+          await this.audioContext.resume();
+        }
+
+        console.log('AudioContext state:', this.audioContext.state);
+
+        // Create RecorderAdapterNode and connect AudioRecorder to it
+        this.recorderAdapter = this.audioContext.createRecorderAdapter();
+        this.audioRecorder.connect(this.recorderAdapter);
+        console.log('AudioRecorder connected to RecorderAdapterNode');
+
+        // Create gain node with zero output to prevent feedback
+        // This is the key to avoiding Core Audio error 10875
+        const gainNode = this.audioContext.createGain();
+        gainNode.gain.value = 0; // Silent - no audio output
+
+        // Connect: RecorderAdapter → GainNode → Destination
+        this.recorderAdapter.connect(gainNode);
+        gainNode.connect(this.audioContext.destination);
+        console.log('Audio graph connected: AudioRecorder → RecorderAdapter → Gain(0) → Destination');
+
+        // Set up callback to capture audio data
+        this.audioRecorder.onAudioReady((event) => {
+          const { buffer, numFrames } = event;
+          console.log('AudioRecorder buffer ready:', buffer.duration, 'seconds,', numFrames, 'frames');
+          if (buffer && buffer.length > 0) {
+            this.recordedBuffers.push(buffer);
+          }
+        });
+
+        // Start recording
+        this.audioRecorder.start();
+        console.log('AudioRecorder started');
+      }
 
       this.audioChunks = [];
+      this.recordedBuffers = [];
       this.liveDetections = [];
       this.startTimeMs = Date.now();
       this.isRecording = true;
-
-      this.mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          this.audioChunks.push(event.data);
-        }
-      };
-
-      this.mediaRecorder.onstop = async () => {
-        await this.processRecording();
-      };
-
-      // Start recording
-      this.mediaRecorder.start(100); // Collect data every 100ms
 
       console.log('✓ Recording started with live pitch detection + Basic Pitch ML');
       return true;
@@ -115,9 +319,24 @@ class PitchDetector extends Component {
   };
 
   stop = async () => {
-    if (this.mediaRecorder && this.isRecording) {
+    if (this.isRecording) {
       this.isRecording = false;
-      this.mediaRecorder.stop();
+
+      // Stop the appropriate recorder
+      if (Platform.OS === 'web' && this.mediaRecorder) {
+        this.mediaRecorder.stop();
+      } else if (Platform.OS !== 'web' && this.audioRecorder) {
+        this.audioRecorder.stop();
+
+        // Optional: Reset audio session to playback mode after recording
+        AudioManager.setAudioSessionOptions({
+          iosCategory: 'playback',
+          iosMode: 'default',
+        });
+
+        // Process the recorded buffers
+        await this.processRecordingFromBuffers();
+      }
 
       if (this.scriptProcessor) {
         this.scriptProcessor.disconnect();
@@ -129,8 +348,15 @@ class PitchDetector extends Component {
         this.analyser = null;
       }
 
+      if (this.recorderAdapter) {
+        this.recorderAdapter.disconnect();
+        this.recorderAdapter = null;
+      }
+
       if (this.microphone) {
-        this.microphone.mediaStream.getTracks().forEach(track => track.stop());
+        if (this.microphone.mediaStream) {
+          this.microphone.mediaStream.getTracks().forEach(track => track.stop());
+        }
         this.microphone = null;
       }
 
@@ -138,6 +364,9 @@ class PitchDetector extends Component {
         await this.audioContext.close();
         this.audioContext = null;
       }
+
+      this.audioRecorder = null;
+      this.mediaRecorder = null;
     }
   };
 
@@ -241,13 +470,24 @@ class PitchDetector extends Component {
   };
 
   runBasicPitch = async (audioBuffer) => {
+    console.log('runBasicPitch called');
+
+    // Ensure model is loaded
+    if (!this.basicPitch) {
+      console.log('BasicPitch model not loaded, initializing...');
+      await this.initBasicPitchModel();
+    }
+
     const frames = [];
     const onsets = [];
     const contours = [];
 
+    console.log('Resampling audio buffer to 22050 Hz...');
     // Resample to 22050 Hz (required by Basic Pitch)
     const resampledBuffer = await this.resampleAudioBuffer(audioBuffer, 22050);
+    console.log('Resampled buffer length:', resampledBuffer.length);
 
+    console.log('Running BasicPitch evaluateModel...');
     // Run Basic Pitch model
     await this.basicPitch.evaluateModel(
       resampledBuffer,
@@ -886,7 +1126,7 @@ class PitchDetector extends Component {
       const arrayBuffer = await file.arrayBuffer();
 
       // Create an AudioContext and decode the audio data
-      const tempAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const tempAudioContext = new AudioContext();
       const audioBuffer = await tempAudioContext.decodeAudioData(arrayBuffer);
 
       console.log(`AudioBuffer duration: ${audioBuffer.duration}s, sample rate: ${audioBuffer.sampleRate}Hz`);
@@ -943,7 +1183,7 @@ class PitchDetector extends Component {
 
       // Convert blob to AudioBuffer
       const arrayBuffer = await audioBlob.arrayBuffer();
-      const tempAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const tempAudioContext = new AudioContext();
       const audioBuffer = await tempAudioContext.decodeAudioData(arrayBuffer);
       console.log(`AudioBuffer duration: ${audioBuffer.duration}s, sample rate: ${audioBuffer.sampleRate}Hz`);
 
@@ -981,6 +1221,85 @@ class PitchDetector extends Component {
 
     } catch (error) {
       console.error('Basic Pitch processing error:', error);
+      this.props.onProcessingComplete?.();
+      throw error;
+    }
+  };
+
+  // Process recording from React Native AudioRecorder buffers
+  processRecordingFromBuffers = async () => {
+    try {
+      console.log('Processing audio from buffers with Basic Pitch...');
+      console.log(`Recorded ${this.recordedBuffers.length} audio buffers`);
+
+      if (this.recordedBuffers.length === 0) {
+        console.warn('No audio buffers recorded');
+        this.props.onProcessingComplete?.();
+        return;
+      }
+
+      // Concatenate all buffers into a single AudioBuffer
+      const firstBuffer = this.recordedBuffers[0];
+      const totalLength = this.recordedBuffers.reduce((sum, buf) => sum + buf.length, 0);
+      const sampleRate = firstBuffer.sampleRate;
+      const numberOfChannels = firstBuffer.numberOfChannels;
+
+      console.log(`Creating combined buffer: ${totalLength} samples, ${sampleRate}Hz, ${numberOfChannels} channels`);
+
+      // Create a new offline context to build the combined buffer
+      const tempAudioContext = new AudioContext();
+      const combinedBuffer = tempAudioContext.createBuffer(numberOfChannels, totalLength, sampleRate);
+
+      // Copy all buffer data into combined buffer
+      let offset = 0;
+      for (const buffer of this.recordedBuffers) {
+        for (let channel = 0; channel < numberOfChannels; channel++) {
+          const sourceData = buffer.getChannelData(channel);
+          const destData = combinedBuffer.getChannelData(channel);
+          destData.set(sourceData, offset);
+        }
+        offset += buffer.length;
+      }
+
+      console.log(`Combined AudioBuffer duration: ${combinedBuffer.duration}s`);
+
+      // Convert to blob for parent component (if needed)
+      // Note: We skip blob creation for React Native since we already have the AudioBuffer
+      this.props.onAudioCaptured?.(combinedBuffer);
+
+      // Run Basic Pitch inference
+      console.log('Running Basic Pitch model...');
+      const notes = await this.runBasicPitch(combinedBuffer);
+
+      console.log(`✓ Basic Pitch detected ${notes.length} notes`);
+
+      // Convert Basic Pitch notes to our format
+      notes.forEach((note, index) => {
+        const { startTimeSeconds, durationSeconds, pitchMidi, amplitude, originalNote, synthesized } = note;
+
+        const noteData = {
+          note: this.midiToNoteName(pitchMidi),
+          frequency: this.midiToFrequency(pitchMidi),
+          startTime: startTimeSeconds,
+          duration: durationSeconds,
+          midiNote: Math.round(pitchMidi),
+          amplitude: amplitude,
+          originalNote: originalNote,
+          synthesized: synthesized,
+        };
+
+        console.log(`Note ${index + 1}/${notes.length}: ${noteData.note} @ ${startTimeSeconds.toFixed(2)}s, ${durationSeconds.toFixed(2)}s, ${noteData.frequency.toFixed(1)} Hz${synthesized ? ' (synthesized)' : ''}`);
+        this.props.onNoteDetected?.(noteData);
+      });
+
+      await tempAudioContext.close();
+
+      // Signal that processing is complete
+      console.log('✓ Processing complete');
+      this.props.onProcessingComplete?.();
+
+    } catch (error) {
+      console.error('Buffer processing error:', error);
       this.props.onProcessingComplete?.();
       throw error;
     }

@@ -17,29 +17,48 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, onNotesChange
   // Handle canvas initialization for native vs web
   const handleCanvas = (canvas) => {
     if (!canvas) return;
+    console.log('[NoteVisualizer] Canvas ref received, platform:', Platform.OS);
     canvasRef.current = canvas;
 
     // For native canvas, we need to set dimensions first
     if (Platform.OS !== 'web') {
       canvas.width = 800; // Will be updated on layout
       canvas.height = 600;
+      console.log('[NoteVisualizer] Canvas dimensions set:', canvas.width, 'x', canvas.height);
     }
   };
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas) {
+      console.log('[NoteVisualizer] No canvas ref in useEffect');
+      return;
+    }
+
+    console.log('[NoteVisualizer] Setting up canvas rendering, platform:', Platform.OS);
 
     const getContext = () => {
-      if (Platform.OS === 'web') {
-        return canvas.getContext('2d');
+      try {
+        if (Platform.OS === 'web') {
+          return canvas.getContext('2d');
+        }
+        // For react-native-canvas, context is obtained differently
+        const ctx = canvas.getContext('2d');
+        console.log('[NoteVisualizer] Got context:', !!ctx);
+        return ctx;
+      } catch (error) {
+        console.error('[NoteVisualizer] Error getting canvas context:', error);
+        return null;
       }
-      // For react-native-canvas, context is obtained differently
-      return canvas.getContext('2d');
     };
 
     const ctx = getContext();
-    if (!ctx) return;
+    if (!ctx) {
+      console.error('[NoteVisualizer] Failed to get 2d context');
+      return;
+    }
+
+    console.log('[NoteVisualizer] Canvas context ready, starting render loop');
 
     const dpr = Platform.OS === 'web' ? (window.devicePixelRatio || 1) : 1;
 
@@ -107,7 +126,9 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, onNotesChange
     render();
 
     return () => {
-      window.removeEventListener('resize', resizeCanvas);
+      if (Platform.OS === 'web') {
+        window.removeEventListener('resize', resizeCanvas);
+      }
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
       }

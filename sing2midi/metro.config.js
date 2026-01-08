@@ -9,10 +9,16 @@ const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config');
 const config = {
   resolver: {
     sourceExts: ['jsx', 'js', 'ts', 'tsx', 'json'],
-    assetExts: ['png', 'jpg', 'jpeg', 'gif', 'svg', 'wav', 'mp3', 'onnx'],
+    assetExts: ['png', 'jpg', 'jpeg', 'gif', 'svg', 'wav', 'mp3', 'onnx', 'bin'],
   },
   transformer: {
     babelTransformerPath: require.resolve('react-native-svg-transformer'),
+    getTransformOptions: async () => ({
+      transform: {
+        experimentalImportSupport: false,
+        inlineRequires: true,
+      },
+    }),
   },
 };
 

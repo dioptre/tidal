@@ -9,6 +9,15 @@ import MIDIExporter from './utils/MIDIExporter';
 import Storage from './utils/Storage';
 import * as Colors from './styles/colors';
 import { getAssetSource } from './config';
+
+// Import AudioContext for both platforms
+let AudioContext;
+if (Platform.OS !== 'web') {
+  const AudioAPI = require('react-native-audio-api');
+  AudioContext = AudioAPI.AudioContext;
+} else {
+  AudioContext = window.AudioContext || window.webkitAudioContext;
+}
 import {
   ListMusicIcon,
   PlayIcon,
@@ -92,14 +101,26 @@ export default function App() {
   };
 
   const handleStartRecording = async () => {
+    console.log('handleStartRecording called');
+    console.log('pitchDetectorRef.current:', pitchDetectorRef.current);
+
+    if (!pitchDetectorRef.current) {
+      console.error('PitchDetector ref is null!');
+      alert('PitchDetector not initialized');
+      return;
+    }
+
     try {
-      await pitchDetectorRef.current?.start();
+      console.log('Calling pitchDetectorRef.current.start()...');
+      await pitchDetectorRef.current.start();
+      console.log('PitchDetector started successfully');
       setIsRecording(true);
       setNotes([]);
       setTidalCode('');
     } catch (error) {
       console.error('Failed to start recording:', error);
-      alert('Failed to access microphone. Please grant permission.');
+      console.error('Error stack:', error.stack);
+      alert(`Failed to access microphone: ${error.message}`);
     }
   };
 
@@ -301,7 +322,7 @@ export default function App() {
     setIsPlaying(true);
 
     // Create new audio context
-    audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+    audioContextRef.current = new AudioContext();
     const audioContext = audioContextRef.current;
 
     // Sort notes by start time
@@ -352,16 +373,22 @@ export default function App() {
       return;
     }
 
-    // Create a download link
-    const url = URL.createObjectURL(lastAudioBlob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `sing2midi_${new Date().toISOString().replace(/[:.]/g, '-')}.webm`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    console.log('Audio download initiated');
+    // Web only - React Native needs different approach for file downloads
+    if (Platform.OS === 'web') {
+      // Create a download link
+      const url = URL.createObjectURL(lastAudioBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `sing2midi_${new Date().toISOString().replace(/[:.]/g, '-')}.webm`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      console.log('Audio download initiated');
+    } else {
+      // TODO: Implement file download for React Native using react-native-fs or similar
+      alert('Audio download not yet supported on mobile');
+    }
   };
 
   const handlePlayAudio = () => {

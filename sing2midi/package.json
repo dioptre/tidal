@@ -36,16 +36,26 @@
   "dependencies": {
     "@react-native-async-storage/async-storage": "^2.2.0",
     "@spotify/basic-pitch": "^1.0.1",
+    "@tensorflow/tfjs": "^4.22.0",
+    "@tensorflow/tfjs-react-native": "^1.0.0",
     "@vitejs/plugin-react": "^4.7.0",
     "buffer": "^6.0.3",
+    "expo-asset": "^12.0.12",
+    "expo-camera": "^17.0.10",
+    "expo-file-system": "^19.0.21",
+    "expo-gl": "^16.0.9",
+    "expo-modules-core": "^3.0.29",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "react-native": "^0.83.1",
+    "react-native-audio-api": "^0.10.3",
     "react-native-canvas": "^0.1.40",
+    "react-native-fs": "^2.20.0",
     "react-native-svg": "^15.15.1",
     "react-native-web": "^0.21.2",
     "react-native-webview": "^13.16.0",
-    "vite": "^5.4.21"
+    "vite": "^5.4.21",
+    "whatwg-fetch": "^3.6.20"
   },
   "devDependencies": {
     "@playwright/test": "^1.57.0",
@@ -54,6 +64,7 @@
     "@react-native/babel-preset": "^0.83.1",
     "@react-native/metro-config": "^0.83.1",
     "babel-plugin-module-resolver": "^5.0.2",
+    "babel-preset-expo": "^54.0.9",
     "playwright": "^1.57.0",
     "react-native-svg-transformer": "^1.5.2"
   }
