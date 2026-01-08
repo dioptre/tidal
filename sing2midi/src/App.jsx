@@ -208,7 +208,7 @@ export default function App() {
               try {
                 // Convert audio blob to base64 for storage
                 const reader = new FileReader();
-                reader.onloadend = () => {
+                reader.onloadend = async () => {
                   const audioBase64 = reader.result;
 
                   const sessionData = {
@@ -220,7 +220,7 @@ export default function App() {
                     voiceMode: voiceMode,
                   };
 
-                  const sessionId = Storage.saveSession(sessionData);
+                  const sessionId = await Storage.saveSession(sessionData);
                   console.log('Session auto-saved:', sessionId);
                 };
                 reader.readAsDataURL(lastAudioBlob);
@@ -471,7 +471,7 @@ export default function App() {
         // Auto-save session
         if (lastAudioBlob) {
           const reader = new FileReader();
-          reader.onloadend = () => {
+          reader.onloadend = async () => {
             const sessionData = {
               notes: mlNotes,
               tidalCode: tidalPattern,
@@ -480,7 +480,7 @@ export default function App() {
               audioBase64: reader.result,
               voiceMode: voiceMode,
             };
-            Storage.saveSession(sessionData);
+            await Storage.saveSession(sessionData);
             console.log('Session auto-saved after edit');
           };
           reader.readAsDataURL(lastAudioBlob);

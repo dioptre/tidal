@@ -1,7 +1,9 @@
 /**
  * Storage utility for saving and loading session data
- * Uses localStorage for web environment
+ * Uses AsyncStorage for both React Native and web (it has built-in web support)
  */
+
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const STORAGE_PREFIX = 'sing2midi_';
 const SESSIONS_KEY = `${STORAGE_PREFIX}sessions`;
@@ -17,9 +19,9 @@ class Storage {
    * @param {string} sessionData.noteNames - Human-readable note names
    * @param {string} sessionData.audioBase64 - Base64-encoded audio data
    * @param {Object} sessionData.graphJson - Visualizer graph data
-   * @returns {string} - Session ID
+   * @returns {Promise<string>} - Session ID
    */
-  static saveSession(sessionData) {
+  static async saveSession(sessionData) {
     try {
       const sessionId = `session_${Date.now()}`;
       const timestamp = new Date().toISOString();
@@ -31,7 +33,7 @@ class Storage {
       };
 
       // Get existing sessions
-      const sessions = this.getAllSessions();
+      const sessions = await this.getAllSessions();
 
       // Add new session at the beginning
       sessions.unshift(session);
@@ -39,8 +41,8 @@ class Storage {
       // Limit to MAX_SESSIONS
       const trimmedSessions = sessions.slice(0, MAX_SESSIONS);
 
-      // Save to localStorage
-      localStorage.setItem(SESSIONS_KEY, JSON.stringify(trimmedSessions));
+      // Save to storage
+      await AsyncStorage.setItem(SESSIONS_KEY, JSON.stringify(trimmedSessions));
 
       console.log(`Session saved: ${sessionId}`);
       return sessionId;
@@ -49,16 +51,16 @@ class Storage {
       // Check if quota exceeded
       if (error.name === 'QuotaExceededError') {
         console.warn('Storage quota exceeded, clearing old sessions...');
-        this.clearOldSessions(10); // Keep only last 10 sessions
+        await this.clearOldSessions(10); // Keep only last 10 sessions
         // Retry once
         try {
-          const sessions = this.getAllSessions();
+          const sessions = await this.getAllSessions();
           sessions.unshift({
             id: `session_${Date.now()}`,
             timestamp: new Date().toISOString(),
             ...sessionData,
           });
-          localStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions));
+          await AsyncStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions));
           return sessions[0].id;
         } catch (retryError) {
           console.error('Failed to save session after clearing:', retryError);
@@ -71,11 +73,11 @@ class Storage {
 
   /**
    * Get all saved sessions
-   * @returns {Array} - Array of session objects
+   * @returns {Promise<Array>} - Array of session objects
    */
-  static getAllSessions() {
+  static async getAllSessions() {
     try {
-      const sessionsJson = localStorage.getItem(SESSIONS_KEY);
+      const sessionsJson = await AsyncStorage.getItem(SESSIONS_KEY);
       if (!sessionsJson) {
         return [];
       }
@@ -89,28 +91,28 @@ class Storage {
   /**
    * Get a specific session by ID
    * @param {string} sessionId - Session ID
-   * @returns {Object|null} - Session object or null if not found
+   * @returns {Promise<Object|null>} - Session object or null if not found
    */
-  static getSession(sessionId) {
-    const sessions = this.getAllSessions();
+  static async getSession(sessionId) {
+    const sessions = await this.getAllSessions();
     return sessions.find(s => s.id === sessionId) || null;
   }
 
   /**
    * Delete a specific session
    * @param {string} sessionId - Session ID to delete
-   * @returns {boolean} - True if deleted, false if not found
+   * @returns {Promise<boolean>} - True if deleted, false if not found
    */
-  static deleteSession(sessionId) {
+  static async deleteSession(sessionId) {
     try {
-      const sessions = this.getAllSessions();
+      const sessions = await this.getAllSessions();
       const filtered = sessions.filter(s => s.id !== sessionId);
 
       if (filtered.length === sessions.length) {
         return false; // Session not found
       }
 
-      localStorage.setItem(SESSIONS_KEY, JSON.stringify(filtered));
+      await AsyncStorage.setItem(SESSIONS_KEY, JSON.stringify(filtered));
       console.log(`Session deleted: ${sessionId}`);
       return true;
     } catch (error) {
@@ -123,11 +125,11 @@ class Storage {
    * Clear old sessions, keeping only the most recent N
    * @param {number} keepCount - Number of sessions to keep
    */
-  static clearOldSessions(keepCount = MAX_SESSIONS) {
+  static async clearOldSessions(keepCount = MAX_SESSIONS) {
     try {
-      const sessions = this.getAllSessions();
+      const sessions = await this.getAllSessions();
       const trimmed = sessions.slice(0, keepCount);
-      localStorage.setItem(SESSIONS_KEY, JSON.stringify(trimmed));
+      await AsyncStorage.setItem(SESSIONS_KEY, JSON.stringify(trimmed));
       console.log(`Cleared old sessions, keeping ${keepCount} most recent`);
     } catch (error) {
       console.error('Failed to clear old sessions:', error);
@@ -138,9 +140,9 @@ class Storage {
   /**
    * Clear all saved sessions
    */
-  static clearAllSessions() {
+  static async clearAllSessions() {
     try {
-      localStorage.removeItem(SESSIONS_KEY);
+      await AsyncStorage.removeItem(SESSIONS_KEY);
       console.log('All sessions cleared');
     } catch (error) {
       console.error('Failed to clear all sessions:', error);
@@ -150,11 +152,11 @@ class Storage {
 
   /**
    * Get storage usage information
-   * @returns {Object} - Storage info with session count and estimated size
+   * @returns {Promise<Object>} - Storage info with session count and estimated size
    */
-  static getStorageInfo() {
-    const sessions = this.getAllSessions();
-    const dataStr = localStorage.getItem(SESSIONS_KEY) || '';
+  static async getStorageInfo() {
+    const sessions = await this.getAllSessions();
+    const dataStr = (await AsyncStorage.getItem(SESSIONS_KEY)) || '';
     const sizeBytes = new Blob([dataStr]).size;
     const sizeMB = (sizeBytes / (1024 * 1024)).toFixed(2);
 

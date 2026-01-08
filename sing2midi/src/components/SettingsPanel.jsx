@@ -16,10 +16,10 @@ const SettingsPanel = ({ visible, onClose, onLoadSession, initialTab = 'history'
     }
   }, [visible, initialTab]);
 
-  const loadSessions = () => {
-    const allSessions = Storage.getAllSessions();
+  const loadSessions = async () => {
+    const allSessions = await Storage.getAllSessions();
     setSessions(allSessions);
-    const info = Storage.getStorageInfo();
+    const info = await Storage.getStorageInfo();
     setStorageInfo(info);
   };
 
@@ -28,17 +28,17 @@ const SettingsPanel = ({ visible, onClose, onLoadSession, initialTab = 'history'
     onClose();
   };
 
-  const handleDeleteSession = (sessionId, e) => {
+  const handleDeleteSession = async (sessionId, e) => {
     e.stopPropagation();
     if (confirm('Delete this session?')) {
-      Storage.deleteSession(sessionId);
+      await Storage.deleteSession(sessionId);
       loadSessions();
     }
   };
 
-  const handleClearAll = () => {
+  const handleClearAll = async () => {
     if (confirm('Delete all sessions? This cannot be undone.')) {
-      Storage.clearAllSessions();
+      await Storage.clearAllSessions();
       loadSessions();
     }
   };
