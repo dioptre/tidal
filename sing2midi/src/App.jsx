@@ -989,8 +989,8 @@ const styles = StyleSheet.create({
   },
   hamburgerButton: {
     position: 'absolute',
-    bottom: 20,
-    right: 20,
+    bottom: 8,
+    right: 8,
     width: 44,
     height: 44,
     borderRadius: 22,

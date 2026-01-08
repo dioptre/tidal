@@ -198,13 +198,13 @@ const SettingsPanel = ({ visible, onClose, onLoadSession, initialTab = 'history'
                     • <Text style={styles.helpKeyword}>Upload (📤)</Text> - Import an audio file to analyze{'\n'}
                     • <Text style={styles.helpKeyword}>Clear (🗑️)</Text> - Delete all notes and reset{'\n'}
                     • <Text style={styles.helpKeyword}>Undo (↩)</Text> - Revert the last edit{'\n'}
-                    • <Text style={styles.helpKeyword}>Play Notes (▶)</Text> - Preview the detected notes as synth{'\n'}
-                    • <Text style={styles.helpKeyword}>Play Audio (▶️)</Text> - Play back your original recording{'\n'}
+                    • <Text style={styles.helpKeyword}>Play Notes (▷)</Text> - Preview the detected notes as synth{'\n'}
+                    • <Text style={styles.helpKeyword}>Play Audio (▶)</Text> - Play back your original recording{'\n'}
                     • <Text style={styles.helpKeyword}>Download (💾)</Text> - Save your recording as audio{'\n'}
                     • <Text style={styles.helpKeyword}>MIDI (🎹)</Text> - Export notes as a MIDI file{'\n'}
-                    • <Text style={styles.helpKeyword}>Note Names (🎵)</Text> - View all detected notes{'\n'}
-                    • <Text style={styles.helpKeyword}>Tidal</Text> - Generate TidalCycles pattern code{'\n'}
-                    • <Text style={styles.helpKeyword}>Strudel</Text> - Generate Strudel (JavaScript) code{'\n'}
+                    • <Text style={styles.helpKeyword}>Note Names (🎼)</Text> - View all detected notes{'\n'}
+                    • <Text style={styles.helpKeyword}>Tidal (🎼)</Text> - Generate TidalCycles pattern code{'\n'}
+                    • <Text style={styles.helpKeyword}>Strudel (🎼)</Text> - Generate Strudel (JavaScript) code{'\n'}
                     • <Text style={styles.helpKeyword}>Help (?)</Text> - Open this help guide
                   </Text>
                 </View>
