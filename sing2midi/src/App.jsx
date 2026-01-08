@@ -426,14 +426,21 @@ export default function App() {
 
     // Restore audio blob if available
     if (session.audioBase64) {
-      // Convert base64 back to blob
-      fetch(session.audioBase64)
-        .then(res => res.blob())
-        .then(blob => {
-          setLastAudioBlob(blob);
-          console.log('Audio restored from session');
-        })
-        .catch(err => console.error('Failed to restore audio:', err));
+      // Convert base64 data URL directly to blob (works in both web and React Native)
+      try {
+        const base64Data = session.audioBase64.split(',')[1];
+        const byteCharacters = atob(base64Data);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: 'audio/wav' });
+        setLastAudioBlob(blob);
+        console.log('Audio restored from session');
+      } catch (err) {
+        console.error('Failed to restore audio:', err);
+      }
     }
 
     console.log(`Session loaded: ${restoredNotes.length} notes restored`);
