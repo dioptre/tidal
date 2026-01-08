@@ -39,9 +39,29 @@ export default function App() {
   const [isProcessing, setIsProcessing] = useState(false); // Processing state after recording stops
   const [lastAudioBlob, setLastAudioBlob] = useState(null); // Store the last recorded audio blob
   const [hoverNote, setHoverNote] = useState(null); // Note being hovered over
+  const [isHoveringRealNote, setIsHoveringRealNote] = useState(false); // Whether hovering over an actual note object
   const [undoStack, setUndoStack] = useState([]); // Undo history
   const [fftData, setFftData] = useState(null); // FFT data for raw mode visualization
   const pitchDetectorRef = useRef(null);
+
+  // Helper: Get note color from note name
+  const getNoteColor = (noteName) => {
+    if (!noteName) return 'rgba(68, 136, 255, 0.9)';
+
+    // Only color if we're actually hovering over a real note object
+    if (!isHoveringRealNote) return 'rgba(68, 136, 255, 0.9)'; // Default blue for cursor notes
+
+    // Parse note name to get MIDI note number
+    const noteMap = { 'C': 0, 'C#': 1, 'D': 2, 'D#': 3, 'E': 4, 'F': 5, 'F#': 6, 'G': 7, 'G#': 8, 'A': 9, 'A#': 10, 'B': 11 };
+    const match = noteName.match(/^([A-G]#?)(-?\d+)$/);
+    if (!match) return 'rgba(68, 136, 255, 0.9)';
+
+    const [, note, octave] = match;
+    const midiNote = (parseInt(octave) + 1) * 12 + noteMap[note];
+    const hue = ((midiNote % 12) / 12) * 360;
+
+    return `hsla(${hue}, 100%, 65%, 0.9)`;
+  };
   const audioContextRef = useRef(null);
   const audioElementRef = useRef(null); // For playing recorded audio
   const playbackTimeoutRef = useRef(null); // For stopping playback timeout
@@ -484,7 +504,10 @@ export default function App() {
           debugShowComparison={DEBUG_SHOW_COMPARISON}
           onNotesChange={handleNotesChange}
           hoverNote={hoverNote}
-          onHoverNoteChange={setHoverNote}
+          onHoverNoteChange={(noteName, isRealNote) => {
+            setHoverNote(noteName);
+            setIsHoveringRealNote(isRealNote);
+          }}
           fftData={fftData}
           voiceMode={voiceMode}
         />
@@ -498,7 +521,7 @@ export default function App() {
 
         {/* Hover note overlay - top left when not recording */}
         {!isRecording && hoverNote && (
-          <View style={styles.liveNoteOverlay}>
+          <View style={[styles.liveNoteOverlay, { backgroundColor: getNoteColor(hoverNote) }]}>
             <Text style={styles.liveNoteText}>{hoverNote}</Text>
           </View>
         )}

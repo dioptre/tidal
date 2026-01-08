@@ -71,7 +71,7 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, onNotesChange
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [notes, isRecording, debugShowComparison, ghostNote, fftData, voiceMode]);
+  }, [notes, isRecording, debugShowComparison, ghostNote, fftData, voiceMode, hoverNote]);
 
   const drawFFTVisualization = (ctx, dataArray, width, height) => {
     const bufferLength = dataArray.length;
@@ -191,14 +191,27 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, onNotesChange
         const noteHeight = (height / midiRange) * 0.7; // Smallest to show all layers below
 
         const hue = ((note.midiNote % 12) / 12) * 360;
-        ctx.fillStyle = `hsl(${hue}, 80%, 55%)`;
-        ctx.shadowBlur = 0;
+
+        // Check if this note is being hovered
+        const isHovered = hoverNote === note.note;
+
+        if (isHovered) {
+          // Highlighted color for hovered notes
+          ctx.fillStyle = `hsl(${hue}, 100%, 65%)`;
+          ctx.shadowBlur = 15;
+          ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
+        } else {
+          ctx.fillStyle = `hsl(${hue}, 80%, 55%)`;
+          ctx.shadowBlur = 0;
+        }
+
         ctx.fillRect(x, y - noteHeight / 2, Math.max(noteWidth, 3), noteHeight);
+        ctx.shadowBlur = 0; // Reset shadow
 
         // Note label on top layer
-        if (noteWidth > 30) {
+        if (noteWidth > 30 || isHovered) {
           ctx.fillStyle = '#ffffff';
-          ctx.font = '11px monospace';
+          ctx.font = isHovered ? 'bold 12px monospace' : '11px monospace';
           ctx.textAlign = 'left';
           ctx.textBaseline = 'middle';
           ctx.fillText(note.note, x + 3, y);
@@ -220,10 +233,18 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, onNotesChange
         // Note rectangle
         const hue = ((note.midiNote % 12) / 12) * 360;
 
+        // Check if this note is being hovered
+        const isHovered = hoverNote === note.note;
+
         // Colorful display during recording
         if (note.isLive) {
           ctx.fillStyle = `hsl(${hue}, 100%, 60%)`;
           ctx.shadowBlur = 20;
+          ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
+        } else if (isHovered) {
+          // Highlighted color for hovered notes (brighter and more saturated)
+          ctx.fillStyle = `hsl(${hue}, 100%, 65%)`;
+          ctx.shadowBlur = 15;
           ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
         } else {
           ctx.fillStyle = `hsl(${hue}, 70%, 50%)`;
@@ -234,9 +255,9 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, onNotesChange
         ctx.shadowBlur = 0; // Reset shadow
 
         // Note label
-        if (noteWidth > 30 || note.isLive) {
-          ctx.fillStyle = note.isLive ? '#ffffff' : '#ffffff';
-          ctx.font = note.isLive ? 'bold 12px monospace' : '11px monospace';
+        if (noteWidth > 30 || note.isLive || isHovered) {
+          ctx.fillStyle = '#ffffff';
+          ctx.font = (note.isLive || isHovered) ? 'bold 12px monospace' : '11px monospace';
           ctx.textAlign = 'left';
           ctx.textBaseline = 'middle';
           ctx.fillText(note.note, x + 3, y);
@@ -468,20 +489,21 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, onNotesChange
     const edgeInfo = findNoteEdge(canvas, e.clientX, e.clientY);
     if (edgeInfo) {
       canvas.style.cursor = 'ew-resize';
-      onHoverNoteChange?.(edgeInfo.note.note);
+      onHoverNoteChange?.(edgeInfo.note.note, true); // true = hovering over real note
     } else {
       // Hover detection
-      canvas.style.cursor = 'default';
       const noteAtPos = findNoteAtPosition(canvas, e.clientX, e.clientY);
       if (noteAtPos) {
-        onHoverNoteChange?.(noteAtPos.note.note);
+        canvas.style.cursor = 'pointer';
+        onHoverNoteChange?.(noteAtPos.note.note, true); // true = hovering over real note
       } else {
-        // Show the note at cursor position
+        // Show the note at cursor position (but won't highlight in graph)
+        canvas.style.cursor = 'default';
         const params = screenToNoteParams(canvas, e.clientX, e.clientY);
         if (params) {
-          onHoverNoteChange?.(getMIDINoteName(params.midiNote));
+          onHoverNoteChange?.(getMIDINoteName(params.midiNote), false); // false = just cursor position
         } else {
-          onHoverNoteChange?.(null);
+          onHoverNoteChange?.(null, false);
         }
       }
     }
