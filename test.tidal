@@ -69,6 +69,8 @@ d1 $ n "0 1 2 [3 5]" # sound "cpu"
   |+| n "<[4 5 3 2] [5 4 3] [6 5]>"
   # squiz 2
 
+  hush
+
 d1 $ every 3 (fast 2) $ sound "bd sd ~ cp"
 
 d1 $ every 4 rev $ every 2 (hurry 2) $ every 3 (# squiz 5) $ sound "bd sd [~ bd] [cp bd*2]"
@@ -168,6 +170,7 @@ d1 $ jux rev $ arp "<updown thumbup pinkyupdown converge diverge>" $ n "<c4'maj'
 --  OffsetOut.ar(out,DirtPan.ar(outAudio, ~dirt.numChannels, pan, volume));
 -- }).add;
 
+hush
 
 d1 $ off "0.25" (|+ n 7) $ n "c e" # sound "supermandolin"
 
@@ -1120,4 +1123,18 @@ d1 $ slow 3 $ note "a-1*3 ~  b-1"
 # rel "0"
 # gain 1.15
 
-d1 $ slow 9.00 $ note "e-3 ~ ~ e-3 fs-3*2 fs-3 ~ g-3 ~ g-3 ~ ~ ~ a-3 ~ ~ b-3 b-3 ~ ~ cs-2 cs-2 ~ ~ ds-2 ~ ~ e-1*2 ~ ~ e-2 ~ ~ e-1" # s "superpiano"
+hush
+
+once $ n (stretch "d2 ~ fs2@2 g2 ~ a2 ~ b2 ~ c3 ~ ~ ds3@2 [ds4] ~ e3") 
+# s "superpiano" 
+# cps (10/60/4) 
+-- delay with nudge
+# nudge 0
+-- # att "5"
+-- # hold "1"
+-- # rel "0"
+-- # gain 2
+
+-- all $ (|+ nudge 0.2)
+
+once $ n (stretch "d2 ~ e2 ~ fs2 ~ g2 a2 ~ b2 cs3 d3@3") # s "superpiano" # cps (45/60/4)
