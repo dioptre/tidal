@@ -1109,3 +1109,15 @@ d2 silence
 d1 silence
 hush
 
+d1 $ slow 5.77 $ note "f-3 g-3 as-3 a-3 as-3 c-2 ds-2 d-2 ds-2 f-2 e-2 f-2 f-2 fs-2 f-2 fs-2 f-2" # s "superpiano"
+
+d1 $ slow 2.72 $ note "cs-3 cs-3 cs-3 cs-2 c-2 cs-2 cs-2 cs-2 d-2 d-2 a-3 a-3 a-1 a-3 as-3 as-3 f-3 f-3 f-3 f-3 fs-3 a-1 ~ ~ ~ ~ c-3" # s "superpiano"
+
+d1 $ slow 3 $ note "a-1*3 ~  b-1" 
+# s "gtr" 
+# att "5"
+# hold "1"
+# rel "0"
+# gain 1.15
+
+d1 $ slow 9.00 $ note "e-3 ~ ~ e-3 fs-3*2 fs-3 ~ g-3 ~ g-3 ~ ~ ~ a-3 ~ ~ b-3 b-3 ~ ~ cs-2 cs-2 ~ ~ ds-2 ~ ~ e-1*2 ~ ~ e-2 ~ ~ e-1" # s "superpiano"
