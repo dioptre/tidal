@@ -7,6 +7,9 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, onNotesChange
   const [dragState, setDragState] = useState(null); // { noteIndex, originalNote, startX, startY, isCreatingNew }
   const [ghostNote, setGhostNote] = useState(null); // Original position during drag
   const holdTimerRef = useRef(null);
+  const [zoom, setZoom] = useState(1.0); // Zoom level (1.0 = 100%)
+  const [panOffset, setPanOffset] = useState(0); // Pan offset in seconds
+  const touchStateRef = useRef({ isPinching: false, lastDistance: null, lastTouches: null });
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -71,7 +74,7 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, onNotesChange
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [notes, isRecording, debugShowComparison, ghostNote, fftData, voiceMode, hoverNote]);
+  }, [notes, isRecording, debugShowComparison, ghostNote, fftData, voiceMode, hoverNote, zoom, panOffset]);
 
   const drawFFTVisualization = (ctx, dataArray, width, height) => {
     const bufferLength = dataArray.length;
@@ -113,7 +116,7 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, onNotesChange
     const maxTime = Math.max(...notes.map(n => (n.startTime || 0) + (n.duration || 0)));
 
     // During recording, show a 5-second sliding window
-    // After recording, show all notes
+    // After recording, show all notes with zoom and pan
     let timeScale, timeOffset;
     if (isRecording) {
       const windowSize = 5; // 5 second window
@@ -122,8 +125,8 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, onNotesChange
       timeOffset = Math.max(0, maxTime - windowSize + 1);
     } else {
       const totalTime = Math.max(maxTime, 5);
-      timeScale = width / totalTime;
-      timeOffset = 0;
+      timeScale = (width / totalTime) * zoom; // Apply zoom
+      timeOffset = panOffset; // Apply pan offset
     }
 
     // Draw grid lines (octave markers)
@@ -332,10 +335,10 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, onNotesChange
 
     const maxTime = Math.max(...notes.map(n => (n.startTime || 0) + (n.duration || 0)));
     const totalTime = Math.max(maxTime, 5);
-    const timeScale = width / totalTime;
+    const timeScale = isRecording ? (width / totalTime) : ((width / totalTime) * zoom); // Apply zoom when not recording
 
-    // Convert x to time
-    const time = x / timeScale;
+    // Convert x to time (account for pan offset when not recording)
+    const time = (x / timeScale) + (isRecording ? 0 : panOffset);
 
     // Convert y to MIDI note (snap to semitones)
     const midiFloat = minMidi + ((height - y) / height) * midiRange;
@@ -620,17 +623,115 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, onNotesChange
     }
   };
 
+  // Wheel handler for zoom (desktop)
+  const handleWheel = (e) => {
+    if (isRecording) return;
+
+    e.preventDefault();
+
+    // Zoom with scroll wheel
+    const zoomDelta = e.deltaY > 0 ? 0.9 : 1.1;
+    const newZoom = Math.max(0.5, Math.min(5.0, zoom * zoomDelta));
+    setZoom(newZoom);
+  };
+
+  // Touch handlers for pinch-to-zoom and two-finger pan
+  const handleTouchStart = (e) => {
+    if (isRecording || e.touches.length !== 2) return;
+
+    const touch1 = e.touches[0];
+    const touch2 = e.touches[1];
+
+    // Calculate initial distance between touches
+    const distance = Math.hypot(
+      touch2.clientX - touch1.clientX,
+      touch2.clientY - touch1.clientY
+    );
+
+    touchStateRef.current = {
+      isPinching: true,
+      lastDistance: distance,
+      lastTouches: {
+        x: (touch1.clientX + touch2.clientX) / 2,
+        y: (touch1.clientY + touch2.clientY) / 2,
+      },
+    };
+  };
+
+  const handleTouchMove = (e) => {
+    if (isRecording || !touchStateRef.current.isPinching || e.touches.length !== 2) return;
+
+    e.preventDefault();
+
+    const touch1 = e.touches[0];
+    const touch2 = e.touches[1];
+
+    // Calculate current distance
+    const distance = Math.hypot(
+      touch2.clientX - touch1.clientX,
+      touch2.clientY - touch1.clientY
+    );
+
+    // Calculate center point
+    const centerX = (touch1.clientX + touch2.clientX) / 2;
+    const centerY = (touch1.clientY + touch2.clientY) / 2;
+
+    // Zoom based on distance change
+    if (touchStateRef.current.lastDistance) {
+      const scale = distance / touchStateRef.current.lastDistance;
+      const newZoom = Math.max(0.5, Math.min(5.0, zoom * scale));
+      setZoom(newZoom);
+    }
+
+    // Pan based on center point movement
+    if (touchStateRef.current.lastTouches) {
+      const canvas = canvasRef.current;
+      if (canvas) {
+        const rect = canvas.getBoundingClientRect();
+        const width = rect.width;
+        const maxTime = Math.max(...notes.map(n => (n.startTime || 0) + (n.duration || 0)));
+        const totalTime = Math.max(maxTime, 5);
+        const timeScale = (width / totalTime) * zoom;
+
+        // Calculate pan delta in pixels, then convert to time
+        const deltaX = centerX - touchStateRef.current.lastTouches.x;
+        const deltaTime = -deltaX / timeScale; // Negative because panning right should show earlier time
+
+        const newPanOffset = Math.max(0, Math.min(totalTime - width / timeScale, panOffset + deltaTime));
+        setPanOffset(newPanOffset);
+      }
+    }
+
+    // Update state
+    touchStateRef.current.lastDistance = distance;
+    touchStateRef.current.lastTouches = { x: centerX, y: centerY };
+  };
+
+  const handleTouchEnd = (e) => {
+    if (e.touches.length < 2) {
+      touchStateRef.current = { isPinching: false, lastDistance: null, lastTouches: null };
+    }
+  };
+
   // Add event listeners to canvas
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || isRecording) return;
+    if (!canvas) return;
 
-    canvas.addEventListener('mousemove', handleMouseMove);
-    canvas.addEventListener('mousedown', handleMouseDown);
-    canvas.addEventListener('mouseup', handleMouseUp);
-    canvas.addEventListener('mouseleave', handleMouseLeave);
-    canvas.addEventListener('dblclick', handleDoubleClick);
-    document.addEventListener('mouseup', handleMouseUp); // Global mouse up
+    if (!isRecording) {
+      canvas.addEventListener('mousemove', handleMouseMove);
+      canvas.addEventListener('mousedown', handleMouseDown);
+      canvas.addEventListener('mouseup', handleMouseUp);
+      canvas.addEventListener('mouseleave', handleMouseLeave);
+      canvas.addEventListener('dblclick', handleDoubleClick);
+      document.addEventListener('mouseup', handleMouseUp); // Global mouse up
+    }
+
+    // Always add zoom/pan listeners (even during recording, for consistency)
+    canvas.addEventListener('wheel', handleWheel, { passive: false });
+    canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+    canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+    canvas.addEventListener('touchend', handleTouchEnd);
 
     return () => {
       canvas.removeEventListener('mousemove', handleMouseMove);
@@ -639,8 +740,12 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, onNotesChange
       canvas.removeEventListener('mouseleave', handleMouseLeave);
       canvas.removeEventListener('dblclick', handleDoubleClick);
       document.removeEventListener('mouseup', handleMouseUp);
+      canvas.removeEventListener('wheel', handleWheel);
+      canvas.removeEventListener('touchstart', handleTouchStart);
+      canvas.removeEventListener('touchmove', handleTouchMove);
+      canvas.removeEventListener('touchend', handleTouchEnd);
     };
-  }, [isRecording, notes, dragState]);
+  }, [isRecording, notes, dragState, zoom, panOffset]);
 
   return (
     <View style={styles.container}>

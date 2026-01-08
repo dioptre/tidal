@@ -18,7 +18,8 @@ import {
   UploadIcon,
   DownloadIcon,
   WaveformIcon,
-  MenuIcon
+  MenuIcon,
+  CircleHelpIcon
 } from './components/Icons.jsx';
 
 // Debug mode: Show live detections (green) vs ML predictions (blue) side-by-side
@@ -37,6 +38,7 @@ export default function App() {
   const [dialogContent, setDialogContent] = useState({ title: '', content: '' });
   const [currentLiveNote, setCurrentLiveNote] = useState(null); // Current note being detected live
   const [settingsPanelVisible, setSettingsPanelVisible] = useState(false); // Settings panel visibility
+  const [settingsPanelInitialTab, setSettingsPanelInitialTab] = useState('history'); // Initial tab for settings panel
   const [isProcessing, setIsProcessing] = useState(false); // Processing state after recording stops
   const [lastAudioBlob, setLastAudioBlob] = useState(null); // Store the last recorded audio blob
   const [hoverNote, setHoverNote] = useState(null); // Note being hovered over
@@ -689,6 +691,16 @@ export default function App() {
               />
             </View>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.button, styles.smallButton, styles.helpButton]}
+            onPress={() => {
+              setSettingsPanelInitialTab('help');
+              setSettingsPanelVisible(true);
+            }}
+          >
+            <CircleHelpIcon size={16} />
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -741,12 +753,16 @@ export default function App() {
         visible={settingsPanelVisible}
         onClose={() => setSettingsPanelVisible(false)}
         onLoadSession={handleLoadSession}
+        initialTab={settingsPanelInitialTab}
       />
 
       {/* Menu button - bottom right corner */}
       <TouchableOpacity
         style={styles.hamburgerButton}
-        onPress={() => setSettingsPanelVisible(!settingsPanelVisible)}
+        onPress={() => {
+          setSettingsPanelInitialTab('history');
+          setSettingsPanelVisible(!settingsPanelVisible);
+        }}
       >
         <MenuIcon size={20} />
       </TouchableOpacity>
@@ -903,6 +919,9 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.BG_SECONDARY,
   },
   strudelButton: {
+    backgroundColor: Colors.BG_SECONDARY,
+  },
+  helpButton: {
     backgroundColor: Colors.BG_SECONDARY,
   },
   disabledButton: {

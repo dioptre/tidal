@@ -3,15 +3,17 @@ import { View, Text, TouchableOpacity, StyleSheet, Modal, ScrollView } from 'rea
 import Storage from '../utils/Storage';
 import * as Colors from '../styles/colors';
 
-const SettingsPanel = ({ visible, onClose, onLoadSession }) => {
+const SettingsPanel = ({ visible, onClose, onLoadSession, initialTab = 'history' }) => {
   const [sessions, setSessions] = useState([]);
   const [storageInfo, setStorageInfo] = useState(null);
+  const [activeTab, setActiveTab] = useState('history'); // 'history' or 'help'
 
   useEffect(() => {
     if (visible) {
       loadSessions();
+      setActiveTab(initialTab); // Set to initialTab when opened
     }
-  }, [visible]);
+  }, [visible, initialTab]);
 
   const loadSessions = () => {
     const allSessions = Storage.getAllSessions();
@@ -75,13 +77,30 @@ const SettingsPanel = ({ visible, onClose, onLoadSession }) => {
           onPress={(e) => e.stopPropagation()}
         >
           <View style={styles.header}>
-            <Text style={styles.title}>History</Text>
+            <View style={styles.tabContainer}>
+              <TouchableOpacity
+                style={[styles.tab, activeTab === 'history' && styles.activeTab]}
+                onPress={() => setActiveTab('history')}
+              >
+                <Text style={[styles.tabText, activeTab === 'history' && styles.activeTabText]}>
+                  History
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.tab, activeTab === 'help' && styles.activeTab]}
+                onPress={() => setActiveTab('help')}
+              >
+                <Text style={[styles.tabText, activeTab === 'help' && styles.activeTabText]}>
+                  Help
+                </Text>
+              </TouchableOpacity>
+            </View>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <Text style={styles.closeButtonText}>✕</Text>
             </TouchableOpacity>
           </View>
 
-          {storageInfo && (
+          {activeTab === 'history' && storageInfo && (
             <View style={styles.storageInfo}>
               <Text style={styles.storageInfoText}>
                 {storageInfo.sessionCount} sessions • {storageInfo.sizeMB} MB
@@ -95,49 +114,118 @@ const SettingsPanel = ({ visible, onClose, onLoadSession }) => {
           )}
 
           <ScrollView style={styles.content}>
-            {sessions.length === 0 ? (
-              <Text style={styles.placeholderText}>
-                No saved sessions yet. Record something to get started!
-              </Text>
-            ) : (
-              sessions.map((session) => (
-                <TouchableOpacity
-                  key={session.id}
-                  style={styles.sessionCard}
-                  onPress={() => handleLoadSession(session)}
-                >
-                  <View style={styles.sessionHeader}>
-                    <Text style={styles.sessionDate}>{formatDate(session.timestamp)}</Text>
+            {activeTab === 'history' ? (
+              <>
+                {sessions.length === 0 ? (
+                  <Text style={styles.placeholderText}>
+                    No saved sessions yet. Record something to get started!
+                  </Text>
+                ) : (
+                  sessions.map((session) => (
                     <TouchableOpacity
-                      onPress={(e) => handleDeleteSession(session.id, e)}
-                      style={styles.deleteButton}
+                      key={session.id}
+                      style={styles.sessionCard}
+                      onPress={() => handleLoadSession(session)}
                     >
-                      <Text style={styles.deleteButtonText}>🗑️</Text>
+                      <View style={styles.sessionHeader}>
+                        <Text style={styles.sessionDate}>{formatDate(session.timestamp)}</Text>
+                        <TouchableOpacity
+                          onPress={(e) => handleDeleteSession(session.id, e)}
+                          style={styles.deleteButton}
+                        >
+                          <Text style={styles.deleteButtonText}>🗑️</Text>
+                        </TouchableOpacity>
+                      </View>
+
+                      <View style={styles.sessionDetails}>
+                        <View style={styles.sessionStat}>
+                          <Text style={styles.sessionStatValue}>{session.notes?.length || 0}</Text>
+                          <Text style={styles.sessionStatLabel}>notes</Text>
+                        </View>
+                        <View style={styles.sessionStat}>
+                          <Text style={styles.sessionStatValue}>{formatDuration(session.notes)}</Text>
+                          <Text style={styles.sessionStatLabel}>duration</Text>
+                        </View>
+                        <View style={styles.sessionStat}>
+                          <Text style={styles.sessionStatValue}>{session.voiceMode ? '🎤' : '🤖'}</Text>
+                          <Text style={styles.sessionStatLabel}>mode</Text>
+                        </View>
+                      </View>
+
+                      {session.noteNames && (
+                        <Text style={styles.sessionPreview} numberOfLines={1}>
+                          {session.noteNames.split('\n')[0]}
+                        </Text>
+                      )}
                     </TouchableOpacity>
-                  </View>
+                  ))
+                )}
+              </>
+            ) : (
+              <View style={styles.helpContent}>
+                <Text style={styles.helpTitle}>Help & Controls</Text>
 
-                  <View style={styles.sessionDetails}>
-                    <View style={styles.sessionStat}>
-                      <Text style={styles.sessionStatValue}>{session.notes?.length || 0}</Text>
-                      <Text style={styles.sessionStatLabel}>notes</Text>
-                    </View>
-                    <View style={styles.sessionStat}>
-                      <Text style={styles.sessionStatValue}>{formatDuration(session.notes)}</Text>
-                      <Text style={styles.sessionStatLabel}>duration</Text>
-                    </View>
-                    <View style={styles.sessionStat}>
-                      <Text style={styles.sessionStatValue}>{session.voiceMode ? '🎤' : '🤖'}</Text>
-                      <Text style={styles.sessionStatLabel}>mode</Text>
-                    </View>
-                  </View>
+                <View style={styles.helpSection}>
+                  <Text style={styles.helpSectionTitle}>🎵 Creating Notes</Text>
+                  <Text style={styles.helpText}>
+                    • <Text style={styles.helpKeyword}>Hold down</Text> on empty space to add a new note{'\n'}
+                    • Drag while holding to set the note's duration
+                  </Text>
+                </View>
 
-                  {session.noteNames && (
-                    <Text style={styles.sessionPreview} numberOfLines={1}>
-                      {session.noteNames.split('\n')[0]}
-                    </Text>
-                  )}
-                </TouchableOpacity>
-              ))
+                <View style={styles.helpSection}>
+                  <Text style={styles.helpSectionTitle}>✏️ Editing Notes</Text>
+                  <Text style={styles.helpText}>
+                    • <Text style={styles.helpKeyword}>Click and drag</Text> a note to move it{'\n'}
+                    • <Text style={styles.helpKeyword}>Drag the edges</Text> of a note to stretch/shrink its duration{'\n'}
+                    • <Text style={styles.helpKeyword}>Double-click</Text> a note to delete it{'\n'}
+                    • Drag a note off the canvas to delete it
+                  </Text>
+                </View>
+
+                <View style={styles.helpSection}>
+                  <Text style={styles.helpSectionTitle}>🔍 Navigation</Text>
+                  <Text style={styles.helpText}>
+                    • <Text style={styles.helpKeyword}>Two-finger pinch</Text> to zoom in/out{'\n'}
+                    • <Text style={styles.helpKeyword}>Two-finger drag</Text> to pan around the canvas{'\n'}
+                    • <Text style={styles.helpKeyword}>Scroll wheel</Text> to zoom (desktop)
+                  </Text>
+                </View>
+
+                <View style={styles.helpSection}>
+                  <Text style={styles.helpSectionTitle}>🎛️ Control Buttons</Text>
+                  <Text style={styles.helpText}>
+                    • <Text style={styles.helpKeyword}>Upload (📤)</Text> - Import an audio file to analyze{'\n'}
+                    • <Text style={styles.helpKeyword}>Clear (🗑️)</Text> - Delete all notes and reset{'\n'}
+                    • <Text style={styles.helpKeyword}>Undo (↩)</Text> - Revert the last edit{'\n'}
+                    • <Text style={styles.helpKeyword}>Play Notes (▶)</Text> - Preview the detected notes as synth{'\n'}
+                    • <Text style={styles.helpKeyword}>Play Audio (▶️)</Text> - Play back your original recording{'\n'}
+                    • <Text style={styles.helpKeyword}>Download (💾)</Text> - Save your recording as audio{'\n'}
+                    • <Text style={styles.helpKeyword}>MIDI (🎹)</Text> - Export notes as a MIDI file{'\n'}
+                    • <Text style={styles.helpKeyword}>Note Names (🎵)</Text> - View all detected notes{'\n'}
+                    • <Text style={styles.helpKeyword}>Tidal</Text> - Generate TidalCycles pattern code{'\n'}
+                    • <Text style={styles.helpKeyword}>Strudel</Text> - Generate Strudel (JavaScript) code{'\n'}
+                    • <Text style={styles.helpKeyword}>Help (?)</Text> - Open this help guide
+                  </Text>
+                </View>
+
+                <View style={styles.helpSection}>
+                  <Text style={styles.helpSectionTitle}>🎤 Recording Modes</Text>
+                  <Text style={styles.helpText}>
+                    • <Text style={styles.helpKeyword}>Voice</Text> - Optimized for singing (recommended){'\n'}
+                    • <Text style={styles.helpKeyword}>Raw</Text> - Shows frequency spectrum visualization
+                  </Text>
+                </View>
+
+                <View style={styles.helpSection}>
+                  <Text style={styles.helpSectionTitle}>💾 Sessions</Text>
+                  <Text style={styles.helpText}>
+                    • Sessions are auto-saved after recording{'\n'}
+                    • Load previous recordings from the History tab{'\n'}
+                    • Edit loaded sessions and changes are saved automatically
+                  </Text>
+                </View>
+              </View>
             )}
           </ScrollView>
         </TouchableOpacity>
@@ -168,6 +256,28 @@ const styles = StyleSheet.create({
     padding: 20,
     borderBottomWidth: 1,
     borderBottomColor: Colors.BORDER_PRIMARY,
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  tab: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: 'transparent',
+  },
+  activeTab: {
+    backgroundColor: Colors.BG_PRIMARY,
+  },
+  tabText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.TEXT_SECONDARY,
+    fontFamily: Colors.FONT_UI,
+  },
+  activeTabText: {
+    color: Colors.TEXT_PRIMARY,
   },
   title: {
     fontSize: 24,
@@ -284,6 +394,36 @@ const styles = StyleSheet.create({
     color: Colors.TEXT_SECONDARY,
     fontFamily: Colors.FONT_TECHNICAL,
     marginTop: 8,
+  },
+  helpContent: {
+    paddingBottom: 20,
+  },
+  helpTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: Colors.TEXT_PRIMARY,
+    marginBottom: 20,
+    fontFamily: Colors.FONT_UI,
+  },
+  helpSection: {
+    marginBottom: 24,
+  },
+  helpSectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: Colors.TEXT_PRIMARY,
+    marginBottom: 8,
+    fontFamily: Colors.FONT_UI,
+  },
+  helpText: {
+    fontSize: 15,
+    color: Colors.TEXT_SECONDARY,
+    lineHeight: 24,
+    fontFamily: Colors.FONT_UI,
+  },
+  helpKeyword: {
+    color: Colors.WAVEFORM_BLUE,
+    fontWeight: '600',
   },
 });
 
