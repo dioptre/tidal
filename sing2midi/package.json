@@ -5,24 +5,56 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start": "react-native start",
+    "ios": "react-native run-ios",
+    "ios:device": "react-native run-ios --device",
+    "ios:simulator": "react-native run-ios --simulator='iPhone 16 Pro'",
+    "ios:clean": "cd ios && xcodebuild clean && rm -rf build DerivedData",
+    "pod-install": "cd ios && export LANG=en_US.UTF-8 && pod install",
+    "pod-update": "cd ios && export LANG=en_US.UTF-8 && pod update",
+    "pod-clean": "cd ios && rm -rf Pods Podfile.lock && export LANG=en_US.UTF-8 && pod install",
+    "prebuild:ios": "npm run pod-install",
+    "xcode": "open ios/sing2midi.xcworkspace",
+    "lint": "echo 'No linter configured'",
+    "test": "playwright test"
+  },
+  "comments": {
+    "setup": "1. Install Node 20.19.4+ via nvm: `nvm install 20.19.4 && nvm use 20.19.4`",
+    "setup2": "2. Install CocoaPods: `sudo gem install cocoapods`",
+    "setup3": "3. Install iOS dependencies: `npm run pod-install`",
+    "ios-dev": "Start Metro bundler in one terminal: `npm start`, then run iOS in another: `npm run ios`",
+    "ios-xcode": "Or open in Xcode: `npm run xcode`, select simulator, press Cmd+R",
+    "web-dev": "Web development: `npm run dev` then visit http://localhost:5176/tidal/",
+    "bundle-id": "Bundle ID: io.sfpl.sing2midi",
+    "app-name": "Voice Composer (code: sing2midi)"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@react-native-async-storage/async-storage": "^2.2.0",
     "@spotify/basic-pitch": "^1.0.1",
     "@vitejs/plugin-react": "^4.7.0",
     "buffer": "^6.0.3",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
+    "react-native": "^0.83.1",
+    "react-native-canvas": "^0.1.40",
     "react-native-svg": "^15.15.1",
     "react-native-web": "^0.21.2",
+    "react-native-webview": "^13.16.0",
     "vite": "^5.4.21"
   },
   "devDependencies": {
     "@playwright/test": "^1.57.0",
-    "playwright": "^1.57.0"
+    "@react-native-community/cli": "^20.1.0",
+    "@react-native-community/cli-platform-ios": "^20.1.0",
+    "@react-native/babel-preset": "^0.83.1",
+    "@react-native/metro-config": "^0.83.1",
+    "babel-plugin-module-resolver": "^5.0.2",
+    "playwright": "^1.57.0",
+    "react-native-svg-transformer": "^1.5.2"
   }
 }

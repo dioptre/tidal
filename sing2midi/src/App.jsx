@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Animated, Image } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Animated, Image, Platform } from 'react-native';
 import PitchDetector from './components/PitchDetector.jsx';
 import NoteVisualizer from './components/NoteVisualizer.jsx';
 import CopyDialog from './components/CopyDialog.jsx';
@@ -606,19 +606,24 @@ export default function App() {
 
         {/* Second row: All other buttons */}
         <View style={[styles.buttonRow, styles.secondaryButtonRow]}>
-          <TouchableOpacity
-            style={[styles.button, styles.smallButton, styles.uploadButton]}
-            onPress={() => document.getElementById('file-upload').click()}
-          >
-            <UploadIcon size={16} />
-          </TouchableOpacity>
-          <input
-            id="file-upload"
-            type="file"
-            accept="audio/*"
-            onChange={handleFileUpload}
-            style={{ display: 'none' }}
-          />
+          {/* Hide file upload on iOS/Android - only show on web */}
+          {Platform.OS === 'web' && (
+            <>
+              <TouchableOpacity
+                style={[styles.button, styles.smallButton, styles.uploadButton]}
+                onPress={() => document.getElementById('file-upload').click()}
+              >
+                <UploadIcon size={16} />
+              </TouchableOpacity>
+              <input
+                id="file-upload"
+                type="file"
+                accept="audio/*"
+                onChange={handleFileUpload}
+                style={{ display: 'none' }}
+              />
+            </>
+          )}
 
           <TouchableOpacity
             style={[styles.button, styles.smallButton, styles.clearButton, notes.length === 0 && styles.disabledButton]}

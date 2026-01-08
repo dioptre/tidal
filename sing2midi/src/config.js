@@ -13,9 +13,12 @@ const getBasePath = () => {
     return '/';
   }
 
-  // For web builds, use the Vite base path
-  if (typeof import.meta !== 'undefined' && import.meta.env) {
-    return import.meta.env.BASE_URL || '/';
+  // For web builds, check if we're in Vite environment
+  // Metro bundler will skip this entirely since isWeb is false
+  if (isWeb && typeof window !== 'undefined') {
+    // In production web builds, Vite will set this at build time
+    // Default to '/tidal/' for GitHub Pages deployment
+    return '/tidal/';
   }
 
   return '/';

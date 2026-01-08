@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Platform, PanResponder } from 'react-native';
+import Canvas from 'react-native-canvas';
 
 const NoteVisualizer = ({ notes, isRecording, debugShowComparison, onNotesChange, hoverNote, onHoverNoteChange, fftData, voiceMode }) => {
   const canvasRef = useRef(null);
@@ -13,30 +14,65 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, onNotesChange
   const [panOffsetY, setPanOffsetY] = useState(0); // Pan offset in semitones (vertical)
   const touchStateRef = useRef({ isPinching: false, isPanning: false, lastDistance: null, lastTouches: null });
 
+  // Handle canvas initialization for native vs web
+  const handleCanvas = (canvas) => {
+    if (!canvas) return;
+    canvasRef.current = canvas;
+
+    // For native canvas, we need to set dimensions first
+    if (Platform.OS !== 'web') {
+      canvas.width = 800; // Will be updated on layout
+      canvas.height = 600;
+    }
+  };
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const ctx = canvas.getContext('2d');
-    const dpr = window.devicePixelRatio || 1;
+    const getContext = () => {
+      if (Platform.OS === 'web') {
+        return canvas.getContext('2d');
+      }
+      // For react-native-canvas, context is obtained differently
+      return canvas.getContext('2d');
+    };
+
+    const ctx = getContext();
+    if (!ctx) return;
+
+    const dpr = Platform.OS === 'web' ? (window.devicePixelRatio || 1) : 1;
 
     // Set canvas size
     const resizeCanvas = () => {
-      const rect = canvas.getBoundingClientRect();
-      canvas.width = rect.width * dpr;
-      canvas.height = rect.height * dpr;
-      ctx.scale(dpr, dpr);
-      canvas.style.width = rect.width + 'px';
-      canvas.style.height = rect.height + 'px';
+      if (Platform.OS === 'web') {
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width * dpr;
+        canvas.height = rect.height * dpr;
+        ctx.scale(dpr, dpr);
+        canvas.style.width = rect.width + 'px';
+        canvas.style.height = rect.height + 'px';
+      }
+      // Native canvas sizing is handled via style prop
     };
 
     resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
+    if (Platform.OS === 'web') {
+      window.addEventListener('resize', resizeCanvas);
+    }
 
     const render = () => {
-      const rect = canvas.getBoundingClientRect();
-      const width = rect.width;
-      const height = rect.height;
+      // Get canvas dimensions
+      let width, height;
+      if (Platform.OS === 'web') {
+        const rect = canvas.getBoundingClientRect();
+        width = rect.width;
+        height = rect.height;
+      } else {
+        // For native, use canvas width/height directly
+        width = canvas.width || 800;
+        height = canvas.height || 600;
+      }
 
       // Clear canvas
       ctx.fillStyle = '#0a0a0a';
@@ -837,8 +873,10 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, onNotesChange
     }
   };
 
-  // Add event listeners to canvas
+  // Add event listeners to canvas (web only)
   useEffect(() => {
+    if (Platform.OS !== 'web') return; // Skip on native - use PanResponder instead
+
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -871,12 +909,57 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, onNotesChange
     };
   }, [isRecording, notes, dragState, zoomX, zoomY, panOffsetX, panOffsetY]);
 
+  // Create PanResponder for native touch handling
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => Platform.OS !== 'web',
+      onMoveShouldSetPanResponder: () => Platform.OS !== 'web',
+      onPanResponderGrant: (evt) => {
+        // Touch started - simulate touchstart
+        if (Platform.OS !== 'web') {
+          handleTouchStart({ touches: evt.nativeEvent.touches, preventDefault: () => {} });
+        }
+      },
+      onPanResponderMove: (evt) => {
+        // Touch moved - simulate touchmove
+        if (Platform.OS !== 'web') {
+          handleTouchMove({ touches: evt.nativeEvent.touches, preventDefault: () => {} });
+        }
+      },
+      onPanResponderRelease: (evt) => {
+        // Touch ended - simulate touchend
+        if (Platform.OS !== 'web') {
+          handleTouchEnd({ touches: evt.nativeEvent.touches || [] });
+        }
+      },
+    })
+  ).current;
+
+  // Render native Canvas on iOS/Android, HTML canvas on web
+  const renderCanvas = () => {
+    if (Platform.OS === 'web') {
+      return (
+        <canvas
+          ref={canvasRef}
+          style={styles.canvas}
+        />
+      );
+    }
+
+    // Native canvas for iOS/Android with PanResponder
+    return (
+      <View style={styles.canvas} {...panResponder.panHandlers}>
+        <Canvas
+          ref={handleCanvas}
+          style={styles.canvas}
+        />
+      </View>
+    );
+  };
+
   return (
     <View style={styles.container}>
-      <canvas
-        ref={canvasRef}
-        style={styles.canvas}
-      />
+      {renderCanvas()}
     </View>
   );
 };
