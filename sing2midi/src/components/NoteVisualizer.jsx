@@ -585,7 +585,7 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, onNotesChange
         const newNote = {
           midiNote,
           startTime: time,
-          duration: 0.1,
+          duration: 0.2,
           note: getMIDINoteName(midiNote),
           frequency: 440 * Math.pow(2, (midiNote - 69) / 12),
           isML: true,

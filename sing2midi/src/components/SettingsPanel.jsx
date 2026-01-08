@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal, ScrollView } from 'react-native';
 import Storage from '../utils/Storage';
 import * as Colors from '../styles/colors';
+import { Trash2Icon, MicIcon, WaveformIcon } from './Icons';
 
 const SettingsPanel = ({ visible, onClose, onLoadSession, initialTab = 'history' }) => {
   const [sessions, setSessions] = useState([]);
@@ -133,7 +134,7 @@ const SettingsPanel = ({ visible, onClose, onLoadSession, initialTab = 'history'
                           onPress={(e) => handleDeleteSession(session.id, e)}
                           style={styles.deleteButton}
                         >
-                          <Text style={styles.deleteButtonText}>🗑️</Text>
+                          <Trash2Icon size={14} color={Colors.TEXT_SECONDARY} />
                         </TouchableOpacity>
                       </View>
 
@@ -147,7 +148,13 @@ const SettingsPanel = ({ visible, onClose, onLoadSession, initialTab = 'history'
                           <Text style={styles.sessionStatLabel}>duration</Text>
                         </View>
                         <View style={styles.sessionStat}>
-                          <Text style={styles.sessionStatValue}>{session.voiceMode ? '🎤' : '🤖'}</Text>
+                          <View style={styles.sessionStatValue}>
+                            {session.voiceMode ? (
+                              <MicIcon size={18} color={Colors.WAVEFORM_BLUE} />
+                            ) : (
+                              <WaveformIcon size={18} color={Colors.WAVEFORM_BLUE} />
+                            )}
+                          </View>
                           <Text style={styles.sessionStatLabel}>mode</Text>
                         </View>
                       </View>
@@ -357,17 +364,13 @@ const styles = StyleSheet.create({
     fontFamily: Colors.FONT_UI,
   },
   deleteButton: {
-    padding: 4,
+    padding: 6,
     width: 28,
     height: 28,
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 4,
-    backgroundColor: '#000000',
-  },
-  deleteButtonText: {
-    fontSize: 16,
-    opacity: 0.6,
+    backgroundColor: 'transparent',
   },
   sessionDetails: {
     flexDirection: 'row',
