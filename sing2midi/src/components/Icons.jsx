@@ -100,3 +100,11 @@ export const WaveformIcon = ({ size = 18, color = "#fff", ...props }) => (
     <Path d="M22 12h-2" />
   </Svg>
 );
+
+export const MenuIcon = ({ size = 18, color = "#fff", ...props }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" {...defaultProps} stroke={color} {...props}>
+    <Path d="M3 12h18" />
+    <Path d="M3 6h18" />
+    <Path d="M3 18h18" />
+  </Svg>
+);

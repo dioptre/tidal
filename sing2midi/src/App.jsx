@@ -17,7 +17,8 @@ import {
   RotateCcwIcon,
   UploadIcon,
   DownloadIcon,
-  WaveformIcon
+  WaveformIcon,
+  MenuIcon
 } from './components/Icons.jsx';
 
 // Debug mode: Show live detections (green) vs ML predictions (blue) side-by-side
@@ -742,12 +743,12 @@ export default function App() {
         onLoadSession={handleLoadSession}
       />
 
-      {/* Hamburger menu button - bottom right corner */}
+      {/* Menu button - bottom right corner */}
       <TouchableOpacity
         style={styles.hamburgerButton}
         onPress={() => setSettingsPanelVisible(!settingsPanelVisible)}
       >
-        <Text style={styles.hamburgerIcon}>☰</Text>
+        <MenuIcon size={20} />
       </TouchableOpacity>
     </View>
   );
@@ -971,25 +972,19 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 20,
     right: 20,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: Colors.BTN_SECONDARY,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: Colors.BG_SECONDARY,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
     zIndex: 1000,
-  },
-  hamburgerIcon: {
-    fontSize: 28,
-    color: '#ffffff',
-    fontWeight: 'bold',
-    lineHeight: 28,
-    marginTop: -2,
-    fontFamily: Colors.FONT_UI,
   },
 });
