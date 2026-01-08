@@ -256,12 +256,15 @@ export default function App() {
   };
 
   const handleClear = () => {
+    // Save current state to undo stack before clearing
+    if (notes.length > 0) {
+      setUndoStack(prev => [...prev, notes]);
+    }
     setNotes([]);
     setTidalCode('');
     setStrudelCode('');
     setNoteNames('');
     setLastAudioBlob(null);
-    setUndoStack([]);
   };
 
   const handlePlayback = async () => {
@@ -407,6 +410,11 @@ export default function App() {
   const handleLoadSession = (session) => {
     console.log('Loading session:', session.id);
 
+    // Save current state to undo stack before loading
+    if (notes.length > 0) {
+      setUndoStack(prev => [...prev, notes]);
+    }
+
     // Restore notes with ML flag
     const restoredNotes = session.notes.map(note => ({ ...note, isML: true }));
     setNotes(restoredNotes);
@@ -432,9 +440,12 @@ export default function App() {
   };
 
   // Handle note changes from visualizer (drag, create, delete)
-  const handleNotesChange = (updatedNotes) => {
-    // Save current state to undo stack
-    setUndoStack(prev => [...prev, notes]);
+  // isIntermediate: true during drag/resize, false on final mouseup
+  const handleNotesChange = (updatedNotes, isIntermediate = false) => {
+    // Only save to undo stack on final changes (not intermediate drag updates)
+    if (!isIntermediate) {
+      setUndoStack(prev => [...prev, notes]);
+    }
 
     // Update notes
     setNotes(updatedNotes);

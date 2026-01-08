@@ -512,7 +512,8 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, onNotesChange
         };
       }
 
-      onNotesChange?.(updatedNotes);
+      // Pass true for intermediate updates during drag
+      onNotesChange?.(updatedNotes, true);
       return;
     }
 
@@ -547,6 +548,9 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, onNotesChange
     // Check if clicking on an edge first (priority over regular note click)
     const edgeInfo = findNoteEdge(canvasRef.current, e.clientX, e.clientY);
     if (edgeInfo) {
+      // Save to undo stack before starting to drag/stretch
+      onNotesChange?.(notes, false); // false = save to undo stack
+
       // Start stretching edge
       setGhostNote({ ...edgeInfo.note });
       setDragState({
@@ -564,6 +568,9 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, onNotesChange
     const noteAtPos = findNoteAtPosition(canvasRef.current, e.clientX, e.clientY);
 
     if (noteAtPos) {
+      // Save to undo stack before starting to drag
+      onNotesChange?.(notes, false); // false = save to undo stack
+
       // Start dragging existing note (not near edge)
       setGhostNote({ ...noteAtPos.note });
       setDragState({
@@ -623,9 +630,9 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, onNotesChange
                           e.clientY < rect.top || e.clientY > rect.bottom;
 
       if (isOffCanvas && dragState.noteIndex !== null) {
-        // Delete the note
+        // Delete the note (no need to save to undo, already saved on mousedown)
         const updatedNotes = notes.filter((_, i) => i !== dragState.noteIndex);
-        onNotesChange?.(updatedNotes);
+        onNotesChange?.(updatedNotes, true); // true = don't save to undo (already saved on mousedown)
       }
     }
 
