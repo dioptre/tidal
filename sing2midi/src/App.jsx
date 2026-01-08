@@ -204,11 +204,6 @@ export default function App() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Sing2MIDI</Text>
-        <Text style={styles.subtitle}>Voice to TidalCycles & MIDI</Text>
-      </View>
-
       <View style={styles.visualizerContainer}>
         <NoteVisualizer notes={notes} isRecording={isRecording} debugShowComparison={DEBUG_SHOW_COMPARISON} />
       </View>
