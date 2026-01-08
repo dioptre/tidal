@@ -7,9 +7,11 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, onNotesChange
   const [dragState, setDragState] = useState(null); // { noteIndex, originalNote, startX, startY, isCreatingNew }
   const [ghostNote, setGhostNote] = useState(null); // Original position during drag
   const holdTimerRef = useRef(null);
-  const [zoom, setZoom] = useState(1.0); // Zoom level (1.0 = 100%)
-  const [panOffset, setPanOffset] = useState(0); // Pan offset in seconds
-  const touchStateRef = useRef({ isPinching: false, lastDistance: null, lastTouches: null });
+  const [zoomX, setZoomX] = useState(1.0); // Horizontal zoom (time axis)
+  const [zoomY, setZoomY] = useState(1.0); // Vertical zoom (pitch axis)
+  const [panOffsetX, setPanOffsetX] = useState(0); // Pan offset in seconds (horizontal)
+  const [panOffsetY, setPanOffsetY] = useState(0); // Pan offset in semitones (vertical)
+  const touchStateRef = useRef({ isPinching: false, isPanning: false, lastDistance: null, lastTouches: null });
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -74,7 +76,7 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, onNotesChange
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [notes, isRecording, debugShowComparison, ghostNote, fftData, voiceMode, hoverNote, zoom, panOffset]);
+  }, [notes, isRecording, debugShowComparison, ghostNote, fftData, voiceMode, hoverNote, zoomX, zoomY, panOffsetX, panOffsetY]);
 
   const drawFFTVisualization = (ctx, dataArray, width, height) => {
     const bufferLength = dataArray.length;
@@ -117,36 +119,44 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, onNotesChange
 
     // During recording, show a 5-second sliding window
     // After recording, show all notes with zoom and pan
-    let timeScale, timeOffset;
+    let timeScale, timeOffset, midiRangeAdjusted, minMidiAdjusted;
     if (isRecording) {
       const windowSize = 5; // 5 second window
       timeScale = width / windowSize;
       // Center the window on the most recent note
       timeOffset = Math.max(0, maxTime - windowSize + 1);
+      midiRangeAdjusted = midiRange;
+      minMidiAdjusted = minMidi;
     } else {
       const totalTime = Math.max(maxTime, 5);
-      timeScale = (width / totalTime) * zoom; // Apply zoom
-      timeOffset = panOffset; // Apply pan offset
+      timeScale = (width / totalTime) * zoomX; // Apply horizontal zoom
+      timeOffset = panOffsetX; // Apply horizontal pan offset
+
+      // Apply vertical zoom and pan
+      midiRangeAdjusted = midiRange / zoomY; // Zooming in shows fewer semitones
+      minMidiAdjusted = minMidi + panOffsetY; // Shift the visible range up/down
     }
 
     // Draw grid lines (octave markers)
     ctx.strokeStyle = '#222222';
     ctx.lineWidth = 1;
-    for (let midi = minMidi; midi <= maxMidi; midi++) {
+    for (let midi = Math.floor(minMidiAdjusted); midi <= Math.ceil(minMidiAdjusted + midiRangeAdjusted); midi++) {
       if (midi % 12 === 0) { // C notes
-        const y = height - ((midi - minMidi) / midiRange) * height;
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(width, y);
-        ctx.stroke();
+        const y = height - ((midi - minMidiAdjusted) / midiRangeAdjusted) * height;
+        if (y >= 0 && y <= height) { // Only draw if visible
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(width, y);
+          ctx.stroke();
 
-        // Label
-        const octave = Math.floor((midi - 12) / 12);
-        ctx.fillStyle = '#444444';
-        ctx.font = '12px monospace';
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(`C${octave}`, 5, y);
+          // Label
+          const octave = Math.floor((midi - 12) / 12);
+          ctx.fillStyle = '#444444';
+          ctx.font = '12px monospace';
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(`C${octave}`, 5, y);
+        }
       }
     }
 
@@ -160,8 +170,11 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, onNotesChange
         if (x + (note.duration || 0.1) * timeScale < 0 || x > width) return;
 
         const noteWidth = (note.duration || 0.1) * timeScale;
-        const y = height - ((note.midiNote - minMidi) / midiRange) * height;
-        const noteHeight = (height / midiRange) * 1.0; // Full height for bottom layer
+        const y = height - ((note.midiNote - minMidiAdjusted) / midiRangeAdjusted) * height;
+        const noteHeight = (height / midiRangeAdjusted) * 1.0; // Full height for bottom layer
+
+        // Skip if note is outside visible Y range
+        if (y < -noteHeight || y > height + noteHeight) return;
 
         ctx.fillStyle = '#2d5016'; // Dark green
         ctx.shadowBlur = 0;
@@ -175,8 +188,11 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, onNotesChange
         if (x + (note.originalNote.duration || 0.1) * timeScale < 0 || x > width) return;
 
         const noteWidth = (note.originalNote.duration || 0.1) * timeScale;
-        const y = height - ((note.originalNote.midiNote - minMidi) / midiRange) * height;
-        const noteHeight = (height / midiRange) * 0.85; // Slightly smaller to show green underneath
+        const y = height - ((note.originalNote.midiNote - minMidiAdjusted) / midiRangeAdjusted) * height;
+        const noteHeight = (height / midiRangeAdjusted) * 0.85; // Slightly smaller to show green underneath
+
+        // Skip if note is outside visible Y range
+        if (y < -noteHeight || y > height + noteHeight) return;
 
         ctx.fillStyle = '#1a3d5c'; // Dark blue
         ctx.shadowBlur = 0;
@@ -190,8 +206,11 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, onNotesChange
         if (x + (note.duration || 0.1) * timeScale < 0 || x > width) return;
 
         const noteWidth = (note.duration || 0.1) * timeScale;
-        const y = height - ((note.midiNote - minMidi) / midiRange) * height;
-        const noteHeight = (height / midiRange) * 0.7; // Smallest to show all layers below
+        const y = height - ((note.midiNote - minMidiAdjusted) / midiRangeAdjusted) * height;
+        const noteHeight = (height / midiRangeAdjusted) * 0.7; // Smallest to show all layers below
+
+        // Skip if note is outside visible Y range
+        if (y < -noteHeight || y > height + noteHeight) return;
 
         const hue = ((note.midiNote % 12) / 12) * 360;
 
@@ -230,8 +249,11 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, onNotesChange
         if (x + (note.duration || 0.1) * timeScale < 0 || x > width) return;
 
         const noteWidth = (note.duration || 0.1) * timeScale;
-        const y = height - ((note.midiNote - minMidi) / midiRange) * height;
-        const noteHeight = (height / midiRange) * 0.8;
+        const y = height - ((note.midiNote - minMidiAdjusted) / midiRangeAdjusted) * height;
+        const noteHeight = (height / midiRangeAdjusted) * 0.8;
+
+        // Skip if note is outside visible Y range
+        if (y < -noteHeight || y > height + noteHeight) return;
 
         // Note rectangle
         const hue = ((note.midiNote % 12) / 12) * 360;
@@ -273,8 +295,8 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, onNotesChange
       const noteStart = (ghostNote.startTime || 0);
       const x = (noteStart - timeOffset) * timeScale;
       const noteWidth = (ghostNote.duration || 0.1) * timeScale;
-      const y = height - ((ghostNote.midiNote - minMidi) / midiRange) * height;
-      const noteHeight = (height / midiRange) * 0.8;
+      const y = height - ((ghostNote.midiNote - minMidiAdjusted) / midiRangeAdjusted) * height;
+      const noteHeight = (height / midiRangeAdjusted) * 0.8;
 
       // Draw ghost as semi-transparent with dashed outline
       ctx.strokeStyle = '#888888';
@@ -335,13 +357,15 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, onNotesChange
 
     const maxTime = Math.max(...notes.map(n => (n.startTime || 0) + (n.duration || 0)));
     const totalTime = Math.max(maxTime, 5);
-    const timeScale = isRecording ? (width / totalTime) : ((width / totalTime) * zoom); // Apply zoom when not recording
+    const timeScale = isRecording ? (width / totalTime) : ((width / totalTime) * zoomX); // Apply horizontal zoom when not recording
 
     // Convert x to time (account for pan offset when not recording)
-    const time = (x / timeScale) + (isRecording ? 0 : panOffset);
+    const time = (x / timeScale) + (isRecording ? 0 : panOffsetX);
 
-    // Convert y to MIDI note (snap to semitones)
-    const midiFloat = minMidi + ((height - y) / height) * midiRange;
+    // Convert y to MIDI note (snap to semitones, account for zoom and pan)
+    const midiRangeAdjusted = isRecording ? midiRange : (midiRange / zoomY);
+    const minMidiAdjusted = isRecording ? minMidi : (minMidi + panOffsetY);
+    const midiFloat = minMidiAdjusted + ((height - y) / height) * midiRangeAdjusted;
     const midiNote = Math.round(midiFloat);
 
     return { time, midiNote, x, y };
@@ -623,20 +647,70 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, onNotesChange
     }
   };
 
-  // Wheel handler for zoom (desktop)
+  // Wheel handler for zoom and pan (desktop)
   const handleWheel = (e) => {
     if (isRecording) return;
 
     e.preventDefault();
 
-    // Zoom with scroll wheel
-    const zoomDelta = e.deltaY > 0 ? 0.9 : 1.1;
-    const newZoom = Math.max(0.5, Math.min(5.0, zoom * zoomDelta));
-    setZoom(newZoom);
+    console.log('Wheel event:', {
+      deltaX: e.deltaX,
+      deltaY: e.deltaY,
+      ctrlKey: e.ctrlKey,
+      shiftKey: e.shiftKey,
+      metaKey: e.metaKey
+    });
+
+    // On macOS/Firefox, pinch-to-zoom shows as wheel event with ctrlKey
+    // Two-finger pan shows as deltaX/deltaY without modifiers
+    // Also support Shift key for zoom
+
+    if (e.ctrlKey || e.metaKey || e.shiftKey) {
+      // Pinch-to-zoom (trackpad pinch gesture) or Shift+scroll to zoom
+      const zoomDelta = e.deltaY > 0 ? 0.9 : 1.1;
+      const newZoomX = Math.max(0.5, Math.min(5.0, zoomX * zoomDelta));
+      const newZoomY = Math.max(0.5, Math.min(5.0, zoomY * zoomDelta));
+      console.log('Zooming:', { newZoomX, newZoomY });
+      setZoomX(newZoomX);
+      setZoomY(newZoomY);
+    } else if (Math.abs(e.deltaX) > 0 || Math.abs(e.deltaY) > 0) {
+      // Two-finger pan (trackpad swipe)
+      console.log('Panning via two-finger swipe');
+
+      const canvas = canvasRef.current;
+      if (canvas) {
+        const rect = canvas.getBoundingClientRect();
+        const width = rect.width;
+        const height = rect.height;
+
+        // Pan horizontally (time)
+        const maxTime = Math.max(...notes.map(n => (n.startTime || 0) + (n.duration || 0)));
+        const totalTime = Math.max(maxTime, 5);
+        const timeScale = (width / totalTime) * zoomX;
+
+        const deltaTime = e.deltaX / timeScale;
+        const newPanOffsetX = Math.max(0, Math.min(totalTime - width / timeScale, panOffsetX + deltaTime));
+        setPanOffsetX(newPanOffsetX);
+
+        // Pan vertically (pitch)
+        const allMidiNotes = notes.map(n => n.midiNote).filter(m => m != null);
+        if (allMidiNotes.length > 0) {
+          const minMidi = Math.min(...allMidiNotes) - 2;
+          const maxMidi = Math.max(...allMidiNotes) + 2;
+          const midiRange = maxMidi - minMidi || 12;
+          const midiRangeAdjusted = midiRange / zoomY;
+
+          const deltaSemitones = (e.deltaY / height) * midiRangeAdjusted;
+          const newPanOffsetY = Math.max(-midiRange/2, Math.min(midiRange/2, panOffsetY + deltaSemitones));
+          setPanOffsetY(newPanOffsetY);
+        }
+      }
+    }
   };
 
   // Touch handlers for pinch-to-zoom and two-finger pan
   const handleTouchStart = (e) => {
+    console.log('TouchStart fired!', { touchCount: e.touches.length, isRecording });
     if (isRecording || e.touches.length !== 2) return;
 
     const touch1 = e.touches[0];
@@ -647,6 +721,8 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, onNotesChange
       touch2.clientX - touch1.clientX,
       touch2.clientY - touch1.clientY
     );
+
+    console.log('Touch gesture started:', { distance: distance.toFixed(2) });
 
     touchStateRef.current = {
       isPinching: true,
@@ -676,29 +752,66 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, onNotesChange
     const centerX = (touch1.clientX + touch2.clientX) / 2;
     const centerY = (touch1.clientY + touch2.clientY) / 2;
 
-    // Zoom based on distance change
-    if (touchStateRef.current.lastDistance) {
-      const scale = distance / touchStateRef.current.lastDistance;
-      const newZoom = Math.max(0.5, Math.min(5.0, zoom * scale));
-      setZoom(newZoom);
-    }
+    if (touchStateRef.current.lastDistance && touchStateRef.current.lastTouches) {
+      // Check distance change vs center movement to determine gesture type
+      const distanceChange = Math.abs(distance - touchStateRef.current.lastDistance);
+      const centerMovement = Math.hypot(
+        centerX - touchStateRef.current.lastTouches.x,
+        centerY - touchStateRef.current.lastTouches.y
+      );
 
-    // Pan based on center point movement
-    if (touchStateRef.current.lastTouches) {
-      const canvas = canvasRef.current;
-      if (canvas) {
-        const rect = canvas.getBoundingClientRect();
-        const width = rect.width;
-        const maxTime = Math.max(...notes.map(n => (n.startTime || 0) + (n.duration || 0)));
-        const totalTime = Math.max(maxTime, 5);
-        const timeScale = (width / totalTime) * zoom;
+      console.log('Touch gesture:', {
+        distanceChange: distanceChange.toFixed(2),
+        centerMovement: centerMovement.toFixed(2),
+        ratio: (distanceChange / centerMovement).toFixed(2),
+        willZoom: distanceChange > centerMovement * 0.5,
+        willPan: centerMovement > 1
+      });
 
-        // Calculate pan delta in pixels, then convert to time
-        const deltaX = centerX - touchStateRef.current.lastTouches.x;
-        const deltaTime = -deltaX / timeScale; // Negative because panning right should show earlier time
+      // If distance is changing significantly, it's primarily a zoom
+      if (distanceChange > centerMovement * 0.5) {
+        // Zoom based on distance change - apply to both axes
+        const scale = distance / touchStateRef.current.lastDistance;
+        const newZoomX = Math.max(0.5, Math.min(5.0, zoomX * scale));
+        const newZoomY = Math.max(0.5, Math.min(5.0, zoomY * scale));
+        console.log('Zooming:', { scale: scale.toFixed(3), newZoomX: newZoomX.toFixed(2), newZoomY: newZoomY.toFixed(2) });
+        setZoomX(newZoomX);
+        setZoomY(newZoomY);
+      }
 
-        const newPanOffset = Math.max(0, Math.min(totalTime - width / timeScale, panOffset + deltaTime));
-        setPanOffset(newPanOffset);
+      // Always pan based on center movement (can happen simultaneously with zoom)
+      if (centerMovement > 1) {
+        console.log('Panning detected! centerMovement:', centerMovement.toFixed(2));
+        const canvas = canvasRef.current;
+        if (canvas) {
+          const rect = canvas.getBoundingClientRect();
+          const width = rect.width;
+          const height = rect.height;
+
+          // Pan horizontally (time)
+          const maxTime = Math.max(...notes.map(n => (n.startTime || 0) + (n.duration || 0)));
+          const totalTime = Math.max(maxTime, 5);
+          const timeScale = (width / totalTime) * zoomX;
+
+          const deltaX = centerX - touchStateRef.current.lastTouches.x;
+          const deltaTime = -deltaX / timeScale; // Negative because panning right should show earlier time
+          const newPanOffsetX = Math.max(0, Math.min(totalTime - width / timeScale, panOffsetX + deltaTime));
+          setPanOffsetX(newPanOffsetX);
+
+          // Pan vertically (pitch)
+          const allMidiNotes = notes.map(n => n.midiNote).filter(m => m != null);
+          if (allMidiNotes.length > 0) {
+            const minMidi = Math.min(...allMidiNotes) - 2;
+            const maxMidi = Math.max(...allMidiNotes) + 2;
+            const midiRange = maxMidi - minMidi || 12;
+            const midiRangeAdjusted = midiRange / zoomY;
+
+            const deltaY = touchStateRef.current.lastTouches.y - centerY; // Inverted
+            const deltaSemitones = (deltaY / height) * midiRangeAdjusted;
+            const newPanOffsetY = Math.max(-midiRange/2, Math.min(midiRange/2, panOffsetY + deltaSemitones));
+            setPanOffsetY(newPanOffsetY);
+          }
+        }
       }
     }
 
@@ -745,7 +858,7 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, onNotesChange
       canvas.removeEventListener('touchmove', handleTouchMove);
       canvas.removeEventListener('touchend', handleTouchEnd);
     };
-  }, [isRecording, notes, dragState, zoom, panOffset]);
+  }, [isRecording, notes, dragState, zoomX, zoomY, panOffsetX, panOffsetY]);
 
   return (
     <View style={styles.container}>

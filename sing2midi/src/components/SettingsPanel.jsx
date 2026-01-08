@@ -169,14 +169,13 @@ const SettingsPanel = ({ visible, onClose, onLoadSession, initialTab = 'history'
                   <Text style={styles.helpSectionTitle}>🎵 Creating Notes</Text>
                   <Text style={styles.helpText}>
                     • <Text style={styles.helpKeyword}>Hold down</Text> on empty space to add a new note{'\n'}
-                    • Drag while holding to set the note's duration
                   </Text>
                 </View>
 
                 <View style={styles.helpSection}>
                   <Text style={styles.helpSectionTitle}>✏️ Editing Notes</Text>
                   <Text style={styles.helpText}>
-                    • <Text style={styles.helpKeyword}>Click and drag</Text> a note to move it{'\n'}
+                    • <Text style={styles.helpKeyword}>Click and drag</Text> the center of a note to move it{'\n'}
                     • <Text style={styles.helpKeyword}>Drag the edges</Text> of a note to stretch/shrink its duration{'\n'}
                     • <Text style={styles.helpKeyword}>Double-click</Text> a note to delete it{'\n'}
                     • Drag a note off the canvas to delete it
@@ -188,7 +187,8 @@ const SettingsPanel = ({ visible, onClose, onLoadSession, initialTab = 'history'
                   <Text style={styles.helpText}>
                     • <Text style={styles.helpKeyword}>Two-finger pinch</Text> to zoom in/out{'\n'}
                     • <Text style={styles.helpKeyword}>Two-finger drag</Text> to pan around the canvas{'\n'}
-                    • <Text style={styles.helpKeyword}>Scroll wheel</Text> to zoom (desktop)
+                    • <Text style={styles.helpKeyword}>Shift/Ctrl/Cmd + scroll</Text> to zoom (desktop){'\n'}
+                    • <Text style={styles.helpKeyword}>Scroll wheel</Text> (no modifiers) to pan (desktop)
                   </Text>
                 </View>
 
