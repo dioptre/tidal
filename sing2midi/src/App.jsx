@@ -8,6 +8,7 @@ import TidalGenerator from './utils/TidalGenerator';
 import MIDIExporter from './utils/MIDIExporter';
 import Storage from './utils/Storage';
 import * as Colors from './styles/colors';
+import { getAssetSource } from './config';
 import {
   ListMusicIcon,
   PlayIcon,
@@ -579,7 +580,7 @@ export default function App() {
             <View style={styles.buttonWithIcon}>
               {voiceMode ? (
                 <Image
-                  source={{ uri: '/assets/img/mic-vocal.png' }}
+                  source={getAssetSource('mic-vocal')}
                   style={[{ width: 18, height: 18 }, styles.whiteIcon]}
                 />
               ) : (
@@ -672,7 +673,7 @@ export default function App() {
             <View style={styles.buttonWithIcon}>
               <Text style={[styles.buttonText, styles.smallButtonText]}>Tidal</Text>
               <Image
-                source={{ uri: '/assets/img/list-music.png' }}
+                source={getAssetSource('list-music')}
                 style={[{ width: 16, height: 16 }, styles.whiteIcon]}
               />
             </View>
@@ -686,7 +687,7 @@ export default function App() {
             <View style={styles.buttonWithIcon}>
               <Text style={[styles.buttonText, styles.smallButtonText]}>Strudel</Text>
               <Image
-                source={{ uri: '/assets/img/list-music.png' }}
+                source={getAssetSource('list-music')}
                 style={[{ width: 16, height: 16 }, styles.whiteIcon]}
               />
             </View>
