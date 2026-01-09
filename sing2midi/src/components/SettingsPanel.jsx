@@ -1,17 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Modal, ScrollView } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Modal, ScrollView, Linking, TextInput } from 'react-native';
 import Storage from '../utils/Storage';
 import Settings from '../utils/Settings';
 import DeviceCapabilities from '../utils/DeviceCapabilities';
+import Logger from '../utils/Logger';
 import * as Colors from '../styles/colors';
 import { Trash2Icon, MicIcon, WaveformIcon } from './Icons';
 
 const SettingsPanel = ({ visible, onClose, onLoadSession, onMethodChange, initialTab = 'history' }) => {
   const [sessions, setSessions] = useState([]);
   const [storageInfo, setStorageInfo] = useState(null);
-  const [activeTab, setActiveTab] = useState('history'); // 'history', 'settings', or 'help'
+  const [activeTab, setActiveTab] = useState('history'); // 'history', 'settings', 'help', 'credits', or 'developer'
   const [settings, setSettings] = useState(null);
   const [deviceCapabilities, setDeviceCapabilities] = useState(null);
+  const [devModeEnabled, setDevModeEnabled] = useState(false); // Developer mode state
+  const [logs, setLogs] = useState([]); // Captured logs
+  const logScrollRef = useRef(null); // Reference to log scroll view
 
   useEffect(() => {
     if (visible) {
@@ -20,6 +24,21 @@ const SettingsPanel = ({ visible, onClose, onLoadSession, onMethodChange, initia
       setActiveTab(initialTab); // Set to initialTab when opened
     }
   }, [visible, initialTab]);
+
+  // Subscribe to logger updates
+  useEffect(() => {
+    const handleLogUpdate = (newLogs) => {
+      setLogs(newLogs);
+    };
+
+    Logger.addListener(handleLogUpdate);
+    // Initial load
+    setLogs(Logger.getLogs());
+
+    return () => {
+      Logger.removeListener(handleLogUpdate);
+    };
+  }, []);
 
   const loadSessions = async () => {
     const allSessions = await Storage.getAllSessions();
@@ -67,6 +86,17 @@ const SettingsPanel = ({ visible, onClose, onLoadSession, onMethodChange, initia
       await Storage.clearAllSessions();
       loadSessions();
     }
+  };
+
+  const handleEnableDevMode = () => {
+    setDevModeEnabled(true);
+    Logger.enableCapture();
+    console.log('[DevMode] Developer mode enabled');
+  };
+
+  const handleClearLogs = () => {
+    Logger.clearLogs();
+    console.log('[DevMode] Logs cleared');
   };
 
   const formatDate = (timestamp) => {
@@ -129,6 +159,24 @@ const SettingsPanel = ({ visible, onClose, onLoadSession, onMethodChange, initia
                   Help
                 </Text>
               </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.tab, activeTab === 'credits' && styles.activeTab]}
+                onPress={() => setActiveTab('credits')}
+              >
+                <Text style={[styles.tabText, activeTab === 'credits' && styles.activeTabText]}>
+                  Credits
+                </Text>
+              </TouchableOpacity>
+              {devModeEnabled && (
+                <TouchableOpacity
+                  style={[styles.tab, activeTab === 'developer' && styles.activeTab]}
+                  onPress={() => setActiveTab('developer')}
+                >
+                  <Text style={[styles.tabText, activeTab === 'developer' && styles.activeTabText]}>
+                    Developer
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <Text style={styles.closeButtonText}>✕</Text>
@@ -296,7 +344,7 @@ const SettingsPanel = ({ visible, onClose, onLoadSession, onMethodChange, initia
                   <Text style={styles.redetectButtonText}>Re-detect Device Capabilities</Text>
                 </TouchableOpacity>
               </View>
-            ) : (
+            ) : activeTab === 'help' ? (
               <View style={styles.helpContent}>
                 <Text style={styles.helpTitle}>Help & Controls</Text>
 
@@ -360,6 +408,72 @@ const SettingsPanel = ({ visible, onClose, onLoadSession, onMethodChange, initia
                     • Edit loaded sessions and changes are saved automatically
                   </Text>
                 </View>
+              </View>
+            ) : activeTab === 'credits' ? (
+              <View style={styles.creditsContent}>
+                <Text style={styles.creditsTitle}>Credits</Text>
+
+                <View style={styles.creditsSection}>
+                  <Text style={styles.creditsText}>
+                    Created{' '}
+                    <Text style={styles.creditsText} onPress={handleEnableDevMode}>
+                      by
+                    </Text>
+                    {' '}
+                    <Text
+                      style={styles.creditsLinkText}
+                      onPress={() => Linking.openURL('https://x.com/andrewgrosser')}
+                    >
+                      Andrew Grosser
+                    </Text>
+                  </Text>
+                </View>
+              </View>
+            ) : (
+              <View style={styles.developerContent}>
+                <Text style={styles.developerTitle}>Developer Console</Text>
+
+                <View style={styles.developerHeader}>
+                  <Text style={styles.developerInfo}>
+                    {logs.length} logs captured (max {Logger.getFilters ? '1000' : '1000'})
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.clearLogsButton}
+                    onPress={handleClearLogs}
+                  >
+                    <Text style={styles.clearLogsButtonText}>Clear Logs</Text>
+                  </TouchableOpacity>
+                </View>
+
+                <ScrollView
+                  style={styles.logContainer}
+                  ref={logScrollRef}
+                  onContentSizeChange={() => {
+                    logScrollRef.current?.scrollToEnd({ animated: true });
+                  }}
+                >
+                  {logs.length === 0 ? (
+                    <Text style={styles.logEmpty}>No logs captured yet...</Text>
+                  ) : (
+                    logs.map((log) => (
+                      <View key={log.id} style={styles.logEntry}>
+                        <Text
+                          style={[
+                            styles.logText,
+                            log.level === 'error' && styles.logError,
+                            log.level === 'warn' && styles.logWarn,
+                            log.level === 'info' && styles.logInfo,
+                          ]}
+                          selectable={true}
+                        >
+                          <Text style={styles.logTimestamp}>[{log.timestamp}]</Text>{' '}
+                          <Text style={styles.logLevel}>{log.level.toUpperCase()}</Text>{' '}
+                          {log.message}
+                        </Text>
+                      </View>
+                    ))
+                  )}
+                </ScrollView>
               </View>
             )}
           </ScrollView>
@@ -721,6 +835,108 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: Colors.WAVEFORM_BLUE,
     fontFamily: Colors.FONT_UI,
+  },
+  // Credits tab styles
+  creditsContent: {
+    paddingBottom: 20,
+  },
+  creditsTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: Colors.TEXT_PRIMARY,
+    marginBottom: 20,
+    fontFamily: Colors.FONT_UI,
+  },
+  creditsSection: {
+    marginBottom: 24,
+  },
+  creditsText: {
+    fontSize: 16,
+    color: Colors.TEXT_PRIMARY,
+    marginBottom: 12,
+    fontFamily: Colors.FONT_UI,
+  },
+  creditsLinkText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.WAVEFORM_BLUE,
+    fontFamily: Colors.FONT_UI,
+    textDecorationLine: 'underline',
+  },
+  // Developer tab styles
+  developerContent: {
+    paddingBottom: 20,
+    flex: 1,
+  },
+  developerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: Colors.TEXT_PRIMARY,
+    marginBottom: 16,
+    fontFamily: Colors.FONT_UI,
+  },
+  developerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  developerInfo: {
+    fontSize: 13,
+    color: Colors.TEXT_SECONDARY,
+    fontFamily: Colors.FONT_TECHNICAL,
+  },
+  clearLogsButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: Colors.STUDIO_RED,
+    borderRadius: 6,
+  },
+  clearLogsButtonText: {
+    fontSize: 12,
+    color: Colors.TEXT_PRIMARY,
+    fontWeight: '600',
+    fontFamily: Colors.FONT_UI,
+  },
+  logContainer: {
+    backgroundColor: Colors.BG_PRIMARY,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.BORDER_PRIMARY,
+    padding: 12,
+    maxHeight: 400,
+  },
+  logEmpty: {
+    fontSize: 14,
+    color: Colors.TEXT_SECONDARY,
+    textAlign: 'center',
+    padding: 20,
+    fontFamily: Colors.FONT_UI,
+  },
+  logEntry: {
+    marginBottom: 4,
+  },
+  logText: {
+    fontSize: 12,
+    color: Colors.TEXT_PRIMARY,
+    fontFamily: Colors.FONT_TECHNICAL,
+    lineHeight: 18,
+  },
+  logTimestamp: {
+    color: Colors.TEXT_SECONDARY,
+    fontSize: 11,
+  },
+  logLevel: {
+    fontWeight: '600',
+  },
+  logError: {
+    color: '#ff4444',
+  },
+  logWarn: {
+    color: '#ffaa00',
+  },
+  logInfo: {
+    color: '#4488ff',
   },
 });
 

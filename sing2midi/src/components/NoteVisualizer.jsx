@@ -26,6 +26,13 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, on
     }
 
     const audioContext = clickAudioContextRef.current;
+
+    // Resume audio context if it's suspended (required on mobile browsers)
+    if (audioContext.state === 'suspended' && audioContext.resume) {
+      audioContext.resume().catch(err => {
+        console.warn('[Audio] Failed to resume audio context:', err);
+      });
+    }
     const oscillator = audioContext.createOscillator();
     const gainNode = audioContext.createGain();
 
@@ -1226,15 +1233,11 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, on
 
     const playheadX = (playheadPosition - timeOffset) * timeScale;
 
-    console.log('[Playhead]', { playheadPosition, timeOffset, timeScale, playheadX, width, height });
-
     // Only render if visible on screen
     if (playheadX < 0 || playheadX > width) {
-      console.log('[Playhead] Not visible on screen');
       return null;
     }
 
-    console.log('[Playhead] Rendering line');
     return (
       <Line
         p1={{ x: playheadX, y: 0 }}

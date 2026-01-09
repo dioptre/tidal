@@ -8,6 +8,7 @@ import TidalGenerator from './utils/TidalGenerator';
 import MIDIExporter from './utils/MIDIExporter';
 import Storage from './utils/Storage';
 import Settings from './utils/Settings';
+import Logger from './utils/Logger';
 import * as Colors from './styles/colors';
 import { getAssetSource } from './config';
 
@@ -404,6 +405,11 @@ export default function App() {
       const audioContext = new AudioContext();
       audioContextRef.current = audioContext;
 
+      // Resume audio context if it's suspended (required on mobile browsers)
+      if (audioContext.state === 'suspended' && audioContext.resume) {
+        await audioContext.resume();
+      }
+
       // Play each note
       const startTime = audioContext.currentTime;
       sortedNotes.forEach(note => {
@@ -447,7 +453,6 @@ export default function App() {
     // Animate playhead synced to AudioContext time
     const animatePlayhead = () => {
       if (!shouldLoopRef.current) {
-        console.log('[Playback] Animation stopped');
         playbackAnimationRef.current = null;
         return;
       }
@@ -456,13 +461,11 @@ export default function App() {
       if (audioContextRef.current && playbackDurationRef.current) {
         const elapsed = audioContextRef.current.currentTime - playbackStartTimeRef.current;
         const position = elapsed % playbackDurationRef.current; // Loop position
-        console.log('[Playback] Animation frame', { elapsed, position, totalDuration: playbackDurationRef.current });
         setPlayheadPosition(position);
       }
 
       playbackAnimationRef.current = requestAnimationFrame(animatePlayhead);
     };
-    console.log('[Playback] Starting animation');
     animatePlayhead();
   };
 

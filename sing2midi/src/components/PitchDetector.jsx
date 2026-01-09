@@ -1,6 +1,7 @@
 import { Component } from 'react';
 import { Platform } from 'react-native';
 import { BasicPitch, addPitchBendsToNoteEvents, noteFramesToTime, outputToNotesPoly } from '@spotify/basic-pitch';
+import AssetLoader from '../utils/AssetLoader';
 
 // Import Web Audio API polyfill for React Native
 let AudioContext, OfflineAudioContext, AudioRecorder, RecorderAdapterNode, AudioManager;
@@ -101,10 +102,18 @@ class PitchDetector extends Component {
             console.log(`Unusual backend detected: ${currentBackend}`);
           }
 
-          // Use CDN model URL - TensorFlow.js will handle the download and cache it
-          // The model will be downloaded once and cached by TensorFlow.js
-          modelUrl = 'https://cdn.jsdelivr.net/npm/@spotify/basic-pitch@1.0.1/model/model.json';
-          console.log('Using CDN model for React Native (will be cached after first download)');
+          // Try to use bundled model first (much faster boot time!)
+          console.log('Checking for bundled Basic Pitch model...');
+          const bundledModelPath = await AssetLoader.getBasicPitchModelPath();
+
+          if (bundledModelPath) {
+            modelUrl = bundledModelPath;
+            console.log('✅ Using BUNDLED model (fast boot!):', modelUrl);
+          } else {
+            // Fallback to CDN model URL - TensorFlow.js will handle the download and cache it
+            modelUrl = 'https://cdn.jsdelivr.net/npm/@spotify/basic-pitch@1.0.1/model/model.json';
+            console.log('Using CDN model for React Native (will be cached after first download)');
+          }
         }
 
         console.log('Loading BasicPitch model from:', modelUrl);
