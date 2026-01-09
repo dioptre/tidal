@@ -102,11 +102,11 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, on
   // Render animated Möbius strip when idle
   const renderMobiusStrip = () => {
     if (notes.length > 0 || isRecording) {
-      console.log('[Möbius] Skipping - notes:', notes.length, 'recording:', isRecording);
+      // console.log('[Möbius] Skipping - notes:', notes.length, 'recording:', isRecording);
       return null;
     }
 
-    console.log('[Möbius] Rendering at time:', animationTime, 'dims:', width, height);
+    // console.log('[Möbius] Rendering at time:', animationTime, 'dims:', width, height);
 
     const centerX = width / 2;
     const centerY = height / 2;
@@ -806,11 +806,11 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, on
   // Render FFT visualization bars
   const renderFFT = () => {
     if (!isRecording || voiceMode || !fftData) {
-      console.log('[FFT] Skipping - recording:', isRecording, 'voiceMode:', voiceMode, 'fftData:', !!fftData);
+      // console.log('[FFT] Skipping - recording:', isRecording, 'voiceMode:', voiceMode, 'fftData:', !!fftData);
       return null;
     }
 
-    console.log('[FFT] Rendering', fftData.length, 'samples');
+    // console.log('[FFT] Rendering', fftData.length, 'samples');
 
     const bufferLength = fftData.length;
     const numBars = 64;
@@ -887,11 +887,16 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, on
   // Render notes as rectangles
   const renderNotes = () => {
     if (notes.length === 0) {
-      console.log('[Notes] Skipping - no notes');
+      // console.log('[Notes] Skipping - no notes');
       return null;
     }
 
-    console.log('[Notes] Rendering', notes.length, 'notes');
+    // Log once when we first get notes
+    const liveCount = notes.filter(n => n.isLive).length;
+    const mlCount = notes.filter(n => n.isML).length;
+    if (notes.length > 0 && liveCount + mlCount === notes.length) {
+      console.log(`[Notes] Rendering ${notes.length} total (${liveCount} live, ${mlCount} ML)`);
+    }
 
     const noteRects = [];
 
@@ -972,7 +977,7 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, on
         );
 
         // Note label (only on native - web doesn't support matchFont)
-        if ((noteWidth > 30 || isHovered) && font) {
+        if ((noteWidth > 30 || isHovered) && font && note.note) {
           const textFont = isHovered ? titleFont : font;
           noteRects.push(
             <SkiaText
@@ -988,16 +993,39 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, on
       });
     } else {
       // Normal rendering (during recording or without debug mode)
+      // console.log('[Notes] Normal rendering mode, isRecording:', isRecording);
       notes.forEach((note, i) => {
         const noteStart = note.startTime || 0;
         const x = (noteStart - timeOffset) * timeScale;
-        if (x + (note.duration || 0.1) * timeScale < 0 || x > width) return;
+
+        // if (i < 3 || note.isLive) {
+        //   console.log('[Notes] Note', i, ':', {
+        //     isLive: note.isLive,
+        //     note: note.note,
+        //     startTime: noteStart,
+        //     x,
+        //     timeOffset,
+        //     timeScale,
+        //     width,
+        //     midiNote: note.midiNote,
+        //     minMidiAdjusted,
+        //     midiRangeAdjusted,
+        //   });
+        // }
+
+        if (x + (note.duration || 0.1) * timeScale < 0 || x > width) {
+          // if (i < 3 || note.isLive) console.log('[Notes] Skipping - out of horizontal bounds');
+          return;
+        }
 
         const noteWidth = (note.duration || 0.1) * timeScale;
         const y = height - ((note.midiNote - minMidiAdjusted) / midiRangeAdjusted) * height;
         const noteHeight = (height / midiRangeAdjusted) * 0.8;
 
-        if (y < -noteHeight || y > height + noteHeight) return;
+        if (y < -noteHeight || y > height + noteHeight) {
+          // if (i < 3 || note.isLive) console.log('[Notes] Skipping - out of vertical bounds, y:', y, 'height:', height);
+          return;
+        }
 
         const isHovered = hoverNote === note.note;
         const isLive = note.isLive;
@@ -1022,8 +1050,8 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, on
           />
         );
 
-        // Note label
-        if (noteWidth > 30 || isLive || isHovered) {
+        // Note label (only render if note name exists)
+        if ((noteWidth > 30 || isLive || isHovered) && note.note) {
           const textFont = isLive || isHovered ? titleFont : font;
           noteRects.push(
             <SkiaText
@@ -1276,20 +1304,20 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, on
 
   // Don't render if dimensions are invalid
   if (width <= 0 || height <= 0) {
-    console.log('[NoteVisualizer] Invalid dimensions, skipping render:', width, height);
+    // console.log('[NoteVisualizer] Invalid dimensions, skipping render:', width, height);
     return <View style={styles.container} />;
   }
 
   // Debug logging for iOS
-  console.log('[NoteVisualizer] Render:', {
-    platform: Platform.OS,
-    width,
-    height,
-    notesCount: notes.length,
-    isRecording,
-    font: font ? 'loaded' : 'null',
-    titleFont: titleFont ? 'loaded' : 'null',
-  });
+  // console.log('[NoteVisualizer] Render:', {
+  //   platform: Platform.OS,
+  //   width,
+  //   height,
+  //   notesCount: notes.length,
+  //   isRecording,
+  //   font: font ? 'loaded' : 'null',
+  //   titleFont: titleFont ? 'loaded' : 'null',
+  // });
 
   const canvasContent = (
     <Canvas

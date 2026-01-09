@@ -7,6 +7,7 @@ import SettingsPanel from './components/SettingsPanel.jsx';
 import TidalGenerator from './utils/TidalGenerator';
 import MIDIExporter from './utils/MIDIExporter';
 import Storage from './utils/Storage';
+import Settings from './utils/Settings';
 import * as Colors from './styles/colors';
 import { getAssetSource } from './config';
 
@@ -33,7 +34,7 @@ import {
 } from './components/Icons.jsx';
 
 // Debug mode: Show live detections (green) vs ML predictions (blue) side-by-side
-const DEBUG_SHOW_COMPARISON = true;
+const DEBUG_SHOW_COMPARISON = false;
 
 export default function App() {
   const [isRecording, setIsRecording] = useState(false);
@@ -56,6 +57,7 @@ export default function App() {
   const [undoStack, setUndoStack] = useState([]); // Undo history
   const [currentSessionId, setCurrentSessionId] = useState(null); // ID of currently loaded session from history
   const [fftData, setFftData] = useState(null); // FFT data for raw mode visualization
+  const [pitchDetectionMethod, setPitchDetectionMethod] = useState('hybrid'); // Auto-detected pitch detection method
   const pitchDetectorRef = useRef(null);
 
   // Helper: Get note color from note name
@@ -95,6 +97,29 @@ export default function App() {
       ).start();
     }
   }, [isProcessing, spinnerRotation]);
+
+  // Initialize settings and auto-detect optimal pitch detection method
+  useEffect(() => {
+    async function initializeApp() {
+      try {
+        console.log('Initializing app settings...');
+        const settings = await Settings.initializeSettings();
+        setPitchDetectionMethod(settings.pitchDetectionMethod);
+        console.log(`Pitch detection method: ${settings.pitchDetectionMethod}`);
+
+        if (settings.deviceCapabilities) {
+          console.log('Device capabilities:', settings.deviceCapabilities);
+          console.log('→', settings.deviceCapabilities.reason);
+        }
+      } catch (error) {
+        console.error('Failed to initialize settings:', error);
+        // Fallback to hybrid
+        setPitchDetectionMethod('hybrid');
+      }
+    }
+
+    initializeApp();
+  }, []);
 
   const showDialog = (title, content) => {
     setDialogContent({ title, content });
@@ -828,6 +853,7 @@ export default function App() {
         onProcessingComplete={handleProcessingComplete}
         onAudioCaptured={handleAudioCaptured}
         voiceMode={voiceMode}
+        pitchDetectionMethod={pitchDetectionMethod}
       />
 
       <CopyDialog
@@ -841,6 +867,10 @@ export default function App() {
         visible={settingsPanelVisible}
         onClose={() => setSettingsPanelVisible(false)}
         onLoadSession={handleLoadSession}
+        onMethodChange={(method) => {
+          console.log(`Pitch detection method changed to: ${method}`);
+          setPitchDetectionMethod(method);
+        }}
         initialTab={settingsPanelInitialTab}
       />
 

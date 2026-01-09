@@ -67,6 +67,15 @@ class PitchDetector extends Component {
 
           const tf = require('@tensorflow/tfjs');
 
+          // Try to use WebGL backend (GPU) if available
+          // TensorFlow.js will automatically fall back to CPU if WebGL is not available
+          try {
+            await tf.setBackend('webgl');
+            console.log('Successfully set backend to WebGL (GPU)');
+          } catch (e) {
+            console.log('WebGL not available, falling back to CPU:', e.message);
+          }
+
           // Wait for TensorFlow backend to initialize
           await tf.ready();
           console.log('TensorFlow.js backend ready:', tf.getBackend());
@@ -83,7 +92,14 @@ class PitchDetector extends Component {
 
           // Wait for TensorFlow backend to initialize
           await tf.ready();
-          console.log('TensorFlow.js backend ready:', tf.getBackend());
+          const currentBackend = tf.getBackend();
+          console.log('TensorFlow.js React Native backend ready:', currentBackend);
+
+          // Note: tfjs-react-native typically uses 'cpu' backend
+          // GPU support on mobile is experimental and often slower than CPU
+          if (currentBackend !== 'cpu' && currentBackend !== 'webgl') {
+            console.log(`Unusual backend detected: ${currentBackend}`);
+          }
 
           // Use CDN model URL - TensorFlow.js will handle the download and cache it
           // The model will be downloaded once and cached by TensorFlow.js
@@ -124,8 +140,12 @@ class PitchDetector extends Component {
 
   start = async () => {
     try {
-      console.log('PitchDetector.start() called');
+      console.log('========================================');
+      console.log('🎤 PitchDetector.start() called');
       console.log('Platform:', Platform.OS);
+      console.log('voiceMode:', this.props.voiceMode);
+      console.log('pitchDetectionMethod:', this.props.pitchDetectionMethod);
+      console.log('========================================');
 
       // Initialize BasicPitch model first
       console.log('Initializing BasicPitch model...');
@@ -197,9 +217,17 @@ class PitchDetector extends Component {
             console.log('Audio RMS:', rms.toFixed(4));
           }
 
-          // Only run live pitch detection in voice mode
+          // Run pitch detection based on mode and method
+          const method = this.props.pitchDetectionMethod || 'hybrid';
+
+          // Debug logging (only log every 30 frames to avoid spam)
+          if (frameCount % 30 === 0) {
+            console.log(`[Frame ${frameCount}] voiceMode=${this.props.voiceMode}, method=${method}, liveDetections=${this.liveDetections.length}`);
+          }
+
           if (this.props.voiceMode) {
-            const detection = this.detectPitchAutocorrelation(inputData, this.audioContext.sampleRate);
+            // Voice mode: Always do live pitch detection
+            const detection = this.detectPitch(inputData, this.audioContext.sampleRate);
 
             if (detection) {
               const timestamp = (Date.now() - this.startTimeMs) / 1000;
@@ -219,13 +247,37 @@ class PitchDetector extends Component {
               });
             }
           } else {
-            // In raw mode, send FFT data for visualization
+            // Raw mode: Still do pitch detection if using non-ONNX methods
+            // BUT also send FFT data for visualization
+
+            // Send FFT data for spectrum visualization
             const bufferLength = this.analyser.frequencyBinCount;
             const dataArray = new Uint8Array(bufferLength);
             this.analyser.getByteFrequencyData(dataArray);
-
-            // Send FFT data to visualizer (throttled to every frame)
             this.props.onFFTData?.(dataArray);
+
+            // If using non-ONNX methods (yin/fft/pca/cepstral), we need live detections for final notes
+            if (method === 'yin' || method === 'fft' || method === 'pca' || method === 'cepstral') {
+              const detection = this.detectPitch(inputData, this.audioContext.sampleRate);
+
+              if (detection) {
+                const timestamp = (Date.now() - this.startTimeMs) / 1000;
+                this.liveDetections.push({
+                  ...detection,
+                  timestamp
+                });
+
+                console.log('PitchDetector (raw mode): Live detection -', detection.note, detection.frequency.toFixed(1), 'Hz');
+
+                // Send live detection to visualizer
+                this.props.onLiveDetection?.({
+                  note: detection.note,
+                  frequency: detection.frequency,
+                  timestamp,
+                  isLive: true
+                });
+              }
+            }
           }
         };
       }
@@ -302,12 +354,72 @@ class PitchDetector extends Component {
         gainNode.connect(this.audioContext.destination);
         console.log('Audio graph connected: AudioRecorder → RecorderAdapter → Gain(0) → Destination');
 
-        // Set up callback to capture audio data
+        // Set up callback to capture audio data and perform live pitch detection
+        let frameCount = 0;
         this.audioRecorder.onAudioReady((event) => {
           const { buffer, numFrames } = event;
           console.log('AudioRecorder buffer ready:', buffer.duration, 'seconds,', numFrames, 'frames');
           if (buffer && buffer.length > 0) {
             this.recordedBuffers.push(buffer);
+
+            if (this.isRecording) {
+              const audioData = buffer.getChannelData(0); // Get first channel
+              const method = this.props.pitchDetectionMethod || 'hybrid';
+
+              if (this.props.voiceMode) {
+                // Voice mode: Perform live pitch detection
+                const detection = this.detectPitch(audioData, buffer.sampleRate);
+
+                if (detection) {
+                  const timestamp = (Date.now() - this.startTimeMs) / 1000;
+                  this.liveDetections.push({
+                    ...detection,
+                    timestamp
+                  });
+
+                  console.log('PitchDetector (iOS): Live detection -', detection.note, detection.frequency.toFixed(1), 'Hz');
+
+                  // Send live detection to visualizer
+                  this.props.onLiveDetection?.({
+                    note: detection.note,
+                    frequency: detection.frequency,
+                    timestamp,
+                    isLive: true
+                  });
+                }
+              } else {
+                // Raw mode: If using non-ONNX methods, still collect live detections
+                if (method === 'yin' || method === 'fft' || method === 'pca') {
+                  const detection = this.detectPitch(audioData, buffer.sampleRate);
+
+                  if (detection) {
+                    const timestamp = (Date.now() - this.startTimeMs) / 1000;
+                    this.liveDetections.push({
+                      ...detection,
+                      timestamp
+                    });
+
+                    console.log('PitchDetector (iOS, raw mode): Live detection -', detection.note, detection.frequency.toFixed(1), 'Hz');
+
+                    // Send live detection to visualizer
+                    this.props.onLiveDetection?.({
+                      note: detection.note,
+                      frequency: detection.frequency,
+                      timestamp,
+                      isLive: true
+                    });
+                  }
+                }
+
+                // Raw mode: Compute and send FFT data
+                // Throttle to every 3rd frame for performance
+                frameCount++;
+                if (frameCount % 3 === 0) {
+                  const fftData = this.computeFFT(audioData);
+                  this.props.onFFTData?.(fftData);
+                }
+              }
+            }
           }
         });
 
@@ -382,6 +494,490 @@ class PitchDetector extends Component {
     }
   };
 
+  // FFT-based pitch detection using Harmonic Product Spectrum (HPS)
+  // HPS finds the fundamental by multiplying downsampled spectra
+  // This avoids picking harmonics (which are louder than the fundamental)
+  detectPitchFFT(buffer, sampleRate) {
+    // Calculate RMS to check if there's enough signal
+    const rms = Math.sqrt(buffer.reduce((sum, val) => sum + val * val, 0) / buffer.length);
+    if (rms < 0.005) return null;
+
+    const fftSize = 2048;
+    const fft = new Float32Array(fftSize);
+
+    // Copy buffer data (zero-pad if needed)
+    for (let i = 0; i < fftSize; i++) {
+      fft[i] = i < buffer.length ? buffer[i] : 0;
+    }
+
+    // Apply Hamming window to reduce spectral leakage
+    for (let i = 0; i < fftSize; i++) {
+      const windowValue = 0.54 - 0.46 * Math.cos(2 * Math.PI * i / fftSize);
+      fft[i] *= windowValue;
+    }
+
+    // Compute full magnitude spectrum
+    const minFreq = 50;  // Lowest note we care about (G1)
+    const maxFreq = 1000; // Highest note we care about (C6)
+    const minBin = Math.floor(minFreq * fftSize / sampleRate);
+    const maxBin = Math.ceil(maxFreq * fftSize / sampleRate);
+
+    // Compute magnitude spectrum
+    const spectrum = new Float32Array(maxBin);
+    for (let k = 0; k < maxBin; k++) {
+      let real = 0;
+      let imag = 0;
+
+      for (let n = 0; n < fftSize; n++) {
+        const angle = -2 * Math.PI * k * n / fftSize;
+        real += fft[n] * Math.cos(angle);
+        imag += fft[n] * Math.sin(angle);
+      }
+
+      spectrum[k] = Math.sqrt(real * real + imag * imag);
+    }
+
+    // Harmonic Product Spectrum (HPS)
+    // Multiply spectrum with downsampled versions to find fundamental
+    const hps = new Float32Array(maxBin);
+    const numHarmonics = 5; // Use first 5 harmonics
+
+    for (let k = minBin; k < maxBin; k++) {
+      hps[k] = spectrum[k]; // Start with original spectrum
+
+      // Multiply with downsampled spectra (harmonics)
+      for (let h = 2; h <= numHarmonics; h++) {
+        const downsampledBin = Math.floor(k / h);
+        if (downsampledBin < spectrum.length) {
+          hps[k] *= spectrum[downsampledBin];
+        }
+      }
+    }
+
+    // Find peak in HPS (this is the fundamental)
+    let maxHPS = 0;
+    let peakBin = 0;
+
+    for (let k = minBin; k < maxBin; k++) {
+      if (hps[k] > maxHPS) {
+        maxHPS = hps[k];
+        peakBin = k;
+      }
+    }
+
+    if (maxHPS < 0.01) return null; // Not confident enough
+
+    // Convert bin to frequency with parabolic interpolation
+    let frequency = peakBin * sampleRate / fftSize;
+
+    if (peakBin > minBin && peakBin < maxBin - 1) {
+      const prevMag = hps[peakBin - 1];
+      const currMag = hps[peakBin];
+      const nextMag = hps[peakBin + 1];
+
+      // Parabolic interpolation for sub-bin accuracy
+      const delta = 0.5 * (nextMag - prevMag) / (2 * currMag - nextMag - prevMag);
+      frequency = (peakBin + delta) * sampleRate / fftSize;
+    }
+
+    // Sanity check
+    if (frequency < 50 || frequency > 1000) return null;
+
+    // Confidence based on HPS peak strength relative to spectrum energy
+    const totalEnergy = spectrum.reduce((sum, val) => sum + val, 0);
+    const confidence = Math.min(maxHPS / (totalEnergy / spectrum.length) / 100, 1.0);
+
+    return {
+      frequency: frequency,
+      note: this.midiToNoteName(this.frequencyToMidi(frequency)),
+      confidence: confidence
+    };
+  }
+
+  // Spectral PCA: Find fundamental by analyzing harmonic spacing across time
+  // This uses frequency-domain PCA to find stable harmonic patterns
+  detectPitchPCA(buffer, sampleRate) {
+    // Calculate RMS to check if there's enough signal
+    const rms = Math.sqrt(buffer.reduce((sum, val) => sum + val * val, 0) / buffer.length);
+    if (rms < 0.005) return null;
+
+    // Need multiple frames for PCA
+    const windowSize = 1024;
+    const hopSize = 256;
+    const numWindows = Math.floor((buffer.length - windowSize) / hopSize);
+
+    if (numWindows < 3) {
+      // Not enough data for PCA, fall back to FFT+HPS
+      return this.detectPitchFFT(buffer, sampleRate);
+    }
+
+    const minFreq = 50;
+    const maxFreq = 1000;
+    const minBin = Math.floor(minFreq * windowSize / sampleRate);
+    const maxBin = Math.ceil(maxFreq * windowSize / sampleRate);
+    const numBins = maxBin - minBin;
+
+    // Build spectrogram matrix: rows = time frames, columns = frequency bins
+    const spectrogram = [];
+
+    for (let w = 0; w < numWindows; w++) {
+      const start = w * hopSize;
+      const windowData = new Float32Array(windowSize);
+
+      // Copy and window the data
+      for (let i = 0; i < windowSize; i++) {
+        const sample = i + start < buffer.length ? buffer[i + start] : 0;
+        const hammingWindow = 0.54 - 0.46 * Math.cos(2 * Math.PI * i / windowSize);
+        windowData[i] = sample * hammingWindow;
+      }
+
+      // Compute magnitude spectrum for this window
+      const spectrum = new Float32Array(numBins);
+      for (let k = minBin; k < maxBin; k++) {
+        let real = 0;
+        let imag = 0;
+
+        for (let n = 0; n < windowSize; n++) {
+          const angle = -2 * Math.PI * k * n / windowSize;
+          real += windowData[n] * Math.cos(angle);
+          imag += windowData[n] * Math.sin(angle);
+        }
+
+        spectrum[k - minBin] = Math.sqrt(real * real + imag * imag);
+      }
+
+      spectrogram.push(spectrum);
+    }
+
+    // Compute mean spectrum (first step of PCA)
+    const meanSpectrum = new Float32Array(numBins);
+    for (let i = 0; i < numWindows; i++) {
+      for (let j = 0; j < numBins; j++) {
+        meanSpectrum[j] += spectrogram[i][j];
+      }
+    }
+    for (let j = 0; j < numBins; j++) {
+      meanSpectrum[j] /= numWindows;
+    }
+
+    // Find harmonic peaks in mean spectrum using HPS
+    const hps = new Float32Array(numBins);
+    const numHarmonics = 4;
+
+    for (let k = 0; k < numBins; k++) {
+      hps[k] = meanSpectrum[k];
+
+      for (let h = 2; h <= numHarmonics; h++) {
+        const downsampledBin = Math.floor(k / h);
+        if (downsampledBin < numBins) {
+          hps[k] *= meanSpectrum[downsampledBin];
+        }
+      }
+    }
+
+    // Find peak in HPS
+    let maxHPS = 0;
+    let peakBin = 0;
+
+    for (let k = 0; k < numBins; k++) {
+      if (hps[k] > maxHPS) {
+        maxHPS = hps[k];
+        peakBin = k;
+      }
+    }
+
+    if (maxHPS < 0.01) return null;
+
+    // Convert bin to frequency
+    const actualBin = peakBin + minBin;
+    let frequency = actualBin * sampleRate / windowSize;
+
+    // Compute stability (variance of peak across time frames)
+    let variance = 0;
+    for (let i = 0; i < numWindows; i++) {
+      const diff = spectrogram[i][peakBin] - meanSpectrum[peakBin];
+      variance += diff * diff;
+    }
+    variance /= numWindows;
+
+    // Confidence: high if peak is stable across time (low variance)
+    const stability = 1.0 / (1.0 + variance / meanSpectrum[peakBin]);
+    const confidence = Math.min(stability, 1.0);
+
+    if (frequency < 50 || frequency > 1000) return null;
+
+    return {
+      frequency: frequency,
+      note: this.midiToNoteName(this.frequencyToMidi(frequency)),
+      confidence: confidence
+    };
+  }
+
+  // Cepstral analysis for pitch detection
+  // Separates excitation (pitch) from vocal tract resonances (formants)
+  detectPitchCepstral(buffer, sampleRate) {
+    const minFreq = 55;  // ~A1 (bass voices can go down to ~80Hz, allow margin)
+    const maxFreq = 1000; // ~B5
+
+    // Use power-of-2 window for FFT efficiency
+    const windowSize = 2048;
+    const halfWindow = windowSize / 2;
+
+    if (buffer.length < windowSize) {
+      return null;
+    }
+
+    // Apply Hamming window
+    const windowed = new Float32Array(windowSize);
+    for (let i = 0; i < windowSize; i++) {
+      const hamming = 0.54 - 0.46 * Math.cos((2 * Math.PI * i) / (windowSize - 1));
+      windowed[i] = buffer[i] * hamming;
+    }
+
+    // STEP 1: Compute power spectrum via DFT
+    const powerSpectrum = new Float32Array(halfWindow);
+    for (let k = 0; k < halfWindow; k++) {
+      let real = 0;
+      let imag = 0;
+      for (let n = 0; n < windowSize; n++) {
+        const angle = (2 * Math.PI * k * n) / windowSize;
+        real += windowed[n] * Math.cos(angle);
+        imag -= windowed[n] * Math.sin(angle);
+      }
+      powerSpectrum[k] = real * real + imag * imag;
+    }
+
+    // STEP 2: Take log of power spectrum (compress dynamic range)
+    const logSpectrum = new Float32Array(halfWindow);
+    for (let k = 0; k < halfWindow; k++) {
+      // Add small epsilon to avoid log(0)
+      logSpectrum[k] = Math.log(powerSpectrum[k] + 1e-10);
+    }
+
+    // STEP 3: Compute cepstrum via inverse DFT of log spectrum
+    // Cepstrum is "spectrum of the spectrum" - reveals periodicity
+    const cepstrum = new Float32Array(halfWindow);
+    for (let n = 0; n < halfWindow; n++) {
+      let sum = 0;
+      for (let k = 0; k < halfWindow; k++) {
+        const angle = (2 * Math.PI * k * n) / halfWindow;
+        sum += logSpectrum[k] * Math.cos(angle);
+      }
+      cepstrum[n] = sum / halfWindow;
+    }
+
+    // STEP 4: Find peak in cepstrum corresponding to fundamental period
+    // Quefrency (cepstral domain "frequency") relates to pitch period
+    const minQuefrency = Math.floor(sampleRate / maxFreq);
+    const maxQuefrency = Math.floor(sampleRate / minFreq);
+
+    let maxPeak = -Infinity;
+    let peakQuefrency = -1;
+
+    for (let q = minQuefrency; q < Math.min(maxQuefrency, halfWindow); q++) {
+      if (cepstrum[q] > maxPeak) {
+        // Check it's a real peak (higher than neighbors)
+        if (q > 0 && q < halfWindow - 1) {
+          if (cepstrum[q] > cepstrum[q - 1] && cepstrum[q] > cepstrum[q + 1]) {
+            maxPeak = cepstrum[q];
+            peakQuefrency = q;
+          }
+        }
+      }
+    }
+
+    if (peakQuefrency === -1 || maxPeak < 0) {
+      return null; // No clear peak found
+    }
+
+    // Parabolic interpolation for sub-sample accuracy
+    let refinedQuefrency = peakQuefrency;
+    if (peakQuefrency > 0 && peakQuefrency < halfWindow - 1) {
+      const y1 = cepstrum[peakQuefrency - 1];
+      const y2 = cepstrum[peakQuefrency];
+      const y3 = cepstrum[peakQuefrency + 1];
+      const offset = 0.5 * (y1 - y3) / (y1 - 2 * y2 + y3);
+      refinedQuefrency = peakQuefrency + offset;
+    }
+
+    // Convert quefrency to frequency
+    const frequency = sampleRate / refinedQuefrency;
+
+    // Confidence based on peak prominence
+    const avgCepstrum = cepstrum.slice(minQuefrency, maxQuefrency).reduce((a, b) => a + b, 0) /
+                        (maxQuefrency - minQuefrency);
+    const confidence = Math.min((maxPeak - avgCepstrum) / Math.abs(avgCepstrum), 1.0);
+
+    if (confidence < 0.2 || frequency < minFreq || frequency > maxFreq) {
+      return null;
+    }
+
+    return {
+      frequency: frequency,
+      note: this.midiToNoteName(this.frequencyToMidi(frequency)),
+      confidence: confidence
+    };
+  }
+
+  // Cepstral + KNN with posterior probabilities
+  // Processes whole audio buffer with past/future context
+  detectPitchCepstralKNN(audioBuffer, sampleRate) {
+    console.log('=== Cepstral+KNN with posterior probabilities ===');
+    console.log(`Processing ${audioBuffer.length} samples at ${sampleRate}Hz`);
+
+    // STEP 1: Aggressive downsampling to 11025Hz for maximum speed (~8x faster)
+    // Nyquist = 5.5kHz, still covers full vocal range (typical max ~4kHz)
+    const targetSampleRate = 11025;
+    const downsampleFactor = Math.round(sampleRate / targetSampleRate);
+
+    console.log(`Downsampling by ${downsampleFactor}x: ${sampleRate}Hz → ${targetSampleRate}Hz`);
+
+    const downsampled = new Float32Array(Math.floor(audioBuffer.length / downsampleFactor));
+    for (let i = 0; i < downsampled.length; i++) {
+      downsampled[i] = audioBuffer[i * downsampleFactor];
+    }
+
+    console.log(`Downsampled: ${audioBuffer.length} → ${downsampled.length} samples (${(downsampled.length/targetSampleRate).toFixed(2)}s)`);
+
+    // Optimized parameters for speed/accuracy trade-off
+    const hopSize = 1024;   // ~93ms at 11.025kHz
+    const windowSize = 2048; // Must match detectPitchCepstral requirement
+    const contextWindow = 3; // Look at ±3 frames (±279ms context)
+
+    // STEP 2: Run cepstral analysis on downsampled audio with sliding window
+    const rawDetections = [];
+
+    for (let i = 0; i < downsampled.length - windowSize; i += hopSize) {
+      const frame = downsampled.slice(i, i + windowSize);
+      const timestamp = i / targetSampleRate;
+
+      const detection = this.detectPitchCepstral(frame, targetSampleRate);
+      if (detection) {
+        rawDetections.push({
+          timestamp,
+          frequency: detection.frequency,
+          confidence: detection.confidence,
+          frameIndex: Math.floor(i / hopSize)
+        });
+      }
+    }
+
+    console.log(`Cepstral: ${rawDetections.length} raw detections`);
+
+    if (rawDetections.length === 0) return [];
+
+    // STEP 2: Calculate posterior probabilities using past/future context
+    const refinedDetections = [];
+
+    for (let i = 0; i < rawDetections.length; i++) {
+      const current = rawDetections[i];
+
+      // Get context window (past and future)
+      const start = Math.max(0, i - contextWindow);
+      const end = Math.min(rawDetections.length, i + contextWindow + 1);
+      const contextFrames = rawDetections.slice(start, end);
+
+      // Calculate posterior probability based on context
+      const { refinedFrequency, posteriorConfidence } = this.calculatePosterior(
+        current,
+        contextFrames,
+        i - start  // Position of current in context
+      );
+
+      refinedDetections.push({
+        timestamp: current.timestamp,
+        frequency: refinedFrequency,
+        confidence: posteriorConfidence,
+        note: this.midiToNoteName(this.frequencyToMidi(refinedFrequency))
+      });
+    }
+
+    console.log(`After posterior refinement: ${refinedDetections.length} detections`);
+    return refinedDetections;
+  }
+
+  // Calculate posterior probability using Bayesian inference with context
+  calculatePosterior(current, contextFrames, currentIndex) {
+    // Prior: current frame's detection
+    const priorFreq = current.frequency;
+    const priorConf = current.confidence;
+
+    // Likelihood: weighted average of context, with recency bias
+    let totalWeight = 0;
+    let weightedFreqSum = 0;
+    let weightedConfSum = 0;
+
+    for (let i = 0; i < contextFrames.length; i++) {
+      const frame = contextFrames[i];
+      const distance = Math.abs(i - currentIndex);
+
+      // Temporal weight: closer frames have more influence
+      // Future frames slightly less weight than past (causal bias)
+      const temporalWeight = Math.exp(-distance / 2.0);
+      const causalBias = i < currentIndex ? 1.0 : 0.8;
+
+      // Pitch similarity weight: similar pitches reinforce each other
+      const freqDiff = Math.abs(this.frequencyToMidi(frame.frequency) -
+                                 this.frequencyToMidi(priorFreq));
+      const pitchWeight = Math.exp(-freqDiff / 1.0); // 1 semitone decay
+
+      const weight = temporalWeight * causalBias * pitchWeight * frame.confidence;
+
+      totalWeight += weight;
+      weightedFreqSum += frame.frequency * weight;
+      weightedConfSum += frame.confidence * weight;
+    }
+
+    // Posterior: blend prior with likelihood
+    const likelihoodFreq = weightedFreqSum / totalWeight;
+    const likelihoodConf = weightedConfSum / totalWeight;
+
+    // Bayesian update: prior * likelihood
+    const posteriorFreq = (priorFreq * priorConf + likelihoodFreq * likelihoodConf) /
+                          (priorConf + likelihoodConf);
+    const posteriorConfidence = Math.min(priorConf + likelihoodConf * 0.5, 1.0);
+
+    return {
+      refinedFrequency: posteriorFreq,
+      posteriorConfidence: posteriorConfidence
+    };
+  }
+
+  // Dispatcher: Choose detection method based on settings
+  detectPitch(buffer, sampleRate) {
+    const method = this.props.pitchDetectionMethod || 'yin';
+
+    switch (method) {
+      case 'yin':
+        return this.detectPitchAutocorrelation(buffer, sampleRate);
+
+      case 'fft':
+        return this.detectPitchFFT(buffer, sampleRate);
+
+      case 'pca':
+        return this.detectPitchPCA(buffer, sampleRate);
+
+      case 'cepstral':
+        return this.detectPitchCepstral(buffer, sampleRate);
+
+      case 'cepstral_knn':
+        // This is handled in runBasicPitch, not real-time
+        return this.detectPitchCepstral(buffer, sampleRate);
+
+      case 'onnx':
+        // ONNX is post-processing only, use YIN for live detection
+        return this.detectPitchAutocorrelation(buffer, sampleRate);
+
+      case 'hybrid':
+        // Hybrid uses YIN for live, ONNX for post-processing
+        return this.detectPitchAutocorrelation(buffer, sampleRate);
+
+      default:
+        console.warn(`Unknown pitch detection method: ${method}, falling back to YIN`);
+        return this.detectPitchAutocorrelation(buffer, sampleRate);
+    }
+  }
+
   // YIN algorithm for pitch detection - more robust for real-time
   detectPitchAutocorrelation(buffer, sampleRate) {
     // Calculate RMS to check if there's enough signal
@@ -447,6 +1043,39 @@ class PitchDetector extends Component {
     };
   };
 
+  // Compute FFT for raw mode visualization (used on iOS/React Native)
+  computeFFT(audioData) {
+    // Simple FFT implementation using power spectrum
+    const fftSize = 2048;
+    const bufferLength = fftSize / 2;
+    const fftData = new Uint8Array(bufferLength);
+
+    // Take first fftSize samples (or pad if needed)
+    const samples = new Float32Array(fftSize);
+    for (let i = 0; i < fftSize; i++) {
+      samples[i] = i < audioData.length ? audioData[i] : 0;
+    }
+
+    // Compute magnitude spectrum (simplified - just use absolute values binned by frequency)
+    // This is a rough approximation, but sufficient for visualization
+    const samplesPerBin = Math.floor(fftSize / bufferLength);
+
+    for (let i = 0; i < bufferLength; i++) {
+      let sum = 0;
+      for (let j = 0; j < samplesPerBin; j++) {
+        const idx = i * samplesPerBin + j;
+        if (idx < samples.length) {
+          sum += Math.abs(samples[idx]);
+        }
+      }
+      // Normalize to 0-255 range
+      const avg = sum / samplesPerBin;
+      fftData[i] = Math.min(255, Math.floor(avg * 1000)); // Scale up for visibility
+    }
+
+    return fftData;
+  };
+
   frequencyToMidi(frequency) {
     return 69 + 12 * Math.log2(frequency / 440);
   };
@@ -481,8 +1110,498 @@ class PitchDetector extends Component {
     return convertedBuffer;
   };
 
+  // POST-PROCESSING PIPELINE
+  // Refines raw detections using statistical analysis and growing notes algorithm
+  postProcessDetections(detections, options = {}) {
+    const {
+      useKNN = false,
+      windowSize = 0.3,        // 300ms rolling window
+      pitchTolerance = 0.5,    // semitones
+      minConfidence = 0.3,
+      minNoteDuration = 0.15   // 150ms minimum
+    } = options;
+
+    console.log('=== Post-processing detections ===');
+    console.log(`Input: ${detections.length} detections, useKNN: ${useKNN}`);
+
+    if (detections.length === 0) return [];
+
+    const sortedDetections = [...detections].sort((a, b) => a.timestamp - b.timestamp);
+
+    // STEP 1: Growing Notes Algorithm
+    // Start with each detection, grow it by absorbing nearby similar detections
+    const grownNotes = [];
+    let currentRegion = null;
+
+    for (let i = 0; i < sortedDetections.length; i++) {
+      const detection = sortedDetections[i];
+      const midiNote = this.frequencyToMidi(detection.frequency);
+
+      if (!currentRegion) {
+        // Start new region
+        currentRegion = {
+          startTime: detection.timestamp,
+          endTime: detection.timestamp,
+          pitches: [midiNote],
+          frequencies: [detection.frequency],
+          confidences: [detection.confidence],
+          detectionCount: 1
+        };
+        continue;
+      }
+
+      // Check coherence with current region
+      const timeSinceLast = detection.timestamp - currentRegion.endTime;
+      const medianPitch = this.getMedian(currentRegion.pitches);
+      const pitchDiff = Math.abs(midiNote - medianPitch);
+
+      // Calculate rolling variance (coherence metric)
+      const recentPitches = currentRegion.pitches.slice(-5); // Last 5 detections
+      const variance = this.calculateVariance(recentPitches);
+
+      // Grow region if coherent
+      if (timeSinceLast < windowSize && pitchDiff < pitchTolerance && variance < 1.0) {
+        // Extend region
+        currentRegion.endTime = detection.timestamp;
+        currentRegion.pitches.push(midiNote);
+        currentRegion.frequencies.push(detection.frequency);
+        currentRegion.confidences.push(detection.confidence);
+        currentRegion.detectionCount++;
+      } else {
+        // Region ended - finalize it
+        const duration = currentRegion.endTime - currentRegion.startTime;
+        if (duration >= minNoteDuration) {
+          grownNotes.push(this.finalizeRegion(currentRegion));
+        }
+
+        // Start new region
+        currentRegion = {
+          startTime: detection.timestamp,
+          endTime: detection.timestamp,
+          pitches: [midiNote],
+          frequencies: [detection.frequency],
+          confidences: [detection.confidence],
+          detectionCount: 1
+        };
+      }
+    }
+
+    // Finalize last region
+    if (currentRegion) {
+      const duration = currentRegion.endTime - currentRegion.startTime;
+      if (duration >= minNoteDuration) {
+        grownNotes.push(this.finalizeRegion(currentRegion));
+      }
+    }
+
+    console.log(`After growing: ${grownNotes.length} notes`);
+
+    // STEP 2: Optional KNN Clustering
+    // Groups nearby notes with similar pitches for further refinement
+    let refinedNotes = grownNotes;
+    if (useKNN && grownNotes.length > 3) {
+      refinedNotes = this.knnClusterNotes(grownNotes, { k: 3, pitchTolerance });
+      console.log(`After KNN clustering: ${refinedNotes.length} notes`);
+    }
+
+    // STEP 3: Final merge pass - combine adjacent notes of same pitch
+    const mergedNotes = [];
+    let currentMerged = null;
+
+    for (const note of refinedNotes) {
+      if (!currentMerged) {
+        currentMerged = { ...note };
+      } else {
+        const gap = note.startTime - currentMerged.endTime;
+        const pitchDiff = Math.abs(Math.round(note.midi) - Math.round(currentMerged.midi));
+
+        // Merge if gap < 300ms and same pitch
+        if (gap < 0.3 && pitchDiff < 1) {
+          console.log(`Merging adjacent notes: ${currentMerged.midi.toFixed(1)} + ${note.midi.toFixed(1)} (${gap.toFixed(3)}s gap)`);
+          currentMerged.endTime = note.endTime;
+          currentMerged.duration = currentMerged.endTime - currentMerged.startTime;
+        } else {
+          mergedNotes.push(currentMerged);
+          currentMerged = { ...note };
+        }
+      }
+    }
+
+    if (currentMerged) {
+      mergedNotes.push(currentMerged);
+    }
+
+    console.log(`Final: ${mergedNotes.length} notes after post-processing`);
+    return mergedNotes;
+  }
+
+  // Helper: Finalize a region into a note
+  finalizeRegion(region) {
+    const medianPitch = this.getMedian(region.pitches);
+    const medianFrequency = this.getMedian(region.frequencies);
+    const avgConfidence = region.confidences.reduce((a, b) => a + b, 0) / region.confidences.length;
+    const duration = region.endTime - region.startTime;
+
+    const noteName = this.midiToNoteName(Math.round(medianPitch));
+
+    return {
+      startTime: region.startTime,
+      endTime: region.endTime,
+      duration: duration,
+      midi: medianPitch,
+      frequency: medianFrequency,
+      confidence: avgConfidence,
+      detectionCount: region.detectionCount
+    };
+  }
+
+  // Helper: Calculate variance of array
+  calculateVariance(arr) {
+    if (arr.length < 2) return 0;
+    const mean = arr.reduce((a, b) => a + b, 0) / arr.length;
+    const squaredDiffs = arr.map(x => (x - mean) ** 2);
+    return squaredDiffs.reduce((a, b) => a + b, 0) / arr.length;
+  }
+
+  // Optional: K-Nearest Neighbors clustering for note refinement
+  knnClusterNotes(notes, options = {}) {
+    const { k = 3, pitchTolerance = 0.5 } = options;
+
+    // Build feature vectors: [timestamp, pitch, duration]
+    const features = notes.map(note => ({
+      note: note,
+      vector: [
+        note.startTime,           // Temporal position
+        note.midi,                 // Pitch
+        note.duration * 10         // Duration (weighted more)
+      ]
+    }));
+
+    const clusters = [];
+
+    // Simple clustering: group notes that are close in feature space
+    for (const feature of features) {
+      // Find nearest cluster
+      let nearestCluster = null;
+      let minDistance = Infinity;
+
+      for (const cluster of clusters) {
+        const centroid = cluster.centroid;
+        const distance = this.euclideanDistance(feature.vector, centroid);
+
+        // Also check pitch similarity
+        const pitchDiff = Math.abs(feature.vector[1] - centroid[1]);
+
+        if (distance < minDistance && pitchDiff < pitchTolerance) {
+          minDistance = distance;
+          nearestCluster = cluster;
+        }
+      }
+
+      // Add to cluster or create new one
+      if (nearestCluster && minDistance < 2.0) {
+        nearestCluster.notes.push(feature.note);
+        nearestCluster.centroid = this.updateCentroid(nearestCluster.notes);
+      } else {
+        clusters.push({
+          notes: [feature.note],
+          centroid: [...feature.vector]
+        });
+      }
+    }
+
+    console.log(`KNN: ${features.length} notes → ${clusters.length} clusters`);
+
+    // Merge notes in each cluster
+    const clusteredNotes = clusters.map(cluster => {
+      if (cluster.notes.length === 1) {
+        return cluster.notes[0];
+      }
+
+      // Merge cluster into single note
+      const sortedNotes = cluster.notes.sort((a, b) => a.startTime - b.startTime);
+      const startTime = sortedNotes[0].startTime;
+      const endTime = sortedNotes[sortedNotes.length - 1].endTime;
+      const medianMidi = this.getMedian(sortedNotes.map(n => n.midi));
+      const avgConfidence = sortedNotes.reduce((sum, n) => sum + n.confidence, 0) / sortedNotes.length;
+
+      return {
+        startTime: startTime,
+        endTime: endTime,
+        duration: endTime - startTime,
+        midi: medianMidi,
+        frequency: this.midiToFrequency(medianMidi),
+        confidence: avgConfidence,
+        detectionCount: sortedNotes.reduce((sum, n) => sum + n.detectionCount, 0)
+      };
+    });
+
+    return clusteredNotes.sort((a, b) => a.startTime - b.startTime);
+  }
+
+  // Helper: Euclidean distance between vectors
+  euclideanDistance(v1, v2) {
+    return Math.sqrt(v1.reduce((sum, val, i) => sum + (val - v2[i]) ** 2, 0));
+  }
+
+  // Helper: Update cluster centroid
+  updateCentroid(notes) {
+    const n = notes.length;
+    return [
+      notes.reduce((sum, note) => sum + note.startTime, 0) / n,
+      notes.reduce((sum, note) => sum + note.midi, 0) / n,
+      notes.reduce((sum, note) => sum + note.duration * 10, 0) / n
+    ];
+  }
+
+  // Convert live detections to note format (for non-ONNX methods)
+  // Uses advanced post-processing pipeline with growing notes + optional KNN
+  convertLiveDetectionsToNotes() {
+    console.log('=== convertLiveDetectionsToNotes called ===');
+    console.log('liveDetections:', this.liveDetections?.length || 0, 'detections');
+
+    if (!this.liveDetections || this.liveDetections.length === 0) {
+      console.error('⚠️ NO LIVE DETECTIONS! Pitch detection may not have run during recording.');
+      console.error('Check: voiceMode prop, pitchDetectionMethod prop, and live detection logic');
+      return [];
+    }
+
+    console.log(`Converting ${this.liveDetections.length} live detections to notes`);
+
+    // Use new post-processing pipeline
+    const method = this.props.pitchDetectionMethod || 'yin';
+    const useKNN = method === 'cepstral' || method === 'fft'; // Enable KNN for noisy methods
+
+    const processedNotes = this.postProcessDetections(this.liveDetections, {
+      useKNN: useKNN,
+      windowSize: 0.3,
+      pitchTolerance: 0.5,
+      minConfidence: 0.3,
+      minNoteDuration: 0.15
+    });
+
+    // Convert to final note format
+    return processedNotes.map(note => this.convertProcessedNoteToFinalFormat(note));
+  }
+
+  // Helper: Convert processed note to final format expected by App.jsx
+  convertProcessedNoteToFinalFormat(note) {
+    const noteName = this.midiToNoteName(Math.round(note.midi));
+
+    console.log(`Note: ${noteName} @ ${note.startTime.toFixed(2)}s, dur=${note.duration.toFixed(2)}s, detections=${note.detectionCount}, conf=${note.confidence.toFixed(2)}`);
+
+    return {
+      startTimeSeconds: note.startTime,
+      durationSeconds: note.duration,
+      pitchMidi: note.midi,
+      amplitude: note.confidence,
+      pitchBends: [],
+      note: noteName,
+      originalNote: {
+        startTime: note.startTime,
+        duration: note.duration,
+        midiNote: note.midi
+      }
+    };
+  }
+
+  // OLD VERSION - Keep for reference/fallback
+  convertLiveDetectionsToNotes_OLD() {
+    console.log('=== convertLiveDetectionsToNotes_OLD called ===');
+    console.log('liveDetections:', this.liveDetections?.length || 0, 'detections');
+
+    if (!this.liveDetections || this.liveDetections.length === 0) {
+      console.error('⚠️ NO LIVE DETECTIONS! Pitch detection may not have run during recording.');
+      console.error('Check: voiceMode prop, pitchDetectionMethod prop, and live detection logic');
+      return [];
+    }
+
+    console.log(`Converting ${this.liveDetections.length} live detections to notes`);
+
+    const sortedDetections = [...this.liveDetections].sort((a, b) => a.timestamp - b.timestamp);
+
+    // STEP 1: Group detections into sustained notes (FIRST PASS - very forgiving)
+    // HPS/FFT can be fragmented, so we merge aggressively first
+    const notes = [];
+    let currentNote = null;
+
+    for (let i = 0; i < sortedDetections.length; i++) {
+      const detection = sortedDetections[i];
+      const midiNote = this.frequencyToMidi(detection.frequency);
+
+      if (!currentNote) {
+        // Start first note
+        currentNote = {
+          startTime: detection.timestamp,
+          endTime: detection.timestamp,
+          pitches: [midiNote],
+          frequencies: [detection.frequency],
+          detectionCount: 1
+        };
+      } else {
+        const timeSinceLast = detection.timestamp - currentNote.endTime;
+        const currentMedianPitch = this.getMedian(currentNote.pitches);
+        const pitchDiff = Math.abs(Math.round(midiNote) - Math.round(currentMedianPitch));
+
+        // Continue note if:
+        // - Time gap < 500ms (very forgiving - merge fragments)
+        // - Pitch within 1 semitone (HPS can drift slightly)
+        if (timeSinceLast < 0.5 && pitchDiff < 1.0) {
+          // Extend current note
+          currentNote.endTime = detection.timestamp;
+          currentNote.pitches.push(midiNote);
+          currentNote.frequencies.push(detection.frequency);
+          currentNote.detectionCount++;
+        } else {
+          // Note ended - save it (no duration filter yet)
+          notes.push(this.finalizeNote(currentNote));
+
+          // Start new note
+          currentNote = {
+            startTime: detection.timestamp,
+            endTime: detection.timestamp,
+            pitches: [midiNote],
+            frequencies: [detection.frequency],
+            detectionCount: 1
+          };
+        }
+      }
+    }
+
+    // Save last note
+    if (currentNote) {
+      notes.push(this.finalizeNote(currentNote));
+    }
+
+    console.log(`First pass: ${notes.length} raw notes`);
+
+    // STEP 2: Post-process to merge adjacent notes of same pitch
+    // This catches cases where there was a brief silence/gap but it's the same sung note
+    const mergedNotes = [];
+    let currentMerged = null;
+
+    for (const note of notes) {
+      if (!currentMerged) {
+        currentMerged = { ...note };
+      } else {
+        const gap = note.startTime - currentMerged.endTime;
+        const pitchDiff = Math.abs(Math.round(note.midi) - Math.round(currentMerged.midi));
+
+        // Merge if gap < 300ms and same pitch
+        if (gap < 0.3 && pitchDiff < 1) {
+          console.log(`Merging notes: ${currentMerged.midi.toFixed(1)} (${gap.toFixed(3)}s gap)`);
+          currentMerged.endTime = note.endTime;
+          currentMerged.duration = currentMerged.endTime - currentMerged.startTime;
+        } else {
+          mergedNotes.push(currentMerged);
+          currentMerged = { ...note };
+        }
+      }
+    }
+
+    if (currentMerged) {
+      mergedNotes.push(currentMerged);
+    }
+
+    console.log(`After merging: ${mergedNotes.length} notes`);
+
+    // STEP 3: Filter out very short notes (< 150ms)
+    const finalNotes = mergedNotes.filter(note => {
+      if (note.duration < 0.15) {
+        console.log(`Filtered out short note: ${note.duration.toFixed(3)}s at ${note.midi.toFixed(1)}`);
+        return false;
+      }
+      return true;
+    });
+
+    console.log(`Final: ${finalNotes.length} notes (filtered short notes)`);
+    return finalNotes;
+  }
+
+  // Helper: Get median value from array
+  getMedian(arr) {
+    const sorted = [...arr].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+  }
+
+  // Helper: Finalize a note by using median pitch and adding realistic duration
+  finalizeNote(noteData) {
+    // Use median pitch to avoid outliers from vibrato/noise
+    const medianPitch = this.getMedian(noteData.pitches);
+
+    // Real duration from detections
+    const duration = noteData.endTime - noteData.startTime;
+
+    // For very stable notes (many detections over time), increase confidence
+    const confidence = Math.min(noteData.detectionCount / 10, 1.0);
+
+    const noteName = this.midiToNoteName(Math.round(medianPitch));
+    console.log(`Note: ${noteName} @ ${noteData.startTime.toFixed(2)}s, dur=${duration.toFixed(2)}s, detections=${noteData.detectionCount}, conf=${confidence.toFixed(2)}`);
+
+    return {
+      startTimeSeconds: noteData.startTime,
+      durationSeconds: duration,
+      pitchMidi: medianPitch,
+      amplitude: confidence,  // Use confidence for amplitude
+      pitchBends: [],
+      note: noteName,  // Add note name for rendering
+      originalNote: {
+        startTime: noteData.startTime,
+        duration: duration,
+        midiNote: medianPitch
+      }
+    };
+  }
+
+  // Helper: Calculate average
+  average(arr) {
+    return arr.reduce((sum, val) => sum + val, 0) / arr.length;
+  }
+
+  // Helper: Convert MIDI note to frequency
+  midiToFrequency(midi) {
+    return 440 * Math.pow(2, (midi - 69) / 12);
+  }
+
   runBasicPitch = async (audioBuffer) => {
     console.log('runBasicPitch called');
+
+    const method = this.props.pitchDetectionMethod || 'hybrid';
+    console.log(`Pitch detection method: ${method}`);
+
+    // Cepstral+KNN: Process whole audio buffer with posterior probabilities
+    if (method === 'cepstral_knn') {
+      console.log('Method cepstral_knn: Processing whole audio with posterior probabilities');
+
+      // Get raw audio data
+      const audioData = audioBuffer.getChannelData(0);
+      const sampleRate = audioBuffer.sampleRate;
+
+      // Run cepstral+KNN on whole buffer
+      const refinedDetections = this.detectPitchCepstralKNN(audioData, sampleRate);
+
+      // Apply post-processing pipeline with KNN
+      const processedNotes = this.postProcessDetections(refinedDetections, {
+        useKNN: true,
+        windowSize: 0.3,
+        pitchTolerance: 0.5,
+        minConfidence: 0.3,
+        minNoteDuration: 0.15
+      });
+
+      // Convert to final note format
+      return processedNotes.map(note => this.convertProcessedNoteToFinalFormat(note));
+    }
+
+    // For non-ONNX methods, skip ML model and use live detections only
+    if (method === 'yin' || method === 'fft' || method === 'pca' || method === 'cepstral') {
+      console.log(`Method ${method}: Using live detections only, skipping ONNX`);
+      return this.convertLiveDetectionsToNotes();
+    }
+
+    // For ONNX and hybrid methods, run the ML model
+    console.log(`Method ${method}: Running ONNX model`);
 
     // Ensure model is loaded
     if (!this.basicPitch) {

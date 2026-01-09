@@ -1,17 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal, ScrollView } from 'react-native';
 import Storage from '../utils/Storage';
+import Settings from '../utils/Settings';
+import DeviceCapabilities from '../utils/DeviceCapabilities';
 import * as Colors from '../styles/colors';
 import { Trash2Icon, MicIcon, WaveformIcon } from './Icons';
 
-const SettingsPanel = ({ visible, onClose, onLoadSession, initialTab = 'history' }) => {
+const SettingsPanel = ({ visible, onClose, onLoadSession, onMethodChange, initialTab = 'history' }) => {
   const [sessions, setSessions] = useState([]);
   const [storageInfo, setStorageInfo] = useState(null);
-  const [activeTab, setActiveTab] = useState('history'); // 'history' or 'help'
+  const [activeTab, setActiveTab] = useState('history'); // 'history', 'settings', or 'help'
+  const [settings, setSettings] = useState(null);
+  const [deviceCapabilities, setDeviceCapabilities] = useState(null);
 
   useEffect(() => {
     if (visible) {
       loadSessions();
+      loadSettings();
       setActiveTab(initialTab); // Set to initialTab when opened
     }
   }, [visible, initialTab]);
@@ -21,6 +26,27 @@ const SettingsPanel = ({ visible, onClose, onLoadSession, initialTab = 'history'
     setSessions(allSessions);
     const info = await Storage.getStorageInfo();
     setStorageInfo(info);
+  };
+
+  const loadSettings = async () => {
+    const currentSettings = await Settings.loadSettings();
+    setSettings(currentSettings);
+    if (currentSettings.deviceCapabilities) {
+      setDeviceCapabilities(currentSettings.deviceCapabilities);
+    }
+  };
+
+  const handleMethodChange = async (method) => {
+    await Settings.setPitchDetectionMethod(method);
+    await loadSettings();
+    // Notify parent component (App.jsx) that method changed
+    onMethodChange?.(method);
+  };
+
+  const handleRedetectCapabilities = async () => {
+    const capabilities = await Settings.redetectCapabilities();
+    setDeviceCapabilities(capabilities);
+    await loadSettings();
   };
 
   const handleLoadSession = (session) => {
@@ -85,6 +111,14 @@ const SettingsPanel = ({ visible, onClose, onLoadSession, initialTab = 'history'
               >
                 <Text style={[styles.tabText, activeTab === 'history' && styles.activeTabText]}>
                   History
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.tab, activeTab === 'settings' && styles.activeTab]}
+                onPress={() => setActiveTab('settings')}
+              >
+                <Text style={[styles.tabText, activeTab === 'settings' && styles.activeTabText]}>
+                  Settings
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -168,6 +202,100 @@ const SettingsPanel = ({ visible, onClose, onLoadSession, initialTab = 'history'
                   ))
                 )}
               </>
+            ) : activeTab === 'settings' ? (
+              <View style={styles.settingsContent}>
+                <Text style={styles.settingsTitle}>Pitch Detection Settings</Text>
+
+                {deviceCapabilities && (
+                  <View style={styles.deviceInfoCard}>
+                    <Text style={styles.deviceInfoTitle}>Device Info</Text>
+                    <View style={styles.deviceInfoRow}>
+                      <Text style={styles.deviceInfoLabel}>Platform:</Text>
+                      <Text style={styles.deviceInfoValue}>{deviceCapabilities.platform}</Text>
+                    </View>
+                    <View style={styles.deviceInfoRow}>
+                      <Text style={styles.deviceInfoLabel}>GPU:</Text>
+                      <Text style={[styles.deviceInfoValue, deviceCapabilities.hasGPU && styles.deviceInfoGood]}>
+                        {deviceCapabilities.hasGPU ? `Yes (${deviceCapabilities.gpuDetails})` : `No (${deviceCapabilities.backend})`}
+                      </Text>
+                    </View>
+                    <View style={styles.deviceInfoRow}>
+                      <Text style={styles.deviceInfoLabel}>Recommended:</Text>
+                      <Text style={styles.deviceInfoValue}>{deviceCapabilities.recommendedMethod.toUpperCase()}</Text>
+                    </View>
+                    {deviceCapabilities.reason && (
+                      <Text style={styles.deviceInfoReason}>{deviceCapabilities.reason}</Text>
+                    )}
+                  </View>
+                )}
+
+                <View style={styles.methodSection}>
+                  <Text style={styles.methodSectionTitle}>Detection Method</Text>
+                  <Text style={styles.methodSectionSubtitle}>
+                    Current: {settings?.pitchDetectionMethod?.toUpperCase() || 'HYBRID'}
+                  </Text>
+
+                  {[
+                    { id: 'yin', name: 'YIN', desc: 'Fast autocorrelation (no GPU needed)' },
+                    { id: 'fft', name: 'FFT+HPS', desc: 'Harmonic Product Spectrum (finds fundamental)' },
+                    { id: 'pca', name: 'Spectral PCA', desc: 'Temporal averaging + HPS (stable for vibrato)' },
+                    { id: 'cepstral', name: 'Cepstral', desc: 'Separates pitch from formants (robust)' },
+                    { id: 'cepstral_knn', name: 'Cepstral+KNN', desc: 'Posterior probabilities with past/future context (best accuracy)' },
+                    { id: 'onnx', name: 'ONNX', desc: 'AI model only (requires GPU)' },
+                    { id: 'hybrid', name: 'Hybrid', desc: 'YIN + AI (best quality, needs GPU)' }
+                  ].map((method) => {
+                    const isSelected = settings?.pitchDetectionMethod === method.id;
+                    const methodInfo = DeviceCapabilities.getMethodDescription(method.id);
+                    const validation = deviceCapabilities
+                      ? DeviceCapabilities.validateMethod(method.id, deviceCapabilities)
+                      : { valid: true };
+
+                    return (
+                      <TouchableOpacity
+                        key={method.id}
+                        style={[
+                          styles.methodCard,
+                          isSelected && styles.methodCardActive,
+                          !validation.valid && styles.methodCardWarning
+                        ]}
+                        onPress={() => handleMethodChange(method.id)}
+                      >
+                        <View style={styles.methodHeader}>
+                          <View style={styles.methodRadio}>
+                            {isSelected && <View style={styles.methodRadioInner} />}
+                          </View>
+                          <View style={styles.methodInfo}>
+                            <Text style={[styles.methodName, isSelected && styles.methodNameActive]}>
+                              {method.name}
+                            </Text>
+                            <Text style={styles.methodDesc}>{method.desc}</Text>
+                            <View style={styles.methodBadges}>
+                              <View style={[styles.badge, styles.badgeSpeed]}>
+                                <Text style={styles.badgeText}>{methodInfo.speed}</Text>
+                              </View>
+                              {methodInfo.gpuRequired && (
+                                <View style={[styles.badge, styles.badgeGPU]}>
+                                  <Text style={styles.badgeText}>GPU</Text>
+                                </View>
+                              )}
+                            </View>
+                            {!validation.valid && (
+                              <Text style={styles.methodWarning}>⚠️ {validation.warning}</Text>
+                            )}
+                          </View>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                <TouchableOpacity
+                  style={styles.redetectButton}
+                  onPress={handleRedetectCapabilities}
+                >
+                  <Text style={styles.redetectButtonText}>Re-detect Device Capabilities</Text>
+                </TouchableOpacity>
+              </View>
             ) : (
               <View style={styles.helpContent}>
                 <Text style={styles.helpTitle}>Help & Controls</Text>
@@ -427,6 +555,172 @@ const styles = StyleSheet.create({
   helpKeyword: {
     color: Colors.WAVEFORM_BLUE,
     fontWeight: '600',
+  },
+  // Settings tab styles
+  settingsContent: {
+    paddingBottom: 20,
+  },
+  settingsTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: Colors.TEXT_PRIMARY,
+    marginBottom: 20,
+    fontFamily: Colors.FONT_UI,
+  },
+  deviceInfoCard: {
+    backgroundColor: Colors.BG_PRIMARY,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: Colors.BORDER_PRIMARY,
+  },
+  deviceInfoTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.TEXT_PRIMARY,
+    marginBottom: 12,
+    fontFamily: Colors.FONT_UI,
+  },
+  deviceInfoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  deviceInfoLabel: {
+    fontSize: 14,
+    color: Colors.TEXT_SECONDARY,
+    fontFamily: Colors.FONT_UI,
+  },
+  deviceInfoValue: {
+    fontSize: 14,
+    color: Colors.TEXT_PRIMARY,
+    fontWeight: '600',
+    fontFamily: Colors.FONT_TECHNICAL,
+  },
+  deviceInfoGood: {
+    color: '#4CAF50',
+  },
+  deviceInfoReason: {
+    fontSize: 12,
+    color: Colors.TEXT_SECONDARY,
+    marginTop: 8,
+    fontStyle: 'italic',
+    fontFamily: Colors.FONT_UI,
+  },
+  methodSection: {
+    marginBottom: 20,
+  },
+  methodSectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: Colors.TEXT_PRIMARY,
+    marginBottom: 8,
+    fontFamily: Colors.FONT_UI,
+  },
+  methodSectionSubtitle: {
+    fontSize: 14,
+    color: Colors.TEXT_SECONDARY,
+    marginBottom: 16,
+    fontFamily: Colors.FONT_TECHNICAL,
+  },
+  methodCard: {
+    backgroundColor: Colors.BG_PRIMARY,
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 10,
+    borderWidth: 2,
+    borderColor: Colors.BORDER_PRIMARY,
+  },
+  methodCardActive: {
+    borderColor: Colors.WAVEFORM_BLUE,
+    backgroundColor: 'rgba(68, 136, 255, 0.05)',
+  },
+  methodCardWarning: {
+    borderColor: '#FFA500',
+  },
+  methodHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  methodRadio: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: Colors.TEXT_SECONDARY,
+    marginRight: 12,
+    marginTop: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  methodRadioInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: Colors.WAVEFORM_BLUE,
+  },
+  methodInfo: {
+    flex: 1,
+  },
+  methodName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.TEXT_PRIMARY,
+    marginBottom: 4,
+    fontFamily: Colors.FONT_UI,
+  },
+  methodNameActive: {
+    color: Colors.WAVEFORM_BLUE,
+  },
+  methodDesc: {
+    fontSize: 13,
+    color: Colors.TEXT_SECONDARY,
+    marginBottom: 8,
+    fontFamily: Colors.FONT_UI,
+  },
+  methodBadges: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  badge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  badgeSpeed: {
+    backgroundColor: 'rgba(76, 175, 80, 0.2)',
+  },
+  badgeGPU: {
+    backgroundColor: 'rgba(68, 136, 255, 0.2)',
+  },
+  badgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: Colors.TEXT_PRIMARY,
+    fontFamily: Colors.FONT_TECHNICAL,
+    textTransform: 'uppercase',
+  },
+  methodWarning: {
+    fontSize: 12,
+    color: '#FFA500',
+    marginTop: 8,
+    fontFamily: Colors.FONT_UI,
+  },
+  redetectButton: {
+    backgroundColor: Colors.BG_PRIMARY,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.BORDER_PRIMARY,
+    alignItems: 'center',
+  },
+  redetectButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.WAVEFORM_BLUE,
+    fontFamily: Colors.FONT_UI,
   },
 });
 
