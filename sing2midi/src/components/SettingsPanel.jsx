@@ -130,7 +130,12 @@ const SettingsPanel = ({ visible, onClose, onLoadSession, onMethodChange, initia
           onPress={(e) => e.stopPropagation()}
         >
           <View style={styles.header}>
-            <View style={styles.tabContainer}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.tabScrollContainer}
+              contentContainerStyle={styles.tabContainer}
+            >
               <TouchableOpacity
                 style={[styles.tab, activeTab === 'history' && styles.activeTab]}
                 onPress={() => setActiveTab('history')}
@@ -173,7 +178,7 @@ const SettingsPanel = ({ visible, onClose, onLoadSession, onMethodChange, initia
                   </Text>
                 </TouchableOpacity>
               )}
-            </View>
+            </ScrollView>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <Text style={styles.closeButtonText}>✕</Text>
             </TouchableOpacity>
@@ -509,6 +514,10 @@ const styles = StyleSheet.create({
     padding: 20,
     borderBottomWidth: 1,
     borderBottomColor: Colors.BORDER_PRIMARY,
+  },
+  tabScrollContainer: {
+    flex: 1,
+    marginRight: 10,
   },
   tabContainer: {
     flexDirection: 'row',

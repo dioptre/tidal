@@ -9,6 +9,15 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, on
   const clickAudioContextRef = useRef(null);
   const activeClickOscillatorRef = useRef(null);
 
+  // Initialize AudioContext on mount for iOS compatibility
+  useEffect(() => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      // Create audio context early to prepare it
+      clickAudioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+      Logger.log('[Audio] AudioContext created early, state:', clickAudioContextRef.current.state);
+    }
+  }, []);
+
   // Play a click preview sound
   const playClickPreview = async (midiNote) => {
     // Stop any currently playing preview
@@ -21,9 +30,10 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, on
       activeClickOscillatorRef.current = null;
     }
 
-    // Create audio context if needed
+    // Create audio context if needed (shouldn't happen due to useEffect above)
     if (!clickAudioContextRef.current) {
       clickAudioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+      Logger.log('[Audio] AudioContext created lazily, state:', clickAudioContextRef.current.state);
     }
 
     const audioContext = clickAudioContextRef.current;
@@ -32,38 +42,46 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, on
     // CRITICAL: Must await this on iOS or audio won't play
     if (audioContext.state === 'suspended') {
       try {
+        Logger.log('[Audio] AudioContext is suspended, attempting to resume...');
         await audioContext.resume();
-        Logger.log('[Audio] AudioContext resumed successfully');
+        Logger.log('[Audio] AudioContext resumed successfully, new state:', audioContext.state);
       } catch (err) {
-        Logger.warn('[Audio] Failed to resume audio context:', err);
+        Logger.error('[Audio] Failed to resume audio context:', err);
         return; // Don't try to play if resume failed
       }
     }
 
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
+    Logger.log('[Audio] About to play note, AudioContext state:', audioContext.state);
 
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
+    try {
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
 
-    // Set frequency from MIDI note
-    const frequency = 440 * Math.pow(2, (midiNote - 69) / 12);
-    oscillator.frequency.value = frequency;
-    oscillator.type = 'sine';
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
 
-    // Envelope for 0.5 second duration
-    const now = audioContext.currentTime;
-    const duration = 0.5;
-    gainNode.gain.setValueAtTime(0, now);
-    gainNode.gain.linearRampToValueAtTime(0.2, now + 0.01); // Quick attack
-    gainNode.gain.linearRampToValueAtTime(0.15, now + 0.03); // Slight decay
-    gainNode.gain.setValueAtTime(0.15, now + duration - 0.05); // Sustain
-    gainNode.gain.linearRampToValueAtTime(0, now + duration); // Release
+      // Set frequency from MIDI note
+      const frequency = 440 * Math.pow(2, (midiNote - 69) / 12);
+      oscillator.frequency.value = frequency;
+      oscillator.type = 'sine';
 
-    oscillator.start(now);
-    oscillator.stop(now + duration);
+      // Envelope for 0.5 second duration
+      const now = audioContext.currentTime;
+      const duration = 0.5;
+      gainNode.gain.setValueAtTime(0, now);
+      gainNode.gain.linearRampToValueAtTime(0.2, now + 0.01); // Quick attack
+      gainNode.gain.linearRampToValueAtTime(0.15, now + 0.03); // Slight decay
+      gainNode.gain.setValueAtTime(0.15, now + duration - 0.05); // Sustain
+      gainNode.gain.linearRampToValueAtTime(0, now + duration); // Release
 
-    activeClickOscillatorRef.current = oscillator;
+      oscillator.start(now);
+      oscillator.stop(now + duration);
+
+      activeClickOscillatorRef.current = oscillator;
+      Logger.log('[Audio] Note playing - MIDI:', midiNote, 'Freq:', frequency.toFixed(2), 'Hz');
+    } catch (err) {
+      Logger.error('[Audio] Failed to create/play oscillator:', err);
+    }
   };
 
   // Get canvas dimensions with web compatibility
@@ -554,13 +572,13 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, on
   };
 
   // Touch/Mouse handlers
-  const handleTouchStart = (x, y) => {
+  const handleTouchStart = async (x, y) => {
     if (isRecording) return;
 
     // Play click preview sound for the note at cursor position
     const params = screenToNoteParams(x, y);
     if (params) {
-      playClickPreview(params.midiNote);
+      await playClickPreview(params.midiNote);
     }
 
     // Check if there are no ML notes - if so, create initial C4 note on any click
