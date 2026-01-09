@@ -3,15 +3,12 @@ import { View, StyleSheet, Dimensions, Platform } from 'react-native';
 import { Canvas, Rect, Text as SkiaText, Line, Group, matchFont, Skia } from '@shopify/react-native-skia';
 import { JsiSkTypeface } from '@shopify/react-native-skia/lib/module/skia/web/JsiSkTypeface';
 
-// Conditionally import useTouchHandler only on native platforms
-let useTouchHandler;
+// Conditionally import gesture handler only on native platforms
+let Gesture, GestureDetector;
 if (Platform.OS !== 'web') {
-  try {
-    const skia = require('@shopify/react-native-skia');
-    useTouchHandler = skia.useTouchHandler;
-  } catch (e) {
-    console.warn('Failed to import useTouchHandler:', e);
-  }
+  const gestureHandler = require('react-native-gesture-handler');
+  Gesture = gestureHandler.Gesture;
+  GestureDetector = gestureHandler.GestureDetector;
 }
 
 const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, onHoverNoteChange, fftData, voiceMode, onNotesChange }) => {
@@ -84,6 +81,19 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, on
   const canvasRef = useRef(null);
   const lastClickTimeRef = useRef(0);
   const lastClickPosRef = useRef({ x: 0, y: 0 });
+
+  // Refs for worklet access
+  const dragStateRef = useRef(null);
+  const isRecordingRef = useRef(isRecording);
+
+  // Keep refs in sync with state
+  useEffect(() => {
+    dragStateRef.current = dragState;
+  }, [dragState]);
+
+  useEffect(() => {
+    isRecordingRef.current = isRecording;
+  }, [isRecording]);
   const [animationTime, setAnimationTime] = useState(0); // Animation time for Möbius strip
 
   // Animation loop for Möbius strip when idle
@@ -1126,50 +1136,45 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, on
     );
   };
 
-  // Touch handler for iOS/Android using Skia's gesture API (only on native platforms)
-  const touchHandler = Platform.OS !== 'web' && useTouchHandler ? useTouchHandler(
-    {
-      onStart: (e) => {
-        if (isRecording) return;
+  // Native touch handlers using react-native-gesture-handler (no worklet issues)
+  const nativeTapGesture = Platform.OS !== 'web' ? Gesture.Tap()
+    .numberOfTaps(1)
+    .onEnd((e) => {
+      if (isRecording) return;
+      const x = e.x;
+      const y = e.y;
 
-        // Skia uses TouchInfo which has x, y properties directly for single touch
-        if (e.x !== undefined && e.y !== undefined) {
-          // Check for double-tap on native
-          const now = Date.now();
-          const timeSinceLastTouch = now - touchStateRef.current.lastTouchTime;
-          const distance = Math.hypot(
-            e.x - touchStateRef.current.lastTouchPos.x,
-            e.y - touchStateRef.current.lastTouchPos.y
-          );
+      const now = Date.now();
+      const timeSinceLastClick = now - lastClickTimeRef.current;
+      const distance = Math.hypot(x - lastClickPosRef.current.x, y - lastClickPosRef.current.y);
 
-          // Detect double-tap (within 300ms and 20px for touch tolerance)
-          if (timeSinceLastTouch < 300 && distance < 20) {
-            handleDoubleClick(e.x, e.y);
-            touchStateRef.current.lastTouchTime = 0; // Reset to prevent triple-tap
-          } else {
-            touchStateRef.current.lastTouchTime = now;
-            touchStateRef.current.lastTouchPos = { x: e.x, y: e.y };
-            // Single touch
-            handleTouchStart(e.x, e.y);
-          }
-        }
-      },
-      onActive: (e) => {
-        if (isRecording) return;
+      // Detect double-tap (within 300ms and 20px)
+      if (timeSinceLastClick < 300 && distance < 20) {
+        handleDoubleClick(x, y);
+        lastClickTimeRef.current = 0;
+      } else {
+        lastClickTimeRef.current = now;
+        lastClickPosRef.current = { x, y };
+      }
+    }) : null;
 
-        // Check if it's a single touch drag (has x, y)
-        if (e.x !== undefined && e.y !== undefined && dragState && !touchStateRef.current.isPinching) {
-          handleTouchMove(e.x, e.y);
-        }
-      },
-      onEnd: (e) => {
-        if (dragState && e.x !== undefined && e.y !== undefined) {
-          handleTouchEnd(e.x, e.y);
-        }
-      },
-    },
-    [isRecording, dragState, notes, zoomX, zoomY, panOffsetX, panOffsetY, width, height, timeScale, timeOffset, minMidiAdjusted, midiRangeAdjusted, midiRange, totalTime]
-  ) : undefined;
+  const nativePanGesture = Platform.OS !== 'web' ? Gesture.Pan()
+    .onBegin((e) => {
+      if (isRecording) return;
+      handleTouchStart(e.x, e.y);
+    })
+    .onUpdate((e) => {
+      if (isRecording) return;
+      handleTouchMove(e.x, e.y);
+    })
+    .onEnd((e) => {
+      if (isRecording) return;
+      handleTouchEnd(e.x, e.y);
+    }) : null;
+
+  const nativeComposedGesture = Platform.OS !== 'web'
+    ? Gesture.Race(nativeTapGesture, nativePanGesture)
+    : null;
 
   // Add event listeners for web (mouse and wheel)
   useEffect(() => {
@@ -1255,16 +1260,11 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, on
     return <View style={styles.container} />;
   }
 
-  return (
-    <View
-      style={styles.container}
-      ref={canvasRef}
+  const canvasContent = (
+    <Canvas
+      style={{ width, height }}
+      mode="continuous"
     >
-      <Canvas
-        style={{ width, height }}
-        mode="continuous"
-        onTouch={Platform.OS !== 'web' ? touchHandler : undefined}
-      >
         {/* Background */}
         <Rect x={0} y={0} width={width} height={height} color="#0a0a0a" />
 
@@ -1292,6 +1292,20 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, on
         {/* Placeholder */}
         {renderPlaceholder()}
       </Canvas>
+  );
+
+  return (
+    <View
+      style={styles.container}
+      ref={canvasRef}
+    >
+      {Platform.OS !== 'web' ? (
+        <GestureDetector gesture={nativeComposedGesture}>
+          {canvasContent}
+        </GestureDetector>
+      ) : (
+        canvasContent
+      )}
     </View>
   );
 };
