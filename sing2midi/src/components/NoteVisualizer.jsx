@@ -20,12 +20,15 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, on
 
   // Play a click preview sound
   const playClickPreview = async (midiNote) => {
+    Logger.log('[Audio] playClickPreview called for MIDI:', midiNote);
+
     // Stop any currently playing preview
     if (activeClickOscillatorRef.current) {
       try {
         activeClickOscillatorRef.current.stop();
+        Logger.log('[Audio] Stopped previous oscillator');
       } catch (e) {
-        // Already stopped
+        Logger.log('[Audio] Previous oscillator already stopped');
       }
       activeClickOscillatorRef.current = null;
     }
@@ -37,6 +40,9 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, on
     }
 
     const audioContext = clickAudioContextRef.current;
+    Logger.log('[Audio] Current AudioContext state:', audioContext.state);
+    Logger.log('[Audio] AudioContext sample rate:', audioContext.sampleRate);
+    Logger.log('[Audio] AudioContext destination:', audioContext.destination);
 
     // Resume audio context if it's suspended (required on mobile browsers, especially iOS)
     // CRITICAL: Must await this on iOS or audio won't play
@@ -51,36 +57,59 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, on
       }
     }
 
-    Logger.log('[Audio] About to play note, AudioContext state:', audioContext.state);
+    // Double check state after resume
+    Logger.log('[Audio] Final AudioContext state before creating oscillator:', audioContext.state);
+
+    if (audioContext.state !== 'running') {
+      Logger.error('[Audio] AudioContext is not running! State:', audioContext.state);
+      return;
+    }
 
     try {
+      Logger.log('[Audio] Creating oscillator...');
       const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
+      Logger.log('[Audio] Oscillator created:', oscillator);
 
+      Logger.log('[Audio] Creating gain node...');
+      const gainNode = audioContext.createGain();
+      Logger.log('[Audio] Gain node created:', gainNode);
+
+      Logger.log('[Audio] Connecting oscillator to gain...');
       oscillator.connect(gainNode);
+      Logger.log('[Audio] Connecting gain to destination...');
       gainNode.connect(audioContext.destination);
+      Logger.log('[Audio] Audio graph connected');
 
       // Set frequency from MIDI note
       const frequency = 440 * Math.pow(2, (midiNote - 69) / 12);
+      Logger.log('[Audio] Setting frequency:', frequency);
       oscillator.frequency.value = frequency;
       oscillator.type = 'sine';
 
       // Envelope for 0.5 second duration
       const now = audioContext.currentTime;
       const duration = 0.5;
+      Logger.log('[Audio] Current time:', now, 'Duration:', duration);
+
       gainNode.gain.setValueAtTime(0, now);
       gainNode.gain.linearRampToValueAtTime(0.2, now + 0.01); // Quick attack
       gainNode.gain.linearRampToValueAtTime(0.15, now + 0.03); // Slight decay
       gainNode.gain.setValueAtTime(0.15, now + duration - 0.05); // Sustain
       gainNode.gain.linearRampToValueAtTime(0, now + duration); // Release
+      Logger.log('[Audio] Gain envelope configured');
 
+      Logger.log('[Audio] Starting oscillator at time:', now);
       oscillator.start(now);
+      Logger.log('[Audio] Scheduling oscillator stop at:', now + duration);
       oscillator.stop(now + duration);
 
       activeClickOscillatorRef.current = oscillator;
-      Logger.log('[Audio] Note playing - MIDI:', midiNote, 'Freq:', frequency.toFixed(2), 'Hz');
+      Logger.log('[Audio] ✓ Note should be playing - MIDI:', midiNote, 'Freq:', frequency.toFixed(2), 'Hz');
     } catch (err) {
       Logger.error('[Audio] Failed to create/play oscillator:', err);
+      Logger.error('[Audio] Error name:', err.name);
+      Logger.error('[Audio] Error message:', err.message);
+      Logger.error('[Audio] Error stack:', err.stack);
     }
   };
 
