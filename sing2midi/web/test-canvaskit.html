@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CanvasKit Direct Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #0a0a0a;
+            color: white;
+            font-family: monospace;
+        }
+        #status {
+            margin-bottom: 20px;
+            padding: 10px;
+            background: #222;
+        }
+        canvas {
+            border: 2px solid #ff0000;
+            display: block;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="status">Loading CanvasKit...</div>
+    <canvas id="canvas" width="800" height="600"></canvas>
+
+    <script src="https://cdn.jsdelivr.net/npm/canvaskit-wasm@0.39.1/bin/full/canvaskit.js"></script>
+    <script>
+        const statusEl = document.getElementById('status');
+        const canvas = document.getElementById('canvas');
+
+        statusEl.textContent = 'Initializing CanvasKit...';
+
+        CanvasKitInit({
+            locateFile: (file) => `https://cdn.jsdelivr.net/npm/canvaskit-wasm@0.39.1/bin/full/${file}`
+        }).then((CanvasKit) => {
+            statusEl.textContent = 'CanvasKit loaded! Drawing...';
+            console.log('CanvasKit:', CanvasKit);
+
+            // Get the canvas surface
+            const surface = CanvasKit.MakeCanvasSurface('canvas');
+            if (!surface) {
+                statusEl.textContent = 'ERROR: Failed to create surface!';
+                console.error('Could not create surface');
+                return;
+            }
+
+            statusEl.textContent = 'Surface created! Drawing shapes...';
+
+            function draw() {
+                const canvas = surface.getCanvas();
+
+                // Clear with black background
+                const paint = new CanvasKit.Paint();
+                paint.setColor(CanvasKit.Color(10, 10, 10, 1.0));
+                paint.setStyle(CanvasKit.PaintStyle.Fill);
+                canvas.drawPaint(paint);
+
+                // Draw red rectangle
+                paint.setColor(CanvasKit.Color(255, 0, 0, 1.0));
+                canvas.drawRect(CanvasKit.LTRBRect(50, 50, 150, 150), paint);
+
+                // Draw green rectangle
+                paint.setColor(CanvasKit.Color(0, 255, 0, 1.0));
+                canvas.drawRect(CanvasKit.LTRBRect(200, 50, 300, 150), paint);
+
+                // Draw blue rectangle
+                paint.setColor(CanvasKit.Color(0, 0, 255, 1.0));
+                canvas.drawRect(CanvasKit.LTRBRect(350, 50, 450, 150), paint);
+
+                // Draw yellow triangle
+                const path = new CanvasKit.Path();
+                path.moveTo(400, 250);
+                path.lineTo(300, 450);
+                path.lineTo(500, 450);
+                path.close();
+
+                paint.setColor(CanvasKit.Color(255, 255, 0, 1.0));
+                canvas.drawPath(path, paint);
+
+                path.delete();
+                paint.delete();
+
+                surface.flush();
+                statusEl.textContent = 'SUCCESS! Shapes drawn. Check the canvas below.';
+            }
+
+            draw();
+
+        }).catch((error) => {
+            statusEl.textContent = 'ERROR: ' + error.message;
+            console.error('CanvasKit init error:', error);
+        });
+    </script>
+</body>
+</html>

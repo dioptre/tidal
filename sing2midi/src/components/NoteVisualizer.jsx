@@ -1,427 +1,411 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { View, StyleSheet, Platform, PanResponder } from 'react-native';
-import Canvas from 'react-native-canvas';
+import React, { useMemo, useEffect, useState, useRef } from 'react';
+import { View, StyleSheet, Dimensions, Platform } from 'react-native';
+import { Canvas, Rect, Text as SkiaText, Line, Group, matchFont, Skia } from '@shopify/react-native-skia';
+import { JsiSkTypeface } from '@shopify/react-native-skia/lib/module/skia/web/JsiSkTypeface';
 
-const NoteVisualizer = ({ notes, isRecording, debugShowComparison, onNotesChange, hoverNote, onHoverNoteChange, fftData, voiceMode }) => {
-  const canvasRef = useRef(null);
-  const animationRef = useRef(null);
-  const [dragState, setDragState] = useState(null); // { noteIndex, originalNote, startX, startY, isCreatingNew }
+// Conditionally import useTouchHandler only on native platforms
+let useTouchHandler;
+if (Platform.OS !== 'web') {
+  try {
+    const skia = require('@shopify/react-native-skia');
+    useTouchHandler = skia.useTouchHandler;
+  } catch (e) {
+    console.warn('Failed to import useTouchHandler:', e);
+  }
+}
+
+const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, onHoverNoteChange, fftData, voiceMode, onNotesChange }) => {
+  // Get canvas dimensions with web compatibility
+  const [dimensions, setDimensions] = useState(() => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const w = Math.floor(window.innerWidth);
+      const h = Math.floor(window.innerHeight);
+      console.log('[NoteVisualizer] Initial dimensions:', w, h);
+      return { width: w, height: h };
+    }
+    const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+    return {
+      width: screenWidth,
+      height: screenHeight,
+    };
+  });
+
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      let resizeTimeout;
+
+      const updateDimensions = () => {
+        if (canvasRef.current) {
+          // Use the parent container's actual dimensions
+          const rect = canvasRef.current.getBoundingClientRect();
+          const w = Math.floor(rect.width);
+          const h = Math.floor(rect.height);
+          console.log('[NoteVisualizer] Update dimensions from container:', w, h);
+          if (w > 0 && h > 0) {
+            setDimensions({ width: w, height: h });
+          }
+        }
+      };
+
+      const handleResize = () => {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(updateDimensions, 100);
+      };
+
+      // Update dimensions after mount to get actual container size
+      setTimeout(updateDimensions, 0);
+
+      window.addEventListener('resize', handleResize);
+      return () => {
+        clearTimeout(resizeTimeout);
+        window.removeEventListener('resize', handleResize);
+      };
+    }
+  }, []);
+
+  const { width, height } = dimensions;
+
+  // Interactive state
+  const [dragState, setDragState] = useState(null); // { noteIndex, originalNote, startX, startY, isCreatingNew, stretchEdge, duration, startTime }
   const [ghostNote, setGhostNote] = useState(null); // Original position during drag
   const holdTimerRef = useRef(null);
   const [zoomX, setZoomX] = useState(1.0); // Horizontal zoom (time axis)
   const [zoomY, setZoomY] = useState(1.0); // Vertical zoom (pitch axis)
   const [panOffsetX, setPanOffsetX] = useState(0); // Pan offset in seconds (horizontal)
   const [panOffsetY, setPanOffsetY] = useState(0); // Pan offset in semitones (vertical)
-  const touchStateRef = useRef({ isPinching: false, isPanning: false, lastDistance: null, lastTouches: null });
+  const touchStateRef = useRef({
+    isPinching: false,
+    isPanning: false,
+    lastDistance: null,
+    lastTouches: null,
+    lastTouchTime: 0,
+    lastTouchPos: { x: 0, y: 0 }
+  });
+  const canvasRef = useRef(null);
+  const lastClickTimeRef = useRef(0);
+  const lastClickPosRef = useRef({ x: 0, y: 0 });
+  const [animationTime, setAnimationTime] = useState(0); // Animation time for Möbius strip
 
-  // Handle canvas initialization for native vs web
-  const handleCanvas = (canvas) => {
-    if (!canvas) return;
-    console.log('[NoteVisualizer] Canvas ref received, platform:', Platform.OS);
-    canvasRef.current = canvas;
+  // Animation loop for Möbius strip when idle
+  useEffect(() => {
+    if (notes.length === 0 && !isRecording) {
+      const animationId = setInterval(() => {
+        setAnimationTime(Date.now() / 1000);
+      }, 1000 / 30); // 30 FPS
 
-    // For native canvas, we need to set dimensions first
-    if (Platform.OS !== 'web') {
-      canvas.width = 800; // Will be updated on layout
-      canvas.height = 600;
-      console.log('[NoteVisualizer] Canvas dimensions set:', canvas.width, 'x', canvas.height);
+      return () => clearInterval(animationId);
     }
+  }, [notes.length, isRecording]);
+
+  // Render animated Möbius strip when idle
+  const renderMobiusStrip = () => {
+    if (notes.length > 0 || isRecording) return null;
+
+    const centerX = width / 2;
+    const centerY = height / 2;
+    const time = animationTime; // Use animation time state for smooth animation
+    const numSegments = 60; // Number of segments to draw the strip
+    const radius = Math.min(width, height) * 0.27; // Radius of the Möbius strip (reduced by 10%)
+    const stripWidth = 40; // Width of the strip
+
+    const segments = [];
+
+    for (let i = 0; i < numSegments; i++) {
+      const t = (i / numSegments) * Math.PI * 2; // Parameter along the strip
+      const t2 = ((i + 1) / numSegments) * Math.PI * 2;
+
+      // Möbius strip parametric equations
+      // x = (R + s * cos(t/2)) * cos(t)
+      // y = (R + s * cos(t/2)) * sin(t)
+      // z = s * sin(t/2)
+
+      const rotation = time * 0.5; // Slow rotation
+
+      // Calculate positions for this segment (using z for shading)
+      const s = stripWidth / 2;
+      const x1 = (radius + s * Math.cos(t / 2)) * Math.cos(t + rotation);
+      const y1 = (radius + s * Math.cos(t / 2)) * Math.sin(t + rotation);
+      const z1 = s * Math.sin(t / 2);
+
+      const x2 = (radius + s * Math.cos(t2 / 2)) * Math.cos(t2 + rotation);
+      const y2 = (radius + s * Math.cos(t2 / 2)) * Math.sin(t2 + rotation);
+      const z2 = s * Math.sin(t2 / 2);
+
+      const x3 = (radius - s * Math.cos(t2 / 2)) * Math.cos(t2 + rotation);
+      const y3 = (radius - s * Math.cos(t2 / 2)) * Math.sin(t2 + rotation);
+      const z3 = -s * Math.sin(t2 / 2);
+
+      const x4 = (radius - s * Math.cos(t / 2)) * Math.cos(t + rotation);
+      const y4 = (radius - s * Math.cos(t / 2)) * Math.sin(t + rotation);
+      const z4 = -s * Math.sin(t / 2);
+
+      // Use z-depth for color shading (depth cueing)
+      const avgZ = (z1 + z2 + z3 + z4) / 4;
+      const brightness = 0.3 + (avgZ / stripWidth + 0.5) * 0.5; // Map z to brightness
+      const hue = (i / numSegments) * 360; // Rainbow colors along the strip
+      const color = `hsla(${hue}, 70%, ${brightness * 50}%, 0.9)`;
+
+      // Only render front-facing segments (simple backface culling)
+      if (avgZ > -stripWidth * 0.3) {
+        segments.push(
+          <Rect
+            key={`mobius-${i}`}
+            x={centerX + x1 - 2}
+            y={centerY + y1 - 2}
+            width={4}
+            height={4}
+            color={color}
+          />
+        );
+      }
+    }
+
+    return (
+      <Group>
+        {segments}
+        {font && (
+          <SkiaText
+            x={centerX - 80}
+            y={centerY - radius - 60}
+            text="Let's make music..."
+            font={titleFont || font}
+            color="#666666"
+          />
+        )}
+      </Group>
+    );
   };
+
+  // Load fonts from TTF files on web, use matchFont on native
+  const [fontTypeface, setFontTypeface] = useState(null);
+  const [titleFontTypeface, setTitleFontTypeface] = useState(null);
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) {
-      console.log('[NoteVisualizer] No canvas ref in useEffect');
-      return;
-    }
-
-    console.log('[NoteVisualizer] Setting up canvas rendering, platform:', Platform.OS);
-
-    const getContext = () => {
-      try {
-        if (Platform.OS === 'web') {
-          return canvas.getContext('2d');
-        }
-        // For react-native-canvas, context is obtained differently
-        const ctx = canvas.getContext('2d');
-        console.log('[NoteVisualizer] Got context:', !!ctx);
-        return ctx;
-      } catch (error) {
-        console.error('[NoteVisualizer] Error getting canvas context:', error);
-        return null;
-      }
-    };
-
-    const ctx = getContext();
-    if (!ctx) {
-      console.error('[NoteVisualizer] Failed to get 2d context');
-      return;
-    }
-
-    console.log('[NoteVisualizer] Canvas context ready, starting render loop');
-
-    const dpr = Platform.OS === 'web' ? (window.devicePixelRatio || 1) : 1;
-
-    // Set canvas size
-    const resizeCanvas = () => {
-      if (Platform.OS === 'web') {
-        const rect = canvas.getBoundingClientRect();
-        canvas.width = rect.width * dpr;
-        canvas.height = rect.height * dpr;
-        ctx.scale(dpr, dpr);
-        canvas.style.width = rect.width + 'px';
-        canvas.style.height = rect.height + 'px';
-      }
-      // Native canvas sizing is handled via style prop
-    };
-
-    resizeCanvas();
     if (Platform.OS === 'web') {
-      window.addEventListener('resize', resizeCanvas);
-    }
+      // Load Inter Regular font
+      console.log('[Font] Loading Inter-Regular.ttf...');
+      fetch('/Inter-Regular.ttf')
+        .then(response => response.arrayBuffer())
+        .then(buffer => {
+          console.log('[Font] Loaded buffer, size:', buffer.byteLength);
+          const uint8Array = new Uint8Array(buffer);
 
-    const render = () => {
-      // Get canvas dimensions
-      let width, height;
-      if (Platform.OS === 'web') {
-        const rect = canvas.getBoundingClientRect();
-        width = rect.width;
-        height = rect.height;
-      } else {
-        // For native, use canvas width/height directly
-        width = canvas.width || 800;
-        height = canvas.height || 600;
-      }
+          // Try using CanvasKit directly
+          const CanvasKit = window.CanvasKit || global.CanvasKit;
+          if (CanvasKit && CanvasKit.Typeface) {
+            console.log('[Font] Available CanvasKit.Typeface methods:', Object.keys(CanvasKit.Typeface));
 
-      // Clear canvas
-      ctx.fillStyle = '#0a0a0a';
-      ctx.fillRect(0, 0, width, height);
+            // Try all available methods
+            let canvasKitTypeface = null;
 
-      // Draw FFT visualization in raw mode recording (before notes)
-      if (isRecording && !voiceMode && fftData) {
-        drawFFTVisualization(ctx, fftData, width, height);
-      }
+            // Try MakeTypefaceFromData first (simpler API)
+            if (CanvasKit.Typeface.MakeTypefaceFromData) {
+              console.log('[Font] Trying MakeTypefaceFromData...');
+              canvasKitTypeface = CanvasKit.Typeface.MakeTypefaceFromData(uint8Array);
+              if (canvasKitTypeface) {
+                console.log('[Font] MakeTypefaceFromData succeeded!');
+              }
+            }
 
-      if (notes.length === 0) {
-        // Show placeholder text (only if not showing FFT)
-        if (!isRecording || voiceMode || !fftData) {
-          ctx.fillStyle = '#444444';
-          ctx.font = '16px sans-serif';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText(
-            isRecording ? 'Listening...' : 'Press "Start Recording" to begin',
-            width / 2,
-            height / 2
-          );
+            // Try MakeFreeTypeFaceFromData if first method failed
+            if (!canvasKitTypeface && CanvasKit.Typeface.MakeFreeTypeFaceFromData) {
+              console.log('[Font] Trying MakeFreeTypeFaceFromData...');
+              canvasKitTypeface = CanvasKit.Typeface.MakeFreeTypeFaceFromData(uint8Array);
+              if (canvasKitTypeface) {
+                console.log('[Font] MakeFreeTypeFaceFromData succeeded!');
+              }
+            }
+
+            if (canvasKitTypeface) {
+              console.log('[Font] CanvasKit typeface created successfully, wrapping it...');
+              // Wrap in JsiSkTypeface for Skia compatibility
+              const wrappedTypeface = new JsiSkTypeface(CanvasKit, canvasKitTypeface);
+              setFontTypeface(wrappedTypeface);
+            } else {
+              console.warn('[Font] All typeface creation methods returned null');
+            }
+          }
+        })
+        .catch(err => console.error('[Font] Failed to load Inter-Regular.ttf:', err));
+
+      // Load Inter SemiBold font
+      console.log('[Font] Loading Inter-SemiBold.ttf...');
+      fetch('/Inter-SemiBold.ttf')
+        .then(response => response.arrayBuffer())
+        .then(buffer => {
+          console.log('[Font] Loaded title buffer, size:', buffer.byteLength);
+          const uint8Array = new Uint8Array(buffer);
+
+          const CanvasKit = window.CanvasKit || global.CanvasKit;
+          if (CanvasKit && CanvasKit.Typeface) {
+            let canvasKitTypeface = null;
+
+            // Try MakeTypefaceFromData first
+            if (CanvasKit.Typeface.MakeTypefaceFromData) {
+              console.log('[Font] Trying MakeTypefaceFromData for title...');
+              canvasKitTypeface = CanvasKit.Typeface.MakeTypefaceFromData(uint8Array);
+              if (canvasKitTypeface) {
+                console.log('[Font] Title MakeTypefaceFromData succeeded!');
+              }
+            }
+
+            // Try MakeFreeTypeFaceFromData if first method failed
+            if (!canvasKitTypeface && CanvasKit.Typeface.MakeFreeTypeFaceFromData) {
+              console.log('[Font] Trying MakeFreeTypeFaceFromData for title...');
+              canvasKitTypeface = CanvasKit.Typeface.MakeFreeTypeFaceFromData(uint8Array);
+              if (canvasKitTypeface) {
+                console.log('[Font] Title MakeFreeTypeFaceFromData succeeded!');
+              }
+            }
+
+            if (canvasKitTypeface) {
+              console.log('[Font] CanvasKit title typeface created successfully, wrapping it...');
+              // Wrap in JsiSkTypeface for Skia compatibility
+              const wrappedTypeface = new JsiSkTypeface(CanvasKit, canvasKitTypeface);
+              setTitleFontTypeface(wrappedTypeface);
+            } else {
+              console.warn('[Font] All title typeface creation methods returned null');
+            }
+          }
+        })
+        .catch(err => console.error('[Font] Failed to load Inter-SemiBold.ttf:', err));
+
+      // If font loading fails, use GetDefault as fallback
+      const CanvasKit = window.CanvasKit || global.CanvasKit;
+      if (CanvasKit && CanvasKit.Typeface && CanvasKit.Typeface.GetDefault) {
+        console.log('[Font] Getting default typeface as fallback...');
+        const canvasKitDefaultTypeface = CanvasKit.Typeface.GetDefault();
+        if (canvasKitDefaultTypeface) {
+          console.log('[Font] Default typeface available, wrapping it...');
+          // Wrap the CanvasKit typeface in JsiSkTypeface so Skia.Font can use it
+          const wrappedTypeface = new JsiSkTypeface(CanvasKit, canvasKitDefaultTypeface);
+          console.log('[Font] Wrapped default typeface:', wrappedTypeface);
+
+          // Set both fonts to default for now so we get SOME text
+          setTimeout(() => {
+            if (!fontTypeface) {
+              console.log('[Font] Using default typeface for main font');
+              setFontTypeface(wrappedTypeface);
+            }
+            if (!titleFontTypeface) {
+              console.log('[Font] Using default typeface for title font');
+              setTitleFontTypeface(wrappedTypeface);
+            }
+          }, 1000); // Give custom fonts 1 second to load
         }
-      } else {
-        // Draw notes
-        drawNotes(ctx, notes, width, height);
       }
-
-      animationRef.current = requestAnimationFrame(render);
-    };
-
-    render();
-
-    return () => {
-      if (Platform.OS === 'web') {
-        window.removeEventListener('resize', resizeCanvas);
-      }
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
-    };
-  }, [notes, isRecording, debugShowComparison, ghostNote, fftData, voiceMode, hoverNote, zoomX, zoomY, panOffsetX, panOffsetY]);
-
-  const drawFFTVisualization = (ctx, dataArray, width, height) => {
-    const bufferLength = dataArray.length;
-    const numBars = 64; // Number of frequency bars
-    const barWidth = width / numBars;
-
-    // Draw frequency bars from bottom up
-    for (let i = 0; i < numBars; i++) {
-      // Map to frequency data (focus on lower-mid frequencies for music)
-      const dataIndex = Math.floor((i / numBars) * (bufferLength * 0.5));
-      const value = dataArray[dataIndex] / 255.0; // Normalize to 0-1
-
-      const barHeight = value * height * 0.8; // Max 80% of canvas height
-      const x = i * barWidth;
-      const y = height - barHeight;
-
-      // Color based on frequency (blue to red gradient)
-      const hue = 200 - (i / numBars) * 160; // Blue (200) to red (40)
-      const saturation = 70 + value * 30;
-      const lightness = 40 + value * 30;
-
-      ctx.fillStyle = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
-      ctx.fillRect(x, y, barWidth - 1, barHeight);
     }
-  };
+  }, []);
 
-  const drawNotes = (ctx, notes, width, height) => {
-    if (notes.length === 0) return;
+  const font = useMemo(() => {
+    if (Platform.OS === 'web') {
+      if (fontTypeface) {
+        try {
+          const font = Skia.Font(fontTypeface, 12);
+          console.log('[Font] Created font with Inter Regular, size 12');
+          return font;
+        } catch (e) {
+          console.warn('[Font] Failed to create font:', e);
+          return null;
+        }
+      }
+      return null; // Font not loaded yet
+    } else {
+      // On native, use matchFont
+      return matchFont({
+        fontFamily: 'sans-serif',
+        fontSize: 12,
+      });
+    }
+  }, [fontTypeface]);
 
-    // Find note range for vertical scaling
+  const titleFont = useMemo(() => {
+    if (Platform.OS === 'web') {
+      if (titleFontTypeface) {
+        try {
+          const font = Skia.Font(titleFontTypeface, 14);
+          console.log('[Font] Created title font with Inter SemiBold, size 14');
+          return font;
+        } catch (e) {
+          console.warn('[Font] Failed to create title font:', e);
+          return null;
+        }
+      }
+      return null; // Font not loaded yet
+    } else {
+      return matchFont({
+        fontFamily: 'sans-serif',
+        fontSize: 14,
+        fontWeight: 'bold',
+      });
+    }
+  }, [titleFontTypeface]);
+
+  // Calculate note range for vertical scaling (with zoom and pan)
+  const { minMidiAdjusted, midiRangeAdjusted, minMidi, midiRange } = useMemo(() => {
+    if (notes.length === 0) {
+      return { minMidiAdjusted: 60, midiRangeAdjusted: 12, minMidi: 60, midiRange: 12 };
+    }
+
     const midiNotes = notes.map(n => n.midiNote).filter(m => m != null);
-    if (midiNotes.length === 0) return;
+    if (midiNotes.length === 0) {
+      return { minMidiAdjusted: 60, midiRangeAdjusted: 12, minMidi: 60, midiRange: 12 };
+    }
 
     const minMidi = Math.min(...midiNotes) - 2;
     const maxMidi = Math.max(...midiNotes) + 2;
     const midiRange = maxMidi - minMidi || 12;
 
-    // Find time range for horizontal scaling
+    // Apply vertical zoom and pan
+    const midiRangeAdjusted = isRecording ? midiRange : (midiRange / zoomY);
+    const minMidiAdjusted = isRecording ? minMidi : (minMidi + panOffsetY);
+
+    return { minMidiAdjusted, midiRangeAdjusted, minMidi, midiRange };
+  }, [notes, isRecording, zoomY, panOffsetY]);
+
+  // Calculate time range for horizontal scaling (with zoom and pan)
+  const { maxTime, timeScale, timeOffset, totalTime } = useMemo(() => {
+    if (notes.length === 0) {
+      return { maxTime: 5, timeScale: width / 5, timeOffset: 0, totalTime: 5 };
+    }
+
     const maxTime = Math.max(...notes.map(n => (n.startTime || 0) + (n.duration || 0)));
 
-    // During recording, show a 5-second sliding window
-    // After recording, show all notes with zoom and pan
-    let timeScale, timeOffset, midiRangeAdjusted, minMidiAdjusted;
     if (isRecording) {
-      const windowSize = 5; // 5 second window
-      timeScale = width / windowSize;
-      // Center the window on the most recent note
-      timeOffset = Math.max(0, maxTime - windowSize + 1);
-      midiRangeAdjusted = midiRange;
-      minMidiAdjusted = minMidi;
+      const windowSize = 5;
+      const timeScale = width / windowSize;
+      const timeOffset = Math.max(0, maxTime - windowSize + 1);
+      return { maxTime, timeScale, timeOffset, totalTime: maxTime };
     } else {
       const totalTime = Math.max(maxTime, 5);
-      timeScale = (width / totalTime) * zoomX; // Apply horizontal zoom
-      timeOffset = panOffsetX; // Apply horizontal pan offset
-
-      // Apply vertical zoom and pan
-      midiRangeAdjusted = midiRange / zoomY; // Zooming in shows fewer semitones
-      minMidiAdjusted = minMidi + panOffsetY; // Shift the visible range up/down
+      const timeScale = (width / totalTime) * zoomX;
+      const timeOffset = panOffsetX;
+      return { maxTime, timeScale, timeOffset, totalTime };
     }
+  }, [notes, width, isRecording, zoomX, panOffsetX]);
 
-    // Draw grid lines (octave markers)
-    ctx.strokeStyle = '#222222';
-    ctx.lineWidth = 1;
-    for (let midi = Math.floor(minMidiAdjusted); midi <= Math.ceil(minMidiAdjusted + midiRangeAdjusted); midi++) {
-      if (midi % 12 === 0) { // C notes
-        const y = height - ((midi - minMidiAdjusted) / midiRangeAdjusted) * height;
-        if (y >= 0 && y <= height) { // Only draw if visible
-          ctx.beginPath();
-          ctx.moveTo(0, y);
-          ctx.lineTo(width, y);
-          ctx.stroke();
+  // Helper: Convert MIDI note to HSL color
+  const midiToColor = (midiNote, opacity = 1) => {
+    const hue = ((midiNote % 12) / 12) * 360;
+    return `hsla(${hue}, 70%, 50%, ${opacity})`;
+  };
 
-          // Label
-          const octave = Math.floor((midi - 12) / 12);
-          ctx.fillStyle = '#444444';
-          ctx.font = '12px monospace';
-          ctx.textAlign = 'left';
-          ctx.textBaseline = 'middle';
-          ctx.fillText(`C${octave}`, 5, y);
-        }
-      }
-    }
-
-    // Draw notes as rectangles
-    // In debug mode after recording, draw in 3 passes: live (green) bottom, ML (blue) middle, final (colorful) top
-    if (debugShowComparison && !isRecording) {
-      // Pass 1: Draw live detections in dark green (bottom layer)
-      notes.filter(n => n.isLive).forEach((note) => {
-        const noteStart = (note.startTime || 0);
-        const x = (noteStart - timeOffset) * timeScale;
-        if (x + (note.duration || 0.1) * timeScale < 0 || x > width) return;
-
-        const noteWidth = (note.duration || 0.1) * timeScale;
-        const y = height - ((note.midiNote - minMidiAdjusted) / midiRangeAdjusted) * height;
-        const noteHeight = (height / midiRangeAdjusted) * 1.0; // Full height for bottom layer
-
-        // Skip if note is outside visible Y range
-        if (y < -noteHeight || y > height + noteHeight) return;
-
-        ctx.fillStyle = '#2d5016'; // Dark green
-        ctx.shadowBlur = 0;
-        ctx.fillRect(x, y - noteHeight / 2, Math.max(noteWidth, 3), noteHeight);
-      });
-
-      // Pass 2: Draw original ML predictions in dark blue (middle layer, on top of green)
-      notes.filter(n => n.isML && n.originalNote).forEach((note) => {
-        const noteStart = (note.originalNote.startTime || 0);
-        const x = (noteStart - timeOffset) * timeScale;
-        if (x + (note.originalNote.duration || 0.1) * timeScale < 0 || x > width) return;
-
-        const noteWidth = (note.originalNote.duration || 0.1) * timeScale;
-        const y = height - ((note.originalNote.midiNote - minMidiAdjusted) / midiRangeAdjusted) * height;
-        const noteHeight = (height / midiRangeAdjusted) * 0.85; // Slightly smaller to show green underneath
-
-        // Skip if note is outside visible Y range
-        if (y < -noteHeight || y > height + noteHeight) return;
-
-        ctx.fillStyle = '#1a3d5c'; // Dark blue
-        ctx.shadowBlur = 0;
-        ctx.fillRect(x, y - noteHeight / 2, Math.max(noteWidth, 3), noteHeight);
-      });
-
-      // Pass 3: Draw final merged notes in colorful (top layer)
-      notes.filter(n => n.isML).forEach((note) => {
-        const noteStart = (note.startTime || 0);
-        const x = (noteStart - timeOffset) * timeScale;
-        if (x + (note.duration || 0.1) * timeScale < 0 || x > width) return;
-
-        const noteWidth = (note.duration || 0.1) * timeScale;
-        const y = height - ((note.midiNote - minMidiAdjusted) / midiRangeAdjusted) * height;
-        const noteHeight = (height / midiRangeAdjusted) * 0.7; // Smallest to show all layers below
-
-        // Skip if note is outside visible Y range
-        if (y < -noteHeight || y > height + noteHeight) return;
-
-        const hue = ((note.midiNote % 12) / 12) * 360;
-
-        // Check if this note is being hovered
-        const isHovered = hoverNote === note.note;
-
-        if (isHovered) {
-          // Highlighted color for hovered notes
-          ctx.fillStyle = `hsl(${hue}, 100%, 65%)`;
-          ctx.shadowBlur = 15;
-          ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
-        } else {
-          ctx.fillStyle = `hsl(${hue}, 80%, 55%)`;
-          ctx.shadowBlur = 0;
-        }
-
-        ctx.fillRect(x, y - noteHeight / 2, Math.max(noteWidth, 3), noteHeight);
-        ctx.shadowBlur = 0; // Reset shadow
-
-        // Note label on top layer
-        if (noteWidth > 30 || isHovered) {
-          ctx.fillStyle = '#ffffff';
-          ctx.font = isHovered ? 'bold 12px monospace' : '11px monospace';
-          ctx.textAlign = 'left';
-          ctx.textBaseline = 'middle';
-          ctx.fillText(note.note, x + 3, y);
-        }
-      });
-    } else {
-      // Normal rendering (during recording or without debug mode)
-      notes.forEach((note, index) => {
-        const noteStart = (note.startTime || 0);
-        const x = (noteStart - timeOffset) * timeScale;
-
-        // Skip notes outside the visible window
-        if (x + (note.duration || 0.1) * timeScale < 0 || x > width) return;
-
-        const noteWidth = (note.duration || 0.1) * timeScale;
-        const y = height - ((note.midiNote - minMidiAdjusted) / midiRangeAdjusted) * height;
-        const noteHeight = (height / midiRangeAdjusted) * 0.8;
-
-        // Skip if note is outside visible Y range
-        if (y < -noteHeight || y > height + noteHeight) return;
-
-        // Note rectangle
-        const hue = ((note.midiNote % 12) / 12) * 360;
-
-        // Check if this note is being hovered
-        const isHovered = hoverNote === note.note;
-
-        // Colorful display during recording
-        if (note.isLive) {
-          ctx.fillStyle = `hsl(${hue}, 100%, 60%)`;
-          ctx.shadowBlur = 20;
-          ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
-        } else if (isHovered) {
-          // Highlighted color for hovered notes (brighter and more saturated)
-          ctx.fillStyle = `hsl(${hue}, 100%, 65%)`;
-          ctx.shadowBlur = 15;
-          ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
-        } else {
-          ctx.fillStyle = `hsl(${hue}, 70%, 50%)`;
-          ctx.shadowBlur = 0;
-        }
-
-        ctx.fillRect(x, y - noteHeight / 2, Math.max(noteWidth, 3), noteHeight);
-        ctx.shadowBlur = 0; // Reset shadow
-
-        // Note label
-        if (noteWidth > 30 || note.isLive || isHovered) {
-          ctx.fillStyle = '#ffffff';
-          ctx.font = (note.isLive || isHovered) ? 'bold 12px monospace' : '11px monospace';
-          ctx.textAlign = 'left';
-          ctx.textBaseline = 'middle';
-          ctx.fillText(note.note, x + 3, y);
-        }
-      });
-    }
-
-    // Draw ghost note during drag (original position)
-    if (ghostNote && !isRecording) {
-      const noteStart = (ghostNote.startTime || 0);
-      const x = (noteStart - timeOffset) * timeScale;
-      const noteWidth = (ghostNote.duration || 0.1) * timeScale;
-      const y = height - ((ghostNote.midiNote - minMidiAdjusted) / midiRangeAdjusted) * height;
-      const noteHeight = (height / midiRangeAdjusted) * 0.8;
-
-      // Draw ghost as semi-transparent with dashed outline
-      ctx.strokeStyle = '#888888';
-      ctx.lineWidth = 2;
-      ctx.setLineDash([5, 5]);
-      ctx.globalAlpha = 0.3;
-      const hue = ((ghostNote.midiNote % 12) / 12) * 360;
-      ctx.fillStyle = `hsl(${hue}, 70%, 50%)`;
-      ctx.fillRect(x, y - noteHeight / 2, Math.max(noteWidth, 3), noteHeight);
-      ctx.strokeRect(x, y - noteHeight / 2, Math.max(noteWidth, 3), noteHeight);
-      ctx.globalAlpha = 1.0;
-      ctx.setLineDash([]);
-    }
-
-    // Draw time cursor if recording
-    if (isRecording && maxTime > 0) {
-      const cursorX = (maxTime - timeOffset) * timeScale;
-      ctx.strokeStyle = '#ff4444';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(cursorX, 0);
-      ctx.lineTo(cursorX, height);
-      ctx.stroke();
-    }
-
-    // Draw time labels
-    ctx.fillStyle = '#888888';
-    ctx.font = '12px monospace';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'bottom';
-    const visibleTime = width / timeScale;
-    const timeStep = Math.max(1, Math.ceil(visibleTime / 10));
-    for (let t = Math.ceil(timeOffset); t <= timeOffset + visibleTime; t += timeStep) {
-      const x = (t - timeOffset) * timeScale;
-      if (x >= 0 && x <= width) {
-        ctx.fillText(`${t.toFixed(1)}s`, x, height - 5);
-      }
-    }
+  // Helper: Get note name from MIDI number
+  const getMIDINoteName = (midiNote) => {
+    const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+    const octave = Math.floor(midiNote / 12) - 1;
+    const noteName = noteNames[midiNote % 12];
+    return `${noteName}${octave}`;
   };
 
   // Helper: Convert screen coordinates to note parameters
-  const screenToNoteParams = (canvas, clientX, clientY) => {
-    const rect = canvas.getBoundingClientRect();
-    const x = clientX - rect.left;
-    const y = clientY - rect.top;
-    const width = rect.width;
-    const height = rect.height;
-
+  const screenToNoteParams = (x, y) => {
     if (notes.length === 0) return null;
 
-    // Use ALL notes for MIDI range calculation (same as drawNotes)
-    const allMidiNotes = notes.map(n => n.midiNote).filter(m => m != null);
-    if (allMidiNotes.length === 0) return null;
-
-    const minMidi = Math.min(...allMidiNotes) - 2;
-    const maxMidi = Math.max(...allMidiNotes) + 2;
-    const midiRange = maxMidi - minMidi || 12;
-
-    const maxTime = Math.max(...notes.map(n => (n.startTime || 0) + (n.duration || 0)));
-    const totalTime = Math.max(maxTime, 5);
-    const timeScale = isRecording ? (width / totalTime) : ((width / totalTime) * zoomX); // Apply horizontal zoom when not recording
-
     // Convert x to time (account for pan offset when not recording)
-    const time = (x / timeScale) + (isRecording ? 0 : panOffsetX);
+    const time = (x / timeScale) + timeOffset;
 
-    // Convert y to MIDI note (snap to semitones, account for zoom and pan)
-    const midiRangeAdjusted = isRecording ? midiRange : (midiRange / zoomY);
-    const minMidiAdjusted = isRecording ? minMidi : (minMidi + panOffsetY);
+    // Convert y to MIDI note (snap to semitones)
     const midiFloat = minMidiAdjusted + ((height - y) / height) * midiRangeAdjusted;
     const midiNote = Math.round(midiFloat);
 
@@ -429,29 +413,13 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, onNotesChange
   };
 
   // Helper: Find note at position
-  const findNoteAtPosition = (canvas, clientX, clientY) => {
-    const params = screenToNoteParams(canvas, clientX, clientY);
+  const findNoteAtPosition = (x, y) => {
+    const params = screenToNoteParams(x, y);
     if (!params) return null;
 
-    const { time, y } = params;
+    const { time } = params;
     const mlNotes = notes.filter(n => n.isML);
 
-    // Get canvas dimensions for calculating note bounds
-    const rect = canvas.getBoundingClientRect();
-    const width = rect.width;
-    const height = rect.height;
-
-    // Use ALL notes for MIDI range calculation (same as drawNotes)
-    const allMidiNotes = notes.map(n => n.midiNote).filter(m => m != null);
-    if (allMidiNotes.length === 0) return null;
-
-    const minMidi = Math.min(...allMidiNotes) - 2;
-    const maxMidi = Math.max(...allMidiNotes) + 2;
-    const midiRange = maxMidi - minMidi || 12;
-
-    // Apply zoom and pan transformations (same as drawNotes)
-    const midiRangeAdjusted = isRecording ? midiRange : (midiRange / zoomY);
-    const minMidiAdjusted = isRecording ? minMidi : (minMidi + panOffsetY);
     const noteHeight = (height / midiRangeAdjusted) * 0.8;
 
     // Find note that contains this position (only check ML notes for interaction)
@@ -460,12 +428,12 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, onNotesChange
       const noteStart = note.startTime;
       const noteEnd = note.startTime + note.duration;
 
-      // Calculate note's vertical bounds using adjusted MIDI range
+      // Calculate note's vertical bounds
       const noteY = height - ((note.midiNote - minMidiAdjusted) / midiRangeAdjusted) * height;
       const noteTop = noteY - noteHeight / 2;
       const noteBottom = noteY + noteHeight / 2;
 
-      // Check if mouse is within note's horizontal and vertical bounds
+      // Check if touch is within note's horizontal and vertical bounds
       if (time >= noteStart && time <= noteEnd && y >= noteTop && y <= noteBottom) {
         return { note, index: notes.indexOf(note) };
       }
@@ -474,12 +442,12 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, onNotesChange
     return null;
   };
 
-  // Helper: Detect if mouse is near note edge (left or right)
-  const findNoteEdge = (canvas, clientX, clientY) => {
-    const noteAtPos = findNoteAtPosition(canvas, clientX, clientY);
+  // Helper: Detect if touch is near note edge (left or right)
+  const findNoteEdge = (x, y) => {
+    const noteAtPos = findNoteAtPosition(x, y);
     if (!noteAtPos) return null;
 
-    const params = screenToNoteParams(canvas, clientX, clientY);
+    const params = screenToNoteParams(x, y);
     if (!params) return null;
 
     const { time } = params;
@@ -487,15 +455,8 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, onNotesChange
     const noteStart = note.startTime;
     const noteEnd = note.startTime + note.duration;
 
-    // Get canvas dimensions for time scale (with zoom applied)
-    const rect = canvas.getBoundingClientRect();
-    const width = rect.width;
-    const maxTime = Math.max(...notes.map(n => (n.startTime || 0) + (n.duration || 0)));
-    const totalTime = Math.max(maxTime, 5);
-    const timeScale = isRecording ? (width / totalTime) : ((width / totalTime) * zoomX); // Apply zoom
-
-    // Calculate time threshold for edge detection (8-10px in time units)
-    const edgeThreshold = 10 / timeScale; // 10px converted to time
+    // Calculate time threshold for edge detection (10px in time units)
+    const edgeThreshold = 10 / timeScale;
 
     // Check if near left or right edge
     const distanceFromStart = Math.abs(time - noteStart);
@@ -510,139 +471,59 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, onNotesChange
     return null;
   };
 
-  // Helper: Get note name from MIDI number
-  const getMIDINoteName = (midiNote) => {
-    const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-    const octave = Math.floor(midiNote / 12) - 1;
-    const noteName = noteNames[midiNote % 12];
-    return `${noteName}${octave}`;
-  };
-
-  // Mouse move handler (hover detection)
-  const handleMouseMove = (e) => {
-    if (isRecording || !canvasRef.current) return;
-
-    const canvas = canvasRef.current;
-
-    // If dragging, update drag position
-    if (dragState) {
-      const params = screenToNoteParams(canvas, e.clientX, e.clientY);
-      if (!params) return;
-
-      const { time, midiNote } = params;
-
-      // Create updated note
-      const updatedNotes = [...notes];
-      if (dragState.noteIndex !== null) {
-        if (dragState.stretchEdge === 'left') {
-          // Stretching left edge: adjust startTime and duration (keep end fixed)
-          const originalEnd = dragState.originalNote.startTime + dragState.originalNote.duration;
-          const newStartTime = Math.max(0, Math.min(time, originalEnd - 0.1)); // Min duration 0.1s
-          const newDuration = originalEnd - newStartTime;
-          updatedNotes[dragState.noteIndex] = {
-            ...updatedNotes[dragState.noteIndex],
-            startTime: newStartTime,
-            duration: newDuration,
-          };
-        } else if (dragState.stretchEdge === 'right') {
-          // Stretching right edge: adjust duration only (keep start fixed)
-          const newDuration = Math.max(0.1, time - dragState.originalNote.startTime); // Min duration 0.1s
-          updatedNotes[dragState.noteIndex] = {
-            ...updatedNotes[dragState.noteIndex],
-            duration: newDuration,
-          };
-        } else {
-          // Moving note (not stretching)
-          updatedNotes[dragState.noteIndex] = {
-            ...updatedNotes[dragState.noteIndex],
-            midiNote,
-            startTime: Math.max(0, time - dragState.duration / 2),
-            note: getMIDINoteName(midiNote),
-          };
-        }
-      } else if (dragState.isCreatingNew) {
-        // Update the new note being created
-        const duration = Math.max(0.1, time - dragState.startTime);
-        updatedNotes[updatedNotes.length - 1] = {
-          ...updatedNotes[updatedNotes.length - 1],
-          duration,
-        };
-      }
-
-      // Pass true for intermediate updates during drag
-      onNotesChange?.(updatedNotes, true);
-      return;
-    }
-
-    // Check for edge hover to change cursor
-    const edgeInfo = findNoteEdge(canvas, e.clientX, e.clientY);
-    if (edgeInfo) {
-      canvas.style.cursor = 'ew-resize';
-      onHoverNoteChange?.(edgeInfo.note.note, true); // true = hovering over real note
-    } else {
-      // Hover detection
-      const noteAtPos = findNoteAtPosition(canvas, e.clientX, e.clientY);
-      if (noteAtPos) {
-        canvas.style.cursor = 'pointer';
-        onHoverNoteChange?.(noteAtPos.note.note, true); // true = hovering over real note
-      } else {
-        // Show the note at cursor position (but won't highlight in graph)
-        canvas.style.cursor = 'default';
-        const params = screenToNoteParams(canvas, e.clientX, e.clientY);
-        if (params) {
-          onHoverNoteChange?.(getMIDINoteName(params.midiNote), false); // false = just cursor position
-        } else {
-          onHoverNoteChange?.(null, false);
-        }
-      }
-    }
-  };
-
-  // Mouse down handler (start drag or create new note)
-  const handleMouseDown = (e) => {
-    if (isRecording || !canvasRef.current) return;
+  // Touch/Mouse handlers
+  const handleTouchStart = (x, y) => {
+    if (isRecording) return;
 
     // Check if clicking on an edge first (priority over regular note click)
-    const edgeInfo = findNoteEdge(canvasRef.current, e.clientX, e.clientY);
+    const edgeInfo = findNoteEdge(x, y);
     if (edgeInfo) {
       // Save to undo stack before starting to drag/stretch
-      onNotesChange?.(notes, false); // false = save to undo stack
+      onNotesChange?.(notes, false);
 
       // Start stretching edge
       setGhostNote({ ...edgeInfo.note });
       setDragState({
         noteIndex: edgeInfo.index,
         originalNote: { ...edgeInfo.note },
-        startX: e.clientX,
-        startY: e.clientY,
+        startX: x,
+        startY: y,
         duration: edgeInfo.note.duration,
-        stretchEdge: edgeInfo.edge, // 'left' or 'right'
+        stretchEdge: edgeInfo.edge,
         isCreatingNew: false,
       });
+      // Change cursor to resizing on web
+      if (Platform.OS === 'web' && canvasRef.current) {
+        canvasRef.current.style.cursor = 'ew-resize';
+      }
       return;
     }
 
-    const noteAtPos = findNoteAtPosition(canvasRef.current, e.clientX, e.clientY);
+    const noteAtPos = findNoteAtPosition(x, y);
 
     if (noteAtPos) {
       // Save to undo stack before starting to drag
-      onNotesChange?.(notes, false); // false = save to undo stack
+      onNotesChange?.(notes, false);
 
-      // Start dragging existing note (not near edge)
+      // Start dragging existing note
       setGhostNote({ ...noteAtPos.note });
       setDragState({
         noteIndex: noteAtPos.index,
         originalNote: { ...noteAtPos.note },
-        startX: e.clientX,
-        startY: e.clientY,
+        startX: x,
+        startY: y,
         duration: noteAtPos.note.duration,
-        stretchEdge: null, // Not stretching
+        stretchEdge: null,
         isCreatingNew: false,
       });
+      // Change cursor to grabbing on web
+      if (Platform.OS === 'web' && canvasRef.current) {
+        canvasRef.current.style.cursor = 'grabbing';
+      }
     } else {
       // Start timer to create new note
       holdTimerRef.current = setTimeout(() => {
-        const params = screenToNoteParams(canvasRef.current, e.clientX, e.clientY);
+        const params = screenToNoteParams(x, y);
         if (!params) return;
 
         const { time, midiNote } = params;
@@ -662,16 +543,65 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, onNotesChange
           noteIndex: null,
           originalNote: null,
           startTime: time,
-          startX: e.clientX,
-          startY: e.clientY,
+          startX: x,
+          startY: y,
           isCreatingNew: true,
         });
       }, 300); // 300ms hold to create new note
     }
   };
 
-  // Mouse up handler (end drag)
-  const handleMouseUp = (e) => {
+  const handleTouchMove = (x, y) => {
+    if (isRecording || !dragState) return;
+
+    const params = screenToNoteParams(x, y);
+    if (!params) return;
+
+    const { time, midiNote } = params;
+
+    // Create updated note
+    const updatedNotes = [...notes];
+    if (dragState.noteIndex !== null) {
+      if (dragState.stretchEdge === 'left') {
+        // Stretching left edge: adjust startTime and duration (keep end fixed)
+        const originalEnd = dragState.originalNote.startTime + dragState.originalNote.duration;
+        const newStartTime = Math.max(0, Math.min(time, originalEnd - 0.1));
+        const newDuration = originalEnd - newStartTime;
+        updatedNotes[dragState.noteIndex] = {
+          ...updatedNotes[dragState.noteIndex],
+          startTime: newStartTime,
+          duration: newDuration,
+        };
+      } else if (dragState.stretchEdge === 'right') {
+        // Stretching right edge: adjust duration only (keep start fixed)
+        const newDuration = Math.max(0.1, time - dragState.originalNote.startTime);
+        updatedNotes[dragState.noteIndex] = {
+          ...updatedNotes[dragState.noteIndex],
+          duration: newDuration,
+        };
+      } else {
+        // Moving note (not stretching)
+        updatedNotes[dragState.noteIndex] = {
+          ...updatedNotes[dragState.noteIndex],
+          midiNote,
+          startTime: Math.max(0, time - dragState.duration / 2),
+          note: getMIDINoteName(midiNote),
+        };
+      }
+    } else if (dragState.isCreatingNew) {
+      // Update the new note being created
+      const duration = Math.max(0.1, time - dragState.startTime);
+      updatedNotes[updatedNotes.length - 1] = {
+        ...updatedNotes[updatedNotes.length - 1],
+        duration,
+      };
+    }
+
+    // Pass true for intermediate updates during drag
+    onNotesChange?.(updatedNotes, true);
+  };
+
+  const handleTouchEnd = (x, y) => {
     if (holdTimerRef.current) {
       clearTimeout(holdTimerRef.current);
       holdTimerRef.current = null;
@@ -680,26 +610,63 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, onNotesChange
     if (!dragState) return;
 
     // Check if dragged off the canvas (delete note)
-    const rect = canvasRef.current?.getBoundingClientRect();
-    if (rect) {
-      // Use clientX/clientY which work globally even outside canvas
-      const isOffCanvas = e.clientX < rect.left || e.clientX > rect.right ||
-                          e.clientY < rect.top || e.clientY > rect.bottom;
+    const isOffCanvas = x < 0 || x > width || y < 0 || y > height;
 
-      if (isOffCanvas && dragState.noteIndex !== null) {
-        // Delete the note (no need to save to undo, already saved on mousedown)
-        const updatedNotes = notes.filter((_, i) => i !== dragState.noteIndex);
-        onNotesChange?.(updatedNotes, true); // true = don't save to undo (already saved on mousedown)
-      }
+    if (isOffCanvas && dragState.noteIndex !== null) {
+      // Delete the note
+      const updatedNotes = notes.filter((_, i) => i !== dragState.noteIndex);
+      onNotesChange?.(updatedNotes, true);
     }
 
     setDragState(null);
     setGhostNote(null);
   };
 
-  // Double-click handler (delete note)
-  const handleDoubleClick = (e) => {
-    const noteAtPos = findNoteAtPosition(canvasRef.current, e.clientX, e.clientY);
+  const handleMouseMove = (x, y) => {
+    if (isRecording) return;
+
+    // If dragging, update drag position
+    if (dragState) {
+      handleTouchMove(x, y);
+      return;
+    }
+
+    // Check for edge hover
+    const edgeInfo = findNoteEdge(x, y);
+    if (edgeInfo) {
+      // Change cursor to resize on web
+      if (Platform.OS === 'web' && canvasRef.current) {
+        canvasRef.current.style.cursor = 'ew-resize';
+      }
+      onHoverNoteChange?.(edgeInfo.note.note, true);
+    } else {
+      // Hover detection
+      const noteAtPos = findNoteAtPosition(x, y);
+      if (noteAtPos) {
+        // Change cursor to pointer on web
+        if (Platform.OS === 'web' && canvasRef.current) {
+          canvasRef.current.style.cursor = 'grab';
+        }
+        onHoverNoteChange?.(noteAtPos.note.note, true);
+      } else {
+        // Show the note at cursor position
+        if (Platform.OS === 'web' && canvasRef.current) {
+          canvasRef.current.style.cursor = 'crosshair';
+        }
+        const params = screenToNoteParams(x, y);
+        if (params) {
+          onHoverNoteChange?.(getMIDINoteName(params.midiNote), false);
+        } else {
+          onHoverNoteChange?.(null, false);
+        }
+      }
+    }
+  };
+
+  const handleDoubleClick = (x, y) => {
+    if (isRecording) return;
+
+    const noteAtPos = findNoteAtPosition(x, y);
 
     if (noteAtPos) {
       // Delete the note
@@ -708,279 +675,623 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, onNotesChange
     }
   };
 
-  // Mouse leave handler
-  const handleMouseLeave = () => {
-    if (!dragState) {
-      onHoverNoteChange?.(null);
-    }
-  };
-
-  // Wheel handler for zoom and pan (desktop)
+  // Wheel handler for zoom and pan (web only)
   const handleWheel = (e) => {
     if (isRecording) return;
 
     e.preventDefault();
 
-    console.log('Wheel event:', {
-      deltaX: e.deltaX,
-      deltaY: e.deltaY,
-      ctrlKey: e.ctrlKey,
-      shiftKey: e.shiftKey,
-      metaKey: e.metaKey
-    });
-
     // On macOS/Firefox, pinch-to-zoom shows as wheel event with ctrlKey
-    // Two-finger pan shows as deltaX/deltaY without modifiers
-    // Also support Shift key for zoom
-
     if (e.ctrlKey || e.metaKey || e.shiftKey) {
-      // Pinch-to-zoom (trackpad pinch gesture) or Shift+scroll to zoom
+      // Pinch-to-zoom or Shift+scroll to zoom
       const zoomDelta = e.deltaY > 0 ? 0.9 : 1.1;
       const newZoomX = Math.max(0.5, Math.min(5.0, zoomX * zoomDelta));
       const newZoomY = Math.max(0.5, Math.min(5.0, zoomY * zoomDelta));
-      console.log('Zooming:', { newZoomX, newZoomY });
       setZoomX(newZoomX);
       setZoomY(newZoomY);
     } else if (Math.abs(e.deltaX) > 0 || Math.abs(e.deltaY) > 0) {
       // Two-finger pan (trackpad swipe)
-      console.log('Panning via two-finger swipe');
+      // Pan horizontally (time)
+      const deltaTime = e.deltaX / timeScale;
+      const newPanOffsetX = Math.max(0, Math.min(totalTime - width / timeScale, panOffsetX + deltaTime));
+      setPanOffsetX(newPanOffsetX);
 
-      const canvas = canvasRef.current;
-      if (canvas) {
-        const rect = canvas.getBoundingClientRect();
-        const width = rect.width;
-        const height = rect.height;
-
-        // Pan horizontally (time)
-        const maxTime = Math.max(...notes.map(n => (n.startTime || 0) + (n.duration || 0)));
-        const totalTime = Math.max(maxTime, 5);
-        const timeScale = (width / totalTime) * zoomX;
-
-        const deltaTime = e.deltaX / timeScale;
-        const newPanOffsetX = Math.max(0, Math.min(totalTime - width / timeScale, panOffsetX + deltaTime));
-        setPanOffsetX(newPanOffsetX);
-
-        // Pan vertically (pitch)
-        const allMidiNotes = notes.map(n => n.midiNote).filter(m => m != null);
-        if (allMidiNotes.length > 0) {
-          const minMidi = Math.min(...allMidiNotes) - 2;
-          const maxMidi = Math.max(...allMidiNotes) + 2;
-          const midiRange = maxMidi - minMidi || 12;
-          const midiRangeAdjusted = midiRange / zoomY;
-
-          const deltaSemitones = (e.deltaY / height) * midiRangeAdjusted;
-          const newPanOffsetY = Math.max(-midiRange/2, Math.min(midiRange/2, panOffsetY + deltaSemitones));
-          setPanOffsetY(newPanOffsetY);
-        }
-      }
+      // Pan vertically (pitch)
+      const deltaSemitones = (e.deltaY / height) * midiRangeAdjusted;
+      const newPanOffsetY = Math.max(-midiRange / 2, Math.min(midiRange / 2, panOffsetY + deltaSemitones));
+      setPanOffsetY(newPanOffsetY);
     }
   };
 
-  // Touch handlers for pinch-to-zoom and two-finger pan
-  const handleTouchStart = (e) => {
-    console.log('TouchStart fired!', { touchCount: e.touches.length, isRecording });
-    if (isRecording || e.touches.length !== 2) return;
+  // Touch handlers for pinch-to-zoom and two-finger pan (iOS)
+  const handleTwoFingerStart = (touches) => {
+    if (isRecording || touches.length !== 2) return;
 
-    const touch1 = e.touches[0];
-    const touch2 = e.touches[1];
+    const touch1 = touches[0];
+    const touch2 = touches[1];
 
     // Calculate initial distance between touches
     const distance = Math.hypot(
-      touch2.clientX - touch1.clientX,
-      touch2.clientY - touch1.clientY
+      touch2.x - touch1.x,
+      touch2.y - touch1.y
     );
-
-    console.log('Touch gesture started:', { distance: distance.toFixed(2) });
 
     touchStateRef.current = {
       isPinching: true,
       lastDistance: distance,
       lastTouches: {
-        x: (touch1.clientX + touch2.clientX) / 2,
-        y: (touch1.clientY + touch2.clientY) / 2,
+        x: (touch1.x + touch2.x) / 2,
+        y: (touch1.y + touch2.y) / 2,
       },
     };
   };
 
-  const handleTouchMove = (e) => {
-    if (isRecording || !touchStateRef.current.isPinching || e.touches.length !== 2) return;
+  const handleTwoFingerMove = (touches) => {
+    if (isRecording || !touchStateRef.current.isPinching || touches.length !== 2) return;
 
-    e.preventDefault();
-
-    const touch1 = e.touches[0];
-    const touch2 = e.touches[1];
+    const touch1 = touches[0];
+    const touch2 = touches[1];
 
     // Calculate current distance
     const distance = Math.hypot(
-      touch2.clientX - touch1.clientX,
-      touch2.clientY - touch1.clientY
+      touch2.x - touch1.x,
+      touch2.y - touch1.y
     );
 
     // Calculate center point
-    const centerX = (touch1.clientX + touch2.clientX) / 2;
-    const centerY = (touch1.clientY + touch2.clientY) / 2;
+    const centerX = (touch1.x + touch2.x) / 2;
+    const centerY = (touch1.y + touch2.y) / 2;
 
     if (touchStateRef.current.lastDistance && touchStateRef.current.lastTouches) {
-      // Check distance change vs center movement to determine gesture type
       const distanceChange = Math.abs(distance - touchStateRef.current.lastDistance);
       const centerMovement = Math.hypot(
         centerX - touchStateRef.current.lastTouches.x,
         centerY - touchStateRef.current.lastTouches.y
       );
 
-      console.log('Touch gesture:', {
-        distanceChange: distanceChange.toFixed(2),
-        centerMovement: centerMovement.toFixed(2),
-        ratio: (distanceChange / centerMovement).toFixed(2),
-        willZoom: distanceChange > centerMovement * 0.5,
-        willPan: centerMovement > 1
-      });
-
       // If distance is changing significantly, it's primarily a zoom
       if (distanceChange > centerMovement * 0.5) {
-        // Zoom based on distance change - apply to both axes
         const scale = distance / touchStateRef.current.lastDistance;
         const newZoomX = Math.max(0.5, Math.min(5.0, zoomX * scale));
         const newZoomY = Math.max(0.5, Math.min(5.0, zoomY * scale));
-        console.log('Zooming:', { scale: scale.toFixed(3), newZoomX: newZoomX.toFixed(2), newZoomY: newZoomY.toFixed(2) });
         setZoomX(newZoomX);
         setZoomY(newZoomY);
       }
 
-      // Always pan based on center movement (can happen simultaneously with zoom)
+      // Always pan based on center movement
       if (centerMovement > 1) {
-        console.log('Panning detected! centerMovement:', centerMovement.toFixed(2));
-        const canvas = canvasRef.current;
-        if (canvas) {
-          const rect = canvas.getBoundingClientRect();
-          const width = rect.width;
-          const height = rect.height;
+        const deltaX = centerX - touchStateRef.current.lastTouches.x;
+        const deltaTime = -deltaX / timeScale;
+        const newPanOffsetX = Math.max(0, Math.min(totalTime - width / timeScale, panOffsetX + deltaTime));
+        setPanOffsetX(newPanOffsetX);
 
-          // Pan horizontally (time)
-          const maxTime = Math.max(...notes.map(n => (n.startTime || 0) + (n.duration || 0)));
-          const totalTime = Math.max(maxTime, 5);
-          const timeScale = (width / totalTime) * zoomX;
+        const deltaY = touchStateRef.current.lastTouches.y - centerY;
+        const deltaSemitones = (deltaY / height) * midiRangeAdjusted;
+        const newPanOffsetY = Math.max(-midiRange / 2, Math.min(midiRange / 2, panOffsetY + deltaSemitones));
+        setPanOffsetY(newPanOffsetY);
+      }
+    }
 
-          const deltaX = centerX - touchStateRef.current.lastTouches.x;
-          const deltaTime = -deltaX / timeScale; // Negative because panning right should show earlier time
-          const newPanOffsetX = Math.max(0, Math.min(totalTime - width / timeScale, panOffsetX + deltaTime));
-          setPanOffsetX(newPanOffsetX);
+    touchStateRef.current.lastDistance = distance;
+    touchStateRef.current.lastTouches = { x: centerX, y: centerY };
+  };
 
-          // Pan vertically (pitch)
-          const allMidiNotes = notes.map(n => n.midiNote).filter(m => m != null);
-          if (allMidiNotes.length > 0) {
-            const minMidi = Math.min(...allMidiNotes) - 2;
-            const maxMidi = Math.max(...allMidiNotes) + 2;
-            const midiRange = maxMidi - minMidi || 12;
-            const midiRangeAdjusted = midiRange / zoomY;
+  const handleTwoFingerEnd = (touches) => {
+    if (touches.length < 2) {
+      touchStateRef.current = { isPinching: false, lastDistance: null, lastTouches: null };
+    }
+  };
 
-            const deltaY = touchStateRef.current.lastTouches.y - centerY; // Inverted
-            const deltaSemitones = (deltaY / height) * midiRangeAdjusted;
-            const newPanOffsetY = Math.max(-midiRange/2, Math.min(midiRange/2, panOffsetY + deltaSemitones));
-            setPanOffsetY(newPanOffsetY);
+  // Render FFT visualization bars
+  const renderFFT = () => {
+    if (!isRecording || voiceMode || !fftData) return null;
+
+    const bufferLength = fftData.length;
+    const numBars = 64;
+    const barWidth = width / numBars;
+
+    return (
+      <Group>
+        {Array.from({ length: numBars }).map((_, i) => {
+          const dataIndex = Math.floor((i / numBars) * (bufferLength * 0.5));
+          const value = fftData[dataIndex] / 255.0;
+          const barHeight = value * height * 0.8;
+          const x = i * barWidth;
+          const y = height - barHeight;
+
+          const hue = 200 - (i / numBars) * 160;
+          const saturation = 70 + value * 30;
+          const lightness = 40 + value * 30;
+
+          return (
+            <Rect
+              key={i}
+              x={x}
+              y={y}
+              width={barWidth - 1}
+              height={barHeight}
+              color={`hsl(${hue}, ${saturation}%, ${lightness}%)`}
+            />
+          );
+        })}
+      </Group>
+    );
+  };
+
+  // Render grid lines (octave markers)
+  const renderGrid = () => {
+    const lines = [];
+    const labels = [];
+
+    for (let midi = Math.floor(minMidiAdjusted); midi <= Math.ceil(minMidiAdjusted + midiRangeAdjusted); midi++) {
+      if (midi % 12 === 0) { // C notes
+        const y = height - ((midi - minMidiAdjusted) / midiRangeAdjusted) * height;
+        if (y >= 0 && y <= height) {
+          lines.push(
+            <Line
+              key={`line-${midi}`}
+              p1={{ x: 0, y }}
+              p2={{ x: width, y }}
+              color="#222222"
+              strokeWidth={1}
+            />
+          );
+
+          const octave = Math.floor((midi - 12) / 12);
+          // Only render text if we have a font
+          if (font) {
+            labels.push(
+              <SkiaText
+                key={`label-${midi}`}
+                x={5}
+                y={y + 4}
+                text={`C${octave}`}
+                font={font}
+                color="#444444"
+              />
+            );
           }
         }
       }
     }
 
-    // Update state
-    touchStateRef.current.lastDistance = distance;
-    touchStateRef.current.lastTouches = { x: centerX, y: centerY };
+    return <Group>{lines}{labels}</Group>;
   };
 
-  const handleTouchEnd = (e) => {
-    if (e.touches.length < 2) {
-      touchStateRef.current = { isPinching: false, lastDistance: null, lastTouches: null };
+  // Render notes as rectangles
+  const renderNotes = () => {
+    if (notes.length === 0) return null;
+
+    const noteRects = [];
+
+    // In debug mode, render in 3 passes: live (green), ML original (blue), final (colorful)
+    if (debugShowComparison && !isRecording) {
+      // Pass 1: Live detections (dark green)
+      notes.filter(n => n.isLive).forEach((note, i) => {
+        const noteStart = note.startTime || 0;
+        const x = (noteStart - timeOffset) * timeScale;
+        if (x + (note.duration || 0.1) * timeScale < 0 || x > width) return;
+
+        const noteWidth = (note.duration || 0.1) * timeScale;
+        const y = height - ((note.midiNote - minMidiAdjusted) / midiRangeAdjusted) * height;
+        const noteHeight = (height / midiRangeAdjusted) * 1.0;
+
+        if (y < -noteHeight || y > height + noteHeight) return;
+
+        noteRects.push(
+          <Rect
+            key={`live-${i}`}
+            x={x}
+            y={y - noteHeight / 2}
+            width={Math.max(noteWidth, 3)}
+            height={noteHeight}
+            color="#2d5016"
+          />
+        );
+      });
+
+      // Pass 2: Original ML predictions (dark blue)
+      notes.filter(n => n.isML && n.originalNote).forEach((note, i) => {
+        const noteStart = note.originalNote.startTime || 0;
+        const x = (noteStart - timeOffset) * timeScale;
+        if (x + (note.originalNote.duration || 0.1) * timeScale < 0 || x > width) return;
+
+        const noteWidth = (note.originalNote.duration || 0.1) * timeScale;
+        const y = height - ((note.originalNote.midiNote - minMidiAdjusted) / midiRangeAdjusted) * height;
+        const noteHeight = (height / midiRangeAdjusted) * 0.85;
+
+        if (y < -noteHeight || y > height + noteHeight) return;
+
+        noteRects.push(
+          <Rect
+            key={`ml-orig-${i}`}
+            x={x}
+            y={y - noteHeight / 2}
+            width={Math.max(noteWidth, 3)}
+            height={noteHeight}
+            color="#1a3d5c"
+          />
+        );
+      });
+
+      // Pass 3: Final merged notes (colorful)
+      notes.filter(n => n.isML).forEach((note, i) => {
+        const noteStart = note.startTime || 0;
+        const x = (noteStart - timeOffset) * timeScale;
+        if (x + (note.duration || 0.1) * timeScale < 0 || x > width) return;
+
+        const noteWidth = (note.duration || 0.1) * timeScale;
+        const y = height - ((note.midiNote - minMidiAdjusted) / midiRangeAdjusted) * height;
+        const noteHeight = (height / midiRangeAdjusted) * 0.7;
+
+        if (y < -noteHeight || y > height + noteHeight) return;
+
+        const isHovered = hoverNote === note.note;
+        const color = isHovered ? midiToColor(note.midiNote, 0.9) : midiToColor(note.midiNote, 0.7);
+
+        noteRects.push(
+          <Rect
+            key={`final-${i}`}
+            x={x}
+            y={y - noteHeight / 2}
+            width={Math.max(noteWidth, 3)}
+            height={noteHeight}
+            color={color}
+          />
+        );
+
+        // Note label (only on native - web doesn't support matchFont)
+        if ((noteWidth > 30 || isHovered) && font) {
+          const textFont = isHovered ? titleFont : font;
+          noteRects.push(
+            <SkiaText
+              key={`label-final-${i}`}
+              x={x + 3}
+              y={y + 4}
+              text={note.note}
+              font={textFont}
+              color="#ffffff"
+            />
+          );
+        }
+      });
+    } else {
+      // Normal rendering (during recording or without debug mode)
+      notes.forEach((note, i) => {
+        const noteStart = note.startTime || 0;
+        const x = (noteStart - timeOffset) * timeScale;
+        if (x + (note.duration || 0.1) * timeScale < 0 || x > width) return;
+
+        const noteWidth = (note.duration || 0.1) * timeScale;
+        const y = height - ((note.midiNote - minMidiAdjusted) / midiRangeAdjusted) * height;
+        const noteHeight = (height / midiRangeAdjusted) * 0.8;
+
+        if (y < -noteHeight || y > height + noteHeight) return;
+
+        const isHovered = hoverNote === note.note;
+        const isLive = note.isLive;
+
+        let color;
+        if (isLive) {
+          color = midiToColor(note.midiNote, 1.0);
+        } else if (isHovered) {
+          color = midiToColor(note.midiNote, 0.9);
+        } else {
+          color = midiToColor(note.midiNote, 0.7);
+        }
+
+        noteRects.push(
+          <Rect
+            key={`note-${i}`}
+            x={x}
+            y={y - noteHeight / 2}
+            width={Math.max(noteWidth, 3)}
+            height={noteHeight}
+            color={color}
+          />
+        );
+
+        // Note label
+        if (noteWidth > 30 || isLive || isHovered) {
+          const textFont = isLive || isHovered ? titleFont : font;
+          noteRects.push(
+            <SkiaText
+              key={`label-${i}`}
+              x={x + 3}
+              y={y + 4}
+              text={note.note}
+              {...(textFont ? { font: textFont } : { size: isLive || isHovered ? 14 : 12 })}
+              color="#ffffff"
+            />
+          );
+        }
+      });
     }
+
+    return <Group>{noteRects}</Group>;
   };
 
-  // Add event listeners to canvas (web only)
-  useEffect(() => {
-    if (Platform.OS !== 'web') return; // Skip on native - use PanResponder instead
+  // Render ghost note during drag
+  const renderGhostNote = () => {
+    if (!ghostNote || isRecording) return null;
 
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    const noteStart = ghostNote.startTime || 0;
+    const x = (noteStart - timeOffset) * timeScale;
+    const noteWidth = (ghostNote.duration || 0.1) * timeScale;
+    const y = height - ((ghostNote.midiNote - minMidiAdjusted) / midiRangeAdjusted) * height;
+    const noteHeight = (height / midiRangeAdjusted) * 0.8;
 
-    if (!isRecording) {
-      canvas.addEventListener('mousemove', handleMouseMove);
-      canvas.addEventListener('mousedown', handleMouseDown);
-      canvas.addEventListener('mouseup', handleMouseUp);
-      canvas.addEventListener('mouseleave', handleMouseLeave);
-      canvas.addEventListener('dblclick', handleDoubleClick);
-      document.addEventListener('mouseup', handleMouseUp); // Global mouse up
-    }
+    const hue = ((ghostNote.midiNote % 12) / 12) * 360;
+    const rectWidth = Math.max(noteWidth, 3);
+    const rectY = y - noteHeight / 2;
 
-    // Always add zoom/pan listeners (even during recording, for consistency)
-    canvas.addEventListener('wheel', handleWheel, { passive: false });
-    canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
-    canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
-    canvas.addEventListener('touchend', handleTouchEnd);
-
-    return () => {
-      canvas.removeEventListener('mousemove', handleMouseMove);
-      canvas.removeEventListener('mousedown', handleMouseDown);
-      canvas.removeEventListener('mouseup', handleMouseUp);
-      canvas.removeEventListener('mouseleave', handleMouseLeave);
-      canvas.removeEventListener('dblclick', handleDoubleClick);
-      document.removeEventListener('mouseup', handleMouseUp);
-      canvas.removeEventListener('wheel', handleWheel);
-      canvas.removeEventListener('touchstart', handleTouchStart);
-      canvas.removeEventListener('touchmove', handleTouchMove);
-      canvas.removeEventListener('touchend', handleTouchEnd);
-    };
-  }, [isRecording, notes, dragState, zoomX, zoomY, panOffsetX, panOffsetY]);
-
-  // Create PanResponder for native touch handling
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => Platform.OS !== 'web',
-      onMoveShouldSetPanResponder: () => Platform.OS !== 'web',
-      onPanResponderGrant: (evt) => {
-        // Touch started - simulate touchstart
-        if (Platform.OS !== 'web') {
-          handleTouchStart({ touches: evt.nativeEvent.touches, preventDefault: () => {} });
-        }
-      },
-      onPanResponderMove: (evt) => {
-        // Touch moved - simulate touchmove
-        if (Platform.OS !== 'web') {
-          handleTouchMove({ touches: evt.nativeEvent.touches, preventDefault: () => {} });
-        }
-      },
-      onPanResponderRelease: (evt) => {
-        // Touch ended - simulate touchend
-        if (Platform.OS !== 'web') {
-          handleTouchEnd({ touches: evt.nativeEvent.touches || [] });
-        }
-      },
-    })
-  ).current;
-
-  // Render native Canvas on iOS/Android, HTML canvas on web
-  const renderCanvas = () => {
-    if (Platform.OS === 'web') {
-      return (
-        <canvas
-          ref={canvasRef}
-          style={styles.canvas}
-        />
-      );
-    }
-
-    // Native canvas for iOS/Android with PanResponder
     return (
-      <View style={styles.canvas} {...panResponder.panHandlers}>
-        <Canvas
-          ref={handleCanvas}
-          style={styles.canvas}
+      <Group opacity={0.3}>
+        {/* Fill */}
+        <Rect
+          x={x}
+          y={rectY}
+          width={rectWidth}
+          height={noteHeight}
+          color={`hsl(${hue}, 70%, 50%)`}
         />
-      </View>
+        {/* Dashed border - simulate with multiple short lines */}
+        {/* Top edge */}
+        <Line
+          p1={{ x: x, y: rectY }}
+          p2={{ x: x + rectWidth, y: rectY }}
+          color="#888888"
+          strokeWidth={2}
+        />
+        {/* Right edge */}
+        <Line
+          p1={{ x: x + rectWidth, y: rectY }}
+          p2={{ x: x + rectWidth, y: rectY + noteHeight }}
+          color="#888888"
+          strokeWidth={2}
+        />
+        {/* Bottom edge */}
+        <Line
+          p1={{ x: x + rectWidth, y: rectY + noteHeight }}
+          p2={{ x: x, y: rectY + noteHeight }}
+          color="#888888"
+          strokeWidth={2}
+        />
+        {/* Left edge */}
+        <Line
+          p1={{ x: x, y: rectY + noteHeight }}
+          p2={{ x: x, y: rectY }}
+          color="#888888"
+          strokeWidth={2}
+        />
+      </Group>
     );
   };
 
+  // Render time cursor during recording
+  const renderTimeCursor = () => {
+    if (!isRecording || maxTime <= 0) return null;
+
+    const cursorX = (maxTime - timeOffset) * timeScale;
+
+    return (
+      <Line
+        p1={{ x: cursorX, y: 0 }}
+        p2={{ x: cursorX, y: height }}
+        color="#ff4444"
+        strokeWidth={2}
+      />
+    );
+  };
+
+  // Render time labels
+  const renderTimeLabels = () => {
+    const labels = [];
+    const visibleTime = width / timeScale;
+    const timeStep = Math.max(1, Math.ceil(visibleTime / 10));
+
+    for (let t = Math.ceil(timeOffset); t <= timeOffset + visibleTime; t += timeStep) {
+      const x = (t - timeOffset) * timeScale;
+      if (x >= 0 && x <= width) {
+        labels.push(
+          <SkiaText
+            key={`time-${t}`}
+            x={x}
+            y={height - 5}
+            text={`${t.toFixed(1)}s`}
+            {...(font ? { font } : { size: 12 })}
+            color="#888888"
+          />
+        );
+      }
+    }
+
+    return <Group>{labels}</Group>;
+  };
+
+  // Render placeholder text
+  const renderPlaceholder = () => {
+    if (notes.length > 0 || (isRecording && !voiceMode && fftData)) return null;
+
+    const text = isRecording ? 'Listening...' : 'Press "Start Recording" to begin';
+
+    return (
+      <SkiaText
+        x={width / 2 - 100}
+        y={height / 2}
+        text={text}
+        size={16}
+        color="#444444"
+      />
+    );
+  };
+
+  // Touch handler for iOS/Android using Skia's gesture API (only on native platforms)
+  const touchHandler = Platform.OS !== 'web' && useTouchHandler ? useTouchHandler(
+    {
+      onStart: (e) => {
+        if (isRecording) return;
+
+        // Skia uses TouchInfo which has x, y properties directly for single touch
+        if (e.x !== undefined && e.y !== undefined) {
+          // Check for double-tap on native
+          const now = Date.now();
+          const timeSinceLastTouch = now - touchStateRef.current.lastTouchTime;
+          const distance = Math.hypot(
+            e.x - touchStateRef.current.lastTouchPos.x,
+            e.y - touchStateRef.current.lastTouchPos.y
+          );
+
+          // Detect double-tap (within 300ms and 20px for touch tolerance)
+          if (timeSinceLastTouch < 300 && distance < 20) {
+            handleDoubleClick(e.x, e.y);
+            touchStateRef.current.lastTouchTime = 0; // Reset to prevent triple-tap
+          } else {
+            touchStateRef.current.lastTouchTime = now;
+            touchStateRef.current.lastTouchPos = { x: e.x, y: e.y };
+            // Single touch
+            handleTouchStart(e.x, e.y);
+          }
+        }
+      },
+      onActive: (e) => {
+        if (isRecording) return;
+
+        // Check if it's a single touch drag (has x, y)
+        if (e.x !== undefined && e.y !== undefined && dragState && !touchStateRef.current.isPinching) {
+          handleTouchMove(e.x, e.y);
+        }
+      },
+      onEnd: (e) => {
+        if (dragState && e.x !== undefined && e.y !== undefined) {
+          handleTouchEnd(e.x, e.y);
+        }
+      },
+    },
+    [isRecording, dragState, notes, zoomX, zoomY, panOffsetX, panOffsetY, width, height, timeScale, timeOffset, minMidiAdjusted, midiRangeAdjusted, midiRange, totalTime]
+  ) : undefined;
+
+  // Add event listeners for web (mouse and wheel)
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !canvasRef.current) return;
+
+    const container = canvasRef.current;
+
+    const getCanvasCoordinates = (e) => {
+      const rect = container.getBoundingClientRect();
+      return {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
+      };
+    };
+
+    const onMouseDown = (e) => {
+      const { x, y } = getCanvasCoordinates(e);
+      handleTouchStart(x, y);
+    };
+
+    const onMouseMove = (e) => {
+      const { x, y } = getCanvasCoordinates(e);
+      handleMouseMove(x, y);
+    };
+
+    const onMouseUp = (e) => {
+      const { x, y } = getCanvasCoordinates(e);
+      handleTouchEnd(x, y);
+    };
+
+    const onClick = (e) => {
+      const { x, y } = getCanvasCoordinates(e);
+      const now = Date.now();
+      const timeSinceLastClick = now - lastClickTimeRef.current;
+      const distance = Math.hypot(x - lastClickPosRef.current.x, y - lastClickPosRef.current.y);
+
+      // Detect double-click (within 300ms and 10px)
+      if (timeSinceLastClick < 300 && distance < 10) {
+        handleDoubleClick(x, y);
+        lastClickTimeRef.current = 0; // Reset to prevent triple-click
+      } else {
+        lastClickTimeRef.current = now;
+        lastClickPosRef.current = { x, y };
+      }
+    };
+
+    const onMouseLeave = () => {
+      if (!dragState) {
+        onHoverNoteChange?.(null, false);
+      }
+    };
+
+    const onWheel = (e) => {
+      handleWheel(e);
+    };
+
+    if (!isRecording) {
+      container.addEventListener('mousedown', onMouseDown);
+      container.addEventListener('mousemove', onMouseMove);
+      container.addEventListener('mouseup', onMouseUp);
+      container.addEventListener('click', onClick);
+      container.addEventListener('mouseleave', onMouseLeave);
+      document.addEventListener('mouseup', onMouseUp); // Global mouse up
+    }
+
+    // Always add wheel for zoom/pan
+    container.addEventListener('wheel', onWheel, { passive: false });
+
+    return () => {
+      container.removeEventListener('mousedown', onMouseDown);
+      container.removeEventListener('mousemove', onMouseMove);
+      container.removeEventListener('mouseup', onMouseUp);
+      container.removeEventListener('click', onClick);
+      container.removeEventListener('mouseleave', onMouseLeave);
+      document.removeEventListener('mouseup', onMouseUp);
+      container.removeEventListener('wheel', onWheel);
+    };
+  }, [isRecording, notes, dragState, zoomX, zoomY, panOffsetX, panOffsetY, width, height, timeScale, timeOffset, minMidiAdjusted, midiRangeAdjusted]);
+
+  // Don't render if dimensions are invalid
+  if (width <= 0 || height <= 0) {
+    console.log('[NoteVisualizer] Invalid dimensions, skipping render:', width, height);
+    return <View style={styles.container} />;
+  }
+
   return (
-    <View style={styles.container}>
-      {renderCanvas()}
+    <View
+      style={styles.container}
+      ref={canvasRef}
+    >
+      <Canvas
+        style={{ width, height }}
+        mode="continuous"
+        onTouch={Platform.OS !== 'web' ? touchHandler : undefined}
+      >
+        {/* Background */}
+        <Rect x={0} y={0} width={width} height={height} color="#0a0a0a" />
+
+        {/* Möbius strip animation (when idle) */}
+        {renderMobiusStrip()}
+
+        {/* FFT Visualization */}
+        {renderFFT()}
+
+        {/* Grid */}
+        {renderGrid()}
+
+        {/* Notes */}
+        {renderNotes()}
+
+        {/* Ghost Note */}
+        {renderGhostNote()}
+
+        {/* Time Cursor */}
+        {renderTimeCursor()}
+
+        {/* Time Labels */}
+        {renderTimeLabels()}
+
+        {/* Placeholder */}
+        {renderPlaceholder()}
+      </Canvas>
     </View>
   );
 };
@@ -990,10 +1301,7 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
     height: '100%',
-  },
-  canvas: {
-    width: '100%',
-    height: '100%',
+    backgroundColor: '#0a0a0a',
   },
 });
 

@@ -13,12 +13,17 @@ const getBasePath = () => {
     return '/';
   }
 
-  // For web builds, check if we're in Vite environment
-  // Metro bundler will skip this entirely since isWeb is false
+  // For web builds, use PUBLIC_URL environment variable if available
+  // This allows customizing the base path at build time
+  // Examples:
+  //   - GitHub Pages subdirectory: PUBLIC_URL=/tidal/ npm run build
+  //   - Custom domain root: PUBLIC_URL=/ npm run build
+  //   - Different subdirectory: PUBLIC_URL=/my-app/ npm run build
   if (isWeb && typeof window !== 'undefined') {
-    // In production web builds, Vite will set this at build time
-    // Default to '/tidal/' for GitHub Pages deployment
-    return '/tidal/';
+    // In CRA/craco builds, PUBLIC_URL is baked into process.env at build time
+    const publicUrl = process.env.PUBLIC_URL || '/tidal/';
+    // Ensure trailing slash
+    return publicUrl.endsWith('/') ? publicUrl : `${publicUrl}/`;
   }
 
   return '/';
@@ -29,34 +34,41 @@ export const IS_WEB = isWeb;
 
 // Helper function to get asset source (works for both web and native)
 export const getAssetSource = (assetName) => {
-  // For native platforms, use require() imports
-  // Note: When building for native, you'll need to add the require statements back
-  // For now, we're optimizing for web deployment
-  if (!isWeb) {
-    // Native asset loading would go here
-    // Example: return require('../public/assets/img/' + assetName + '.png');
-    console.warn('Native asset loading not yet implemented');
-    return null;
-  }
-
-  // For web, construct URI with base path
+  // Asset mapping for both platforms
   const assetMap = {
-    'mic-vocal': 'assets/img/mic-vocal.png',
-    'list-music': 'assets/img/list-music.png',
-    'keyboard-music': 'assets/img/keyboard-music.png',
-    'guitar': 'assets/img/guitar.png',
-    'strudel-icon': 'assets/img/strudel-icon.png',
-    'tidal-logo': 'assets/img/tidal-logo.svg',
+    'mic-vocal': 'mic-vocal.png',
+    'list-music': 'list-music.png',
+    'keyboard-music': 'keyboard-music.png',
+    'guitar': 'guitar.png',
+    'strudel-icon': 'strudel-icon.png',
+    'tidal-logo': 'tidal-logo.svg',
   };
 
-  const path = assetMap[assetName];
-  if (!path) {
+  const fileName = assetMap[assetName];
+  if (!fileName) {
     console.warn(`Unknown asset: ${assetName}`);
     return null;
   }
 
-  // Combine base path with asset path
-  return { uri: `${BASE_PATH}${path}` };
+  // For native platforms, use static require() imports
+  // Metro bundler needs static require() calls to bundle assets
+  if (!isWeb) {
+    // Map asset names to their require() calls
+    const nativeAssets = {
+      'mic-vocal': require('../public/assets/img/mic-vocal.png'),
+      'list-music': require('../public/assets/img/list-music.png'),
+      'keyboard-music': require('../public/assets/img/keyboard-music.png'),
+      'guitar': require('../public/assets/img/guitar.png'),
+      'strudel-icon': require('../public/assets/img/strudel-icon.png'),
+      'tidal-logo': require('../public/assets/img/tidal-logo.svg'),
+    };
+
+    return nativeAssets[assetName] || null;
+  }
+
+  // For web, construct URI with base path
+  const webPath = `assets/img/${fileName}`;
+  return { uri: `${BASE_PATH}${webPath}` };
 };
 
 export default {

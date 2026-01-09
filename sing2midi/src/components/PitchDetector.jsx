@@ -62,16 +62,18 @@ class PitchDetector extends Component {
         let modelUrl;
 
         if (Platform.OS === 'web') {
-          // On web, try to use local model file from node_modules
-          // This avoids the CDN and works with the bundler
-          try {
-            // Metro/Webpack should bundle this properly
-            modelUrl = require('@spotify/basic-pitch/model/model.json');
-            console.log('Using local model from node_modules:', modelUrl);
-          } catch (e) {
-            console.log('Failed to require local model, falling back to CDN:', e.message);
-            modelUrl = 'https://cdn.jsdelivr.net/npm/@spotify/basic-pitch@1.0.1/model/model.json';
-          }
+          // Web: use standard @tensorflow/tfjs (NOT react-native version)
+          console.log('Web detected, initializing TensorFlow.js for web...');
+
+          const tf = require('@tensorflow/tfjs');
+
+          // Wait for TensorFlow backend to initialize
+          await tf.ready();
+          console.log('TensorFlow.js backend ready:', tf.getBackend());
+
+          // Use CDN model URL for web - TensorFlow.js will handle the download and cache it
+          modelUrl = 'https://cdn.jsdelivr.net/npm/@spotify/basic-pitch@1.0.1/model/model.json';
+          console.log('Using CDN model for web (will be cached after first download)');
         } else {
           // React Native: Wait for TensorFlow.js backend to be ready
           console.log('React Native detected, ensuring TensorFlow.js backend is ready...');
@@ -92,6 +94,16 @@ class PitchDetector extends Component {
         console.log('Loading BasicPitch model from:', modelUrl);
         this.basicPitch = new BasicPitch(modelUrl);
         console.log('BasicPitch model initialized successfully');
+
+        // Debug: Check what's actually in the model
+        if (Platform.OS === 'web') {
+          console.log('[DEBUG] Checking loaded model...');
+          const model = await this.basicPitch.model;
+          console.log('[DEBUG] Model type:', model.constructor.name);
+          console.log('[DEBUG] Model has execute:', typeof model.execute);
+          console.log('[DEBUG] Model has predict:', typeof model.predict);
+          console.log('[DEBUG] Model methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(model)).filter(m => typeof model[m] === 'function'));
+        }
 
         return this.basicPitch;
       } catch (error) {

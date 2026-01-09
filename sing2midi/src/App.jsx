@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Animated, Image, Platform } from 'react-native';
 import PitchDetector from './components/PitchDetector.jsx';
-import NoteVisualizer from './components/NoteVisualizer.jsx';
+import NoteVisualizerWrapper from './components/NoteVisualizerWrapper.jsx';
 import CopyDialog from './components/CopyDialog.jsx';
 import SettingsPanel from './components/SettingsPanel.jsx';
 import TidalGenerator from './utils/TidalGenerator';
@@ -547,7 +547,7 @@ export default function App() {
   return (
     <View style={styles.container}>
       <View style={styles.visualizerContainer}>
-        <NoteVisualizer
+        <NoteVisualizerWrapper
           notes={notes}
           isRecording={isRecording}
           debugShowComparison={DEBUG_SHOW_COMPARISON}

@@ -39,12 +39,17 @@ jobs:
         run: npm ci
 
       - name: Build
+        env:
+          # Set PUBLIC_URL for GitHub Pages deployment
+          # Change this to "/" for custom domain or "/your-path/" for different subdirectory
+          PUBLIC_URL: /tidal/
         run: npm run build
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./sing2midi/dist
+          # craco outputs to 'build' directory, not 'dist'
+          path: ./sing2midi/build
 
   deploy:
     environment:

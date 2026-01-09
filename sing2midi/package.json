@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview",
+    "dev": "craco start",
+    "build": "craco build",
+    "preview": "serve -s build",
     "start": "react-native start",
     "ios": "react-native run-ios",
     "ios:device": "react-native run-ios --device",
@@ -25,7 +25,8 @@
     "setup3": "3. Install iOS dependencies: `npm run pod-install`",
     "ios-dev": "Start Metro bundler in one terminal: `npm start`, then run iOS in another: `npm run ios`",
     "ios-xcode": "Or open in Xcode: `npm run xcode`, select simulator, press Cmd+R",
-    "web-dev": "Web development: `npm run dev` then visit http://localhost:5176/tidal/",
+    "web-dev": "Web development: `npm run dev` then visit http://localhost:3000/tidal/",
+    "web-dev-root": "For root path: set PUBLIC_URL=/ in .env, then visit http://localhost:3000/",
     "bundle-id": "Bundle ID: io.sfpl.sing2midi",
     "app-name": "Voice Composer (code: sing2midi)"
   },
@@ -35,20 +36,23 @@
   "description": "",
   "dependencies": {
     "@react-native-async-storage/async-storage": "^2.2.0",
+    "@shopify/react-native-skia": "^2.4.14",
     "@spotify/basic-pitch": "^1.0.1",
     "@tensorflow/tfjs": "^4.22.0",
     "@tensorflow/tfjs-react-native": "^1.0.0",
     "@vitejs/plugin-react": "^4.7.0",
+    "ajv": "^8.17.1",
     "buffer": "^6.0.3",
     "expo-asset": "^12.0.12",
     "expo-camera": "^17.0.10",
     "expo-file-system": "^19.0.21",
     "expo-gl": "^16.0.9",
     "expo-modules-core": "^3.0.29",
-    "react": "^19.2.3",
-    "react-dom": "^19.2.3",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
     "react-native": "^0.83.1",
     "react-native-audio-api": "^0.10.3",
+    "react-native-reanimated": "3.19.1",
     "react-native-canvas": "^0.1.40",
     "react-native-fs": "^2.20.0",
     "react-native-svg": "^15.15.1",
@@ -58,6 +62,8 @@
     "whatwg-fetch": "^3.6.20"
   },
   "devDependencies": {
+    "@babel/plugin-transform-flow-strip-types": "^7.27.1",
+    "@craco/craco": "^7.1.0",
     "@playwright/test": "^1.57.0",
     "@react-native-community/cli": "^20.1.0",
     "@react-native-community/cli-platform-ios": "^20.1.0",
@@ -65,7 +71,22 @@
     "@react-native/metro-config": "^0.83.1",
     "babel-plugin-module-resolver": "^5.0.2",
     "babel-preset-expo": "^54.0.9",
+    "node-polyfill-webpack-plugin": "^2.0.1",
+    "path-browserify": "^1.0.1",
     "playwright": "^1.57.0",
-    "react-native-svg-transformer": "^1.5.2"
+    "react-native-svg-transformer": "^1.5.2",
+    "react-scripts": "^5.0.1"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
   }
 }
