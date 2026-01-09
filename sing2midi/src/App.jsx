@@ -59,6 +59,7 @@ export default function App() {
   const [currentSessionId, setCurrentSessionId] = useState(null); // ID of currently loaded session from history
   const [fftData, setFftData] = useState(null); // FFT data for raw mode visualization
   const [pitchDetectionMethod, setPitchDetectionMethod] = useState('hybrid'); // Auto-detected pitch detection method
+  const [lastClickedNoteIndex, setLastClickedNoteIndex] = useState(null); // Track last clicked note for delete
   const pitchDetectorRef = useRef(null);
 
   // Helper: Get note color from note name
@@ -327,6 +328,7 @@ export default function App() {
     setStrudelCode('');
     setNoteNames('');
     setLastAudioBlob(null);
+    setLastClickedNoteIndex(null); // Clear last clicked note
   };
 
   const handlePlayback = async () => {
@@ -585,6 +587,11 @@ export default function App() {
       setUndoStack(prev => [...prev, notes]);
     }
 
+    // Clear last clicked note if it no longer exists or notes array changed
+    if (lastClickedNoteIndex !== null && (lastClickedNoteIndex >= updatedNotes.length || updatedNotes.length !== notes.length)) {
+      setLastClickedNoteIndex(null);
+    }
+
     // Update notes
     setNotes(updatedNotes);
 
@@ -682,6 +689,7 @@ export default function App() {
     const previousNotes = undoStack[undoStack.length - 1];
     setUndoStack(prev => prev.slice(0, -1));
     setNotes(previousNotes);
+    setLastClickedNoteIndex(null); // Clear last clicked note on undo
 
     // Regenerate patterns immediately
     const mlNotes = previousNotes.filter(n => n.isML);
@@ -695,6 +703,54 @@ export default function App() {
       setNoteNames(noteNamesList);
     }
   };
+
+  // Handle note click (track for delete key)
+  const handleNoteClick = (noteIndex) => {
+    setLastClickedNoteIndex(noteIndex);
+  };
+
+  // Handle delete key press
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Delete or Backspace key
+      if ((e.key === 'Delete' || e.key === 'Backspace') && lastClickedNoteIndex !== null) {
+        // Check if the note still exists at that index
+        if (lastClickedNoteIndex < notes.length) {
+          // Save to undo stack
+          setUndoStack(prev => [...prev, notes]);
+
+          // Delete the note
+          const updatedNotes = notes.filter((_, i) => i !== lastClickedNoteIndex);
+          setNotes(updatedNotes);
+
+          // Clear the last clicked note so pressing delete again does nothing
+          setLastClickedNoteIndex(null);
+
+          // Regenerate patterns
+          const mlNotes = updatedNotes.filter(n => n.isML);
+          if (mlNotes.length > 0) {
+            const tidalPattern = TidalGenerator.generatePattern(mlNotes);
+            const strudelPattern = TidalGenerator.generateStrudelPattern(mlNotes);
+            const noteNamesList = TidalGenerator.generateNoteNames(mlNotes);
+
+            setTidalCode(tidalPattern);
+            setStrudelCode(strudelPattern);
+            setNoteNames(noteNamesList);
+          } else {
+            setTidalCode('');
+            setStrudelCode('');
+            setNoteNames('');
+          }
+        } else {
+          // Note no longer exists, clear the last clicked note
+          setLastClickedNoteIndex(null);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [lastClickedNoteIndex, notes]);
 
   return (
     <View style={styles.container}>
@@ -710,6 +766,7 @@ export default function App() {
             setHoverNote(noteName);
             setIsHoveringRealNote(isRealNote);
           }}
+          onNoteClick={handleNoteClick}
           fftData={fftData}
           voiceMode={voiceMode}
         />

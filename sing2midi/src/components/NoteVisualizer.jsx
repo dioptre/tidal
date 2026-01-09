@@ -3,7 +3,7 @@ import { View, StyleSheet, Dimensions, Platform, PanResponder } from 'react-nati
 import { Canvas, Rect, Text as SkiaText, Line, Group, matchFont, Skia } from '@shopify/react-native-skia';
 import { JsiSkTypeface } from '@shopify/react-native-skia/lib/module/skia/web/JsiSkTypeface';
 
-const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, onHoverNoteChange, fftData, voiceMode, onNotesChange, playheadPosition }) => {
+const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, onHoverNoteChange, fftData, voiceMode, onNotesChange, playheadPosition, onNoteClick }) => {
   // Audio context for click preview sounds
   const clickAudioContextRef = useRef(null);
   const activeClickOscillatorRef = useRef(null);
@@ -596,6 +596,9 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, on
     if (noteAtPos) {
       // Save to undo stack before starting to drag
       onNotesChange?.(notes, false);
+
+      // Track this note click for delete key functionality
+      onNoteClick?.(noteAtPos.index);
 
       // Start dragging existing note
       setGhostNote({ ...noteAtPos.note });
