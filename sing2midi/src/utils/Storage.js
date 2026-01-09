@@ -248,6 +248,34 @@ class Storage {
       maxSessions: MAX_SESSIONS,
     };
   }
+
+  /**
+   * Generic get item from storage
+   * @param {string} key - Storage key
+   * @returns {Promise<string|null>} - Value or null if not found
+   */
+  static async getItem(key) {
+    try {
+      return await AsyncStorage.getItem(`${STORAGE_PREFIX}${key}`);
+    } catch (error) {
+      Logger.error(`[Storage] Failed to get item ${key}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Generic set item to storage
+   * @param {string} key - Storage key
+   * @param {string} value - Value to store
+   * @returns {Promise<void>}
+   */
+  static async setItem(key, value) {
+    try {
+      await AsyncStorage.setItem(`${STORAGE_PREFIX}${key}`, value);
+    } catch (error) {
+      Logger.error(`[Storage] Failed to set item ${key}:`, error);
+    }
+  }
 }
 
 export default Storage;

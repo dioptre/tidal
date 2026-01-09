@@ -124,6 +124,9 @@ export default function App() {
           Logger.log('Device capabilities:', settings.deviceCapabilities);
           Logger.log('→', settings.deviceCapabilities.reason);
         }
+
+        // Check if this is iOS and show mute switch warning (one-time only)
+        await checkAndShowMuteSwitchWarning();
       } catch (error) {
         Logger.error('Failed to initialize settings:', error);
         // Fallback to hybrid
@@ -133,6 +136,33 @@ export default function App() {
 
     initializeApp();
   }, []);
+
+  // Check if we should show the iOS mute switch warning
+  const checkAndShowMuteSwitchWarning = async () => {
+    if (Platform.OS !== 'web') return;
+
+    // Detect iOS
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+    if (!isIOS) return;
+
+    try {
+      // Check if we've already shown the warning
+      const hasShownWarning = await Storage.getItem('hasShownMuteSwitchWarning');
+
+      if (!hasShownWarning) {
+        // Show alert
+        alert('🔊 iOS Audio Tip\n\nMake sure your device\'s mute switch (on the left side) is OFF to hear note previews.\n\nThe orange indicator means sound is muted.');
+
+        // Mark as shown
+        await Storage.setItem('hasShownMuteSwitchWarning', 'true');
+        Logger.log('[iOS] Mute switch warning shown and stored');
+      }
+    } catch (error) {
+      Logger.error('[iOS] Failed to check/show mute switch warning:', error);
+    }
+  };
 
   const showDialog = (title, content) => {
     setDialogContent({ title, content });
