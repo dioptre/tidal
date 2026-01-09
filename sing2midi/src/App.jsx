@@ -54,6 +54,7 @@ export default function App() {
   const [hoverNote, setHoverNote] = useState(null); // Note being hovered over
   const [isHoveringRealNote, setIsHoveringRealNote] = useState(false); // Whether hovering over an actual note object
   const [undoStack, setUndoStack] = useState([]); // Undo history
+  const [currentSessionId, setCurrentSessionId] = useState(null); // ID of currently loaded session from history
   const [fftData, setFftData] = useState(null); // FFT data for raw mode visualization
   const pitchDetectorRef = useRef(null);
 
@@ -223,7 +224,7 @@ export default function App() {
           setStrudelCode(strudelPattern);
           setNoteNames(noteNamesList);
 
-          // Auto-save session to localStorage
+          // Auto-save session to localStorage (save to history after recording)
           setTimeout(async () => {
             if (lastAudioBlob) {
               try {
@@ -239,10 +240,14 @@ export default function App() {
                     noteNames: noteNamesList,
                     audioBase64: audioBase64,
                     voiceMode: voiceMode,
+                    undoStack: [], // Empty undo stack for new recordings
                   };
 
+                  // Save to both current session (for editing) and history (for later retrieval)
+                  await Storage.saveCurrentSession(sessionData);
                   const sessionId = await Storage.saveSession(sessionData);
-                  console.log('Session auto-saved:', sessionId);
+                  setCurrentSessionId(sessionId); // Track new session
+                  console.log('Session saved to history:', sessionId);
                 };
                 reader.readAsDataURL(lastAudioBlob);
               } catch (error) {
@@ -437,14 +442,21 @@ export default function App() {
   const handleLoadSession = (session) => {
     console.log('Loading session:', session.id);
 
-    // Save current state to undo stack before loading
-    if (notes.length > 0) {
-      setUndoStack(prev => [...prev, notes]);
-    }
+    // Track which session is loaded so we can update it later
+    setCurrentSessionId(session.id);
 
     // Restore notes with ML flag
     const restoredNotes = session.notes.map(note => ({ ...note, isML: true }));
     setNotes(restoredNotes);
+
+    // Restore undo stack if available
+    if (session.undoStack && Array.isArray(session.undoStack)) {
+      setUndoStack(session.undoStack);
+      console.log('Undo stack restored:', session.undoStack.length, 'states');
+    } else {
+      // If no undo stack in session, clear it
+      setUndoStack([]);
+    }
 
     // Restore generated code
     setTidalCode(session.tidalCode || '');
@@ -506,18 +518,37 @@ export default function App() {
         if (lastAudioBlob) {
           const reader = new FileReader();
           reader.onloadend = async () => {
-            const sessionData = {
-              notes: mlNotes,
-              tidalCode: tidalPattern,
-              strudelCode: strudelPattern,
-              noteNames: noteNamesList,
-              audioBase64: reader.result,
-              voiceMode: voiceMode,
-            };
-            await Storage.saveSession(sessionData);
-            console.log('Session auto-saved after edit');
+            try {
+              const sessionData = {
+                notes: mlNotes,
+                tidalCode: tidalPattern,
+                strudelCode: strudelPattern,
+                noteNames: noteNamesList,
+                audioBase64: reader.result,
+                voiceMode: voiceMode,
+                undoStack: undoStack, // Save undo history
+              };
+
+              // Always save to current session
+              await Storage.saveCurrentSession(sessionData);
+
+              // If we have a loaded session from history, update it too
+              if (currentSessionId) {
+                await Storage.updateSession(currentSessionId, sessionData);
+                console.log('Session updated in history:', currentSessionId);
+              }
+
+              console.log('Session auto-saved after edit');
+            } catch (error) {
+              console.error('Failed to auto-save after edit:', error);
+            }
+          };
+          reader.onerror = (error) => {
+            console.error('Failed to read audio blob:', error);
           };
           reader.readAsDataURL(lastAudioBlob);
+        } else {
+          console.warn('Cannot auto-save: no audio blob available');
         }
       }
     }, 1000); // 1 second debounce

@@ -7,11 +7,60 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const STORAGE_PREFIX = 'sing2midi_';
 const SESSIONS_KEY = `${STORAGE_PREFIX}sessions`;
+const CURRENT_SESSION_KEY = `${STORAGE_PREFIX}current_session`;
 const MAX_SESSIONS = 50; // Maximum number of sessions to store
 
 class Storage {
   /**
-   * Save a session with all its data
+   * Save/update the current session (overwrites existing)
+   * This is used for auto-save during editing to avoid filling up storage
+   * @param {Object} sessionData - Session data to save
+   * @returns {Promise<string>} - Session ID
+   */
+  static async saveCurrentSession(sessionData) {
+    try {
+      const sessionId = `session_${Date.now()}`;
+      const timestamp = new Date().toISOString();
+
+      const session = {
+        id: sessionId,
+        timestamp,
+        ...sessionData,
+      };
+
+      // Save as the current session (overwrites previous)
+      await AsyncStorage.setItem(CURRENT_SESSION_KEY, JSON.stringify(session));
+      console.log(`Current session saved: ${sessionId}`);
+      return sessionId;
+    } catch (error) {
+      console.error('Failed to save current session:', error);
+      // If quota exceeded, just overwrite (no history to clear)
+      if (error.name === 'QuotaExceededError') {
+        console.warn('Storage quota exceeded, cannot save session');
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Get the current session
+   * @returns {Promise<Object|null>} - Current session object or null
+   */
+  static async getCurrentSession() {
+    try {
+      const sessionJson = await AsyncStorage.getItem(CURRENT_SESSION_KEY);
+      if (!sessionJson) {
+        return null;
+      }
+      return JSON.parse(sessionJson);
+    } catch (error) {
+      console.error('Failed to load current session:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Save a session with all its data (adds to history)
    * @param {Object} sessionData - Session data to save
    * @param {Array} sessionData.notes - Array of note objects
    * @param {string} sessionData.tidalCode - TidalCycles pattern code
@@ -67,6 +116,37 @@ class Storage {
           throw retryError;
         }
       }
+      throw error;
+    }
+  }
+
+  /**
+   * Update an existing session in history
+   * @param {string} sessionId - Session ID to update
+   * @param {Object} sessionData - New session data
+   * @returns {Promise<boolean>} - True if updated, false if not found
+   */
+  static async updateSession(sessionId, sessionData) {
+    try {
+      const sessions = await this.getAllSessions();
+      const index = sessions.findIndex(s => s.id === sessionId);
+
+      if (index === -1) {
+        console.warn(`Session ${sessionId} not found in history`);
+        return false;
+      }
+
+      // Update the session while preserving ID and timestamp
+      sessions[index] = {
+        id: sessionId,
+        timestamp: sessions[index].timestamp, // Keep original timestamp
+        ...sessionData,
+      };
+
+      await AsyncStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions));
+      return true;
+    } catch (error) {
+      console.error('Failed to update session:', error);
       throw error;
     }
   }
