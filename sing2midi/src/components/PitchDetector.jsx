@@ -603,10 +603,10 @@ class PitchDetector extends Component {
     filtered = this.removeDuplicateNotes(filtered);
 
     // Apply pitch smoothing to make scales more uniform
-    // DISABLED: Pitch smoothing causes final notes (colorful) to differ from ONNX predictions (dark blue)
-    // The ONNX model output should be treated as ground truth and displayed as-is
-    // To re-enable: uncomment line below. Current settings are gentle (85% original + 15% median, threshold 1.0 semitones)
-    // filtered = this.smoothPitchContour(filtered);
+    // ENABLED with gentle settings: 85% original + 15% median, threshold 1.0 semitones
+    // This provides subtle smoothing while preserving the ONNX model predictions
+    // To disable: comment out the line below
+    filtered = this.smoothPitchContour(filtered);
 
     // Merge consecutive notes with same/similar pitch (this fixes "f-3 f-3" -> "f-3" and fills dark green gaps)
     filtered = this.mergeConsecutiveNotes(filtered);
