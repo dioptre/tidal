@@ -88,5 +88,10 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "overrides": {
+    "@tensorflow/tfjs-react-native": {
+      "@react-native-async-storage/async-storage": "^2.2.0"
+    }
   }
 }
