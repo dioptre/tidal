@@ -91,7 +91,15 @@
   },
   "overrides": {
     "@tensorflow/tfjs-react-native": {
-      "@react-native-async-storage/async-storage": "^2.2.0"
+      "@react-native-async-storage/async-storage": "^2.2.0",
+      "@tensorflow/tfjs-backend-cpu": "^4.22.0",
+      "@tensorflow/tfjs-backend-webgl": "^4.22.0",
+      "@tensorflow/tfjs-core": "^4.22.0",
+      "expo-camera": "^17.0.10",
+      "expo-gl": "^16.0.9",
+      "react": "^19.2.0",
+      "react-native": "^0.83.1",
+      "react-native-fs": "^2.20.0"
     }
   }
 }
