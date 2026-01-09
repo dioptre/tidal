@@ -405,9 +405,18 @@ export default function App() {
       const audioContext = new AudioContext();
       audioContextRef.current = audioContext;
 
-      // Resume audio context if it's suspended (required on mobile browsers)
-      if (audioContext.state === 'suspended' && audioContext.resume) {
-        await audioContext.resume();
+      // Resume audio context if it's suspended (required on mobile browsers, especially iOS)
+      // CRITICAL: Must await this on iOS or audio won't play
+      if (audioContext.state === 'suspended') {
+        try {
+          await audioContext.resume();
+          Logger.log('[Playback] AudioContext resumed successfully');
+        } catch (err) {
+          Logger.error('[Playback] Failed to resume audio context:', err);
+          shouldLoopRef.current = false;
+          setIsPlaying(false);
+          return; // Don't try to play if resume failed
+        }
       }
 
       // Play each note
@@ -1264,7 +1273,7 @@ const styles = StyleSheet.create({
   },
   hamburgerButton: {
     position: 'absolute',
-    bottom: 8,
+    top: 8,
     right: 8,
     width: 44,
     height: 44,

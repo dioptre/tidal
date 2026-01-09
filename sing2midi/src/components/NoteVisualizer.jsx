@@ -10,7 +10,7 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, on
   const activeClickOscillatorRef = useRef(null);
 
   // Play a click preview sound
-  const playClickPreview = (midiNote) => {
+  const playClickPreview = async (midiNote) => {
     // Stop any currently playing preview
     if (activeClickOscillatorRef.current) {
       try {
@@ -28,12 +28,18 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, on
 
     const audioContext = clickAudioContextRef.current;
 
-    // Resume audio context if it's suspended (required on mobile browsers)
-    if (audioContext.state === 'suspended' && audioContext.resume) {
-      audioContext.resume().catch(err => {
+    // Resume audio context if it's suspended (required on mobile browsers, especially iOS)
+    // CRITICAL: Must await this on iOS or audio won't play
+    if (audioContext.state === 'suspended') {
+      try {
+        await audioContext.resume();
+        Logger.log('[Audio] AudioContext resumed successfully');
+      } catch (err) {
         Logger.warn('[Audio] Failed to resume audio context:', err);
-      });
+        return; // Don't try to play if resume failed
+      }
     }
+
     const oscillator = audioContext.createOscillator();
     const gainNode = audioContext.createGain();
 
