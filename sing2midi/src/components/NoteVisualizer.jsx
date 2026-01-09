@@ -573,6 +573,9 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, on
       // Save to undo stack before starting to drag/stretch
       onNotesChange?.(notes, false);
 
+      // Track this note click for delete key functionality
+      onNoteClick?.(edgeInfo.index);
+
       // Start stretching edge
       setGhostNote({ ...edgeInfo.note });
       setDragState({

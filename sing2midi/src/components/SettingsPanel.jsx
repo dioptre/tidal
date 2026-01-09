@@ -313,7 +313,7 @@ const SettingsPanel = ({ visible, onClose, onLoadSession, onMethodChange, initia
                     • <Text style={styles.helpKeyword}>Click and drag</Text> the center of a note to move it{'\n'}
                     • <Text style={styles.helpKeyword}>Drag the edges</Text> of a note to stretch/shrink its duration{'\n'}
                     • <Text style={styles.helpKeyword}>Double-click</Text> a note to delete it{'\n'}
-                    • Drag a note off the canvas to delete it
+                    • <Text style={styles.helpKeyword}>Click then Delete key</Text> - Click a note, then press Delete/Backspace to remove it{'\n'}
                   </Text>
                 </View>
 
@@ -333,7 +333,7 @@ const SettingsPanel = ({ visible, onClose, onLoadSession, onMethodChange, initia
                     • <Text style={styles.helpKeyword}>Upload (📤)</Text> - Import an audio file to analyze{'\n'}
                     • <Text style={styles.helpKeyword}>Clear (🗑️)</Text> - Delete all notes and reset{'\n'}
                     • <Text style={styles.helpKeyword}>Undo (↩)</Text> - Revert the last edit{'\n'}
-                    • <Text style={styles.helpKeyword}>Play Notes (▷)</Text> - Preview the detected notes as synth{'\n'}
+                    • <Text style={styles.helpKeyword}>Play Notes (▷)</Text> - Preview the detected notes as synth (loops continuously){'\n'}
                     • <Text style={styles.helpKeyword}>Play Audio (▶)</Text> - Play back your original recording{'\n'}
                     • <Text style={styles.helpKeyword}>Download (💾)</Text> - Save your recording as audio{'\n'}
                     • <Text style={styles.helpKeyword}>MIDI (🎹)</Text> - Export notes as a MIDI file{'\n'}
