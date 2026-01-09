@@ -31,7 +31,9 @@ import {
   DownloadIcon,
   WaveformIcon,
   MenuIcon,
-  CircleHelpIcon
+  CircleHelpIcon,
+  ArrowBigUpIcon,
+  ArrowBigDownIcon
 } from './components/Icons.jsx';
 
 // Debug mode: Show live detections (green) vs ML predictions (blue) side-by-side
@@ -751,9 +753,95 @@ export default function App() {
     setLastClickedNoteIndex(noteIndex);
   };
 
-  // Handle delete key press
+  // Handle keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e) => {
+      // Spacebar - Start/Stop playback
+      if (e.code === 'Space' && !isRecording) {
+        e.preventDefault();
+        handlePlayback();
+        return;
+      }
+
+      // Arrow keys - Move last clicked note
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key) && lastClickedNoteIndex !== null) {
+        e.preventDefault();
+
+        // Check if the note still exists at that index
+        if (lastClickedNoteIndex < notes.length && notes[lastClickedNoteIndex].isML) {
+          // Save to undo stack
+          setUndoStack(prev => [...prev, notes]);
+
+          const updatedNotes = [...notes];
+          const note = updatedNotes[lastClickedNoteIndex];
+
+          if (e.key === 'ArrowUp') {
+            // Move up 1 semitone
+            note.midiNote += 1;
+            note.note = getMIDINoteName(note.midiNote);
+            note.frequency = 440 * Math.pow(2, (note.midiNote - 69) / 12);
+          } else if (e.key === 'ArrowDown') {
+            // Move down 1 semitone
+            note.midiNote -= 1;
+            note.note = getMIDINoteName(note.midiNote);
+            note.frequency = 440 * Math.pow(2, (note.midiNote - 69) / 12);
+          } else if (e.key === 'ArrowLeft') {
+            // Move left 0.25s (1/4 second)
+            note.startTime = Math.max(0, note.startTime - 0.25);
+          } else if (e.key === 'ArrowRight') {
+            // Move right 0.25s (1/4 second)
+            note.startTime += 0.25;
+          }
+
+          setNotes(updatedNotes);
+
+          // Regenerate patterns
+          const mlNotes = updatedNotes.filter(n => n.isML);
+          if (mlNotes.length > 0) {
+            const tidalPattern = TidalGenerator.generatePattern(mlNotes);
+            const strudelPattern = TidalGenerator.generateStrudelPattern(mlNotes);
+            const noteNamesList = TidalGenerator.generateNoteNames(mlNotes);
+
+            setTidalCode(tidalPattern);
+            setStrudelCode(strudelPattern);
+            setNoteNames(noteNamesList);
+
+            // Save to storage (debounced)
+            if (saveTimeoutRef.current) {
+              clearTimeout(saveTimeoutRef.current);
+            }
+            saveTimeoutRef.current = setTimeout(async () => {
+              try {
+                const sessionData = {
+                  notes: updatedNotes,
+                  tidalCode: tidalPattern,
+                  strudelCode: strudelPattern,
+                  noteNames: noteNamesList,
+                  audioBlob: lastAudioBlob,
+                  pitchDetectionMethod,
+                  voiceMode: voiceMode,
+                  undoStack: undoStack,
+                };
+
+                // Always save to current session
+                await Storage.saveCurrentSession(sessionData);
+
+                // If we have a loaded session from history, update it too
+                if (currentSessionId) {
+                  await Storage.updateSession(currentSessionId, sessionData);
+                  Logger.log('Session updated in history after arrow key edit:', currentSessionId);
+                }
+
+                Logger.log('Session auto-saved after arrow key edit');
+              } catch (error) {
+                Logger.error('Failed to auto-save after arrow key edit:', error);
+              }
+            }, 1000);
+          }
+        }
+        return;
+      }
+
       // Delete or Backspace key
       if ((e.key === 'Delete' || e.key === 'Backspace') && lastClickedNoteIndex !== null) {
         // Check if the note still exists at that index
@@ -792,7 +880,82 @@ export default function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [lastClickedNoteIndex, notes]);
+  }, [lastClickedNoteIndex, notes, isRecording, handlePlayback]);
+
+  // Helper: Get note name from MIDI number
+  const getMIDINoteName = (midiNote) => {
+    const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+    const octave = Math.floor(midiNote / 12) - 1;
+    const noteName = noteNames[midiNote % 12];
+    return `${noteName}${octave}`;
+  };
+
+  // Handler: Shift all notes up or down one octave
+  const handleOctaveShift = async (direction) => {
+    if (notes.length === 0) return;
+
+    // Save to undo stack
+    setUndoStack(prev => [...prev, notes]);
+
+    // Shift all ML notes by 12 semitones (1 octave)
+    const semitoneShift = direction === 'up' ? 12 : -12;
+    const updatedNotes = notes.map(note => {
+      if (note.isML) {
+        const newMidiNote = note.midiNote + semitoneShift;
+        return {
+          ...note,
+          midiNote: newMidiNote,
+          note: getMIDINoteName(newMidiNote),
+          frequency: 440 * Math.pow(2, (newMidiNote - 69) / 12)
+        };
+      }
+      return note;
+    });
+
+    setNotes(updatedNotes);
+
+    // Regenerate patterns
+    const mlNotes = updatedNotes.filter(n => n.isML);
+    const tidalPattern = TidalGenerator.generatePattern(mlNotes);
+    const strudelPattern = TidalGenerator.generateStrudelPattern(mlNotes);
+    const noteNamesStr = mlNotes.map(n => n.note).join(' ');
+
+    setTidalCode(tidalPattern);
+    setStrudelCode(strudelPattern);
+    setNoteNames(noteNamesStr);
+
+    // Save to storage (debounced)
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    saveTimeoutRef.current = setTimeout(async () => {
+      try {
+        const sessionData = {
+          notes: updatedNotes,
+          tidalCode: tidalPattern,
+          strudelCode: strudelPattern,
+          noteNames: noteNamesStr,
+          audioBlob: lastAudioBlob,
+          pitchDetectionMethod,
+          voiceMode: voiceMode,
+          undoStack: undoStack,
+        };
+
+        // Always save to current session
+        await Storage.saveCurrentSession(sessionData);
+
+        // If we have a loaded session from history, update it too
+        if (currentSessionId) {
+          await Storage.updateSession(currentSessionId, sessionData);
+          Logger.log('Session updated in history after octave shift:', currentSessionId);
+        }
+
+        Logger.log('Session auto-saved after octave shift');
+      } catch (error) {
+        Logger.error('Failed to auto-save after octave shift:', error);
+      }
+    }, 1000);
+  };
 
   return (
     <View style={styles.container}>
@@ -925,6 +1088,22 @@ export default function App() {
             disabled={undoStack.length === 0}
           >
             <RotateCcwIcon size={16} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.button, styles.smallButton, styles.octaveUpButton, notes.length === 0 && styles.disabledButton]}
+            onPress={() => handleOctaveShift('up')}
+            disabled={notes.length === 0}
+          >
+            <ArrowBigUpIcon size={16} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.button, styles.smallButton, styles.octaveDownButton, notes.length === 0 && styles.disabledButton]}
+            onPress={() => handleOctaveShift('down')}
+            disabled={notes.length === 0}
+          >
+            <ArrowBigDownIcon size={16} />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -1209,6 +1388,12 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.BG_SECONDARY,
   },
   undoButton: {
+    backgroundColor: Colors.BG_SECONDARY,
+  },
+  octaveUpButton: {
+    backgroundColor: Colors.BG_SECONDARY,
+  },
+  octaveDownButton: {
     backgroundColor: Colors.BG_SECONDARY,
   },
   exportButton: {

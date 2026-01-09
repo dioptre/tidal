@@ -135,3 +135,15 @@ export const BotIcon = ({ size = 18, color = "#fff", ...props }) => (
     <Path d="M9 13v2" />
   </Svg>
 );
+
+export const ArrowBigUpIcon = ({ size = 18, color = "#fff", ...props }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" {...defaultProps} stroke={color} {...props}>
+    <Path d="M9 18v-6H5l7-7 7 7h-4v6z" />
+  </Svg>
+);
+
+export const ArrowBigDownIcon = ({ size = 18, color = "#fff", ...props }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" {...defaultProps} stroke={color} {...props}>
+    <Path d="M15 6v6h4l-7 7-7-7h4V6z" />
+  </Svg>
+);

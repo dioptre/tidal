@@ -378,6 +378,17 @@ const SettingsPanel = ({ visible, onClose, onLoadSession, onMethodChange, initia
                 </View>
 
                 <View style={styles.helpSection}>
+                  <Text style={styles.helpSectionTitle}>⌨️ Keyboard Shortcuts</Text>
+                  <Text style={styles.helpText}>
+                    • <Text style={styles.helpKeyword}>Spacebar</Text> - Start/stop playback{'\n'}
+                    • <Text style={styles.helpKeyword}>Arrow Up/Down</Text> - Move selected note up/down 1 semitone{'\n'}
+                    • <Text style={styles.helpKeyword}>Arrow Left/Right</Text> - Move selected note left/right 0.25 seconds{'\n'}
+                    • <Text style={styles.helpKeyword}>Delete/Backspace</Text> - Remove selected note{'\n'}
+                    • <Text style={styles.helpKeyword}>Octave Shift Buttons (⬆️⬇️)</Text> - Shift all notes up/down one octave
+                  </Text>
+                </View>
+
+                <View style={styles.helpSection}>
                   <Text style={styles.helpSectionTitle}>🔍 Navigation</Text>
                   <Text style={styles.helpText}>
                     • <Text style={styles.helpKeyword}>Two-finger pinch</Text> to zoom in/out{'\n'}
@@ -393,6 +404,7 @@ const SettingsPanel = ({ visible, onClose, onLoadSession, onMethodChange, initia
                     • <Text style={styles.helpKeyword}>Upload (📤)</Text> - Import an audio file to analyze{'\n'}
                     • <Text style={styles.helpKeyword}>Clear (🗑️)</Text> - Delete all notes and reset{'\n'}
                     • <Text style={styles.helpKeyword}>Undo (↩)</Text> - Revert the last edit{'\n'}
+                    • <Text style={styles.helpKeyword}>Octave Up/Down (⬆️⬇️)</Text> - Shift all notes up or down by one octave{'\n'}
                     • <Text style={styles.helpKeyword}>Play Notes (▷)</Text> - Preview the detected notes as synth (loops continuously){'\n'}
                     • <Text style={styles.helpKeyword}>Play Audio (▶)</Text> - Play back your original recording{'\n'}
                     • <Text style={styles.helpKeyword}>Download (💾)</Text> - Save your recording as audio{'\n'}
