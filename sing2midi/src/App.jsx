@@ -640,7 +640,36 @@ export default function App() {
           };
           reader.readAsDataURL(lastAudioBlob);
         } else {
-          console.warn('Cannot auto-save: no audio blob available');
+          // Manual mode: save without audio (user is creating notes manually)
+          try {
+            const sessionData = {
+              notes: mlNotes,
+              tidalCode: tidalPattern,
+              strudelCode: strudelPattern,
+              noteNames: noteNamesList,
+              audioBase64: null, // No audio in manual mode
+              voiceMode: voiceMode,
+              undoStack: undoStack,
+            };
+
+            // If no current session, create a new one for manual mode
+            if (!currentSessionId) {
+              Storage.saveSession(sessionData).then(newSessionId => {
+                setCurrentSessionId(newSessionId);
+                console.log('New manual session created:', newSessionId);
+              });
+            } else {
+              // Update existing session
+              Storage.updateSession(currentSessionId, sessionData);
+              console.log('Manual session updated:', currentSessionId);
+            }
+
+            // Always save to current session
+            Storage.saveCurrentSession(sessionData);
+            console.log('Manual mode session auto-saved');
+          } catch (error) {
+            console.error('Failed to auto-save manual session:', error);
+          }
         }
       }
     }, 1000); // 1 second debounce
@@ -810,7 +839,7 @@ export default function App() {
           <TouchableOpacity
             style={[styles.button, styles.smallButton, styles.playAudioButton, (!lastAudioBlob || isPlayingAudio) && styles.disabledButton]}
             onPress={handlePlayAudio}
-            disabled={!lastAudioBlob}
+            disabled={!lastAudioBlob || isPlayingAudio}
           >
             {isPlayingAudio ? <SquareIcon size={16} filled={true} /> : <PlayIcon size={16} filled={true} />}
           </TouchableOpacity>

@@ -4,6 +4,54 @@ import { Canvas, Rect, Text as SkiaText, Line, Group, matchFont, Skia } from '@s
 import { JsiSkTypeface } from '@shopify/react-native-skia/lib/module/skia/web/JsiSkTypeface';
 
 const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, onHoverNoteChange, fftData, voiceMode, onNotesChange, playheadPosition }) => {
+  // Audio context for click preview sounds
+  const clickAudioContextRef = useRef(null);
+  const activeClickOscillatorRef = useRef(null);
+
+  // Play a click preview sound
+  const playClickPreview = (midiNote) => {
+    // Stop any currently playing preview
+    if (activeClickOscillatorRef.current) {
+      try {
+        activeClickOscillatorRef.current.stop();
+      } catch (e) {
+        // Already stopped
+      }
+      activeClickOscillatorRef.current = null;
+    }
+
+    // Create audio context if needed
+    if (!clickAudioContextRef.current) {
+      clickAudioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+    }
+
+    const audioContext = clickAudioContextRef.current;
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+
+    // Set frequency from MIDI note
+    const frequency = 440 * Math.pow(2, (midiNote - 69) / 12);
+    oscillator.frequency.value = frequency;
+    oscillator.type = 'sine';
+
+    // Envelope for 0.5 second duration
+    const now = audioContext.currentTime;
+    const duration = 0.5;
+    gainNode.gain.setValueAtTime(0, now);
+    gainNode.gain.linearRampToValueAtTime(0.2, now + 0.01); // Quick attack
+    gainNode.gain.linearRampToValueAtTime(0.15, now + 0.03); // Slight decay
+    gainNode.gain.setValueAtTime(0.15, now + duration - 0.05); // Sustain
+    gainNode.gain.linearRampToValueAtTime(0, now + duration); // Release
+
+    oscillator.start(now);
+    oscillator.stop(now + duration);
+
+    activeClickOscillatorRef.current = oscillator;
+  };
+
   // Get canvas dimensions with web compatibility
   const [dimensions, setDimensions] = useState(() => {
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
@@ -495,6 +543,29 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, on
   // Touch/Mouse handlers
   const handleTouchStart = (x, y) => {
     if (isRecording) return;
+
+    // Play click preview sound for the note at cursor position
+    const params = screenToNoteParams(x, y);
+    if (params) {
+      playClickPreview(params.midiNote);
+    }
+
+    // Check if there are no ML notes - if so, create initial C4 note on any click
+    const mlNotes = notes.filter(n => n.isML);
+    if (mlNotes.length === 0) {
+      // Create initial C4 note (MIDI 60) starting at 1s, duration 2s
+      const initialNote = {
+        midiNote: 60, // C4 (middle C)
+        startTime: 1.0,
+        duration: 2.0,
+        note: 'C4',
+        frequency: 440 * Math.pow(2, (60 - 69) / 12), // ~261.63 Hz
+        isML: true,
+      };
+      const updatedNotes = [...notes, initialNote];
+      onNotesChange?.(updatedNotes);
+      return;
+    }
 
     // Check if clicking on an edge first (priority over regular note click)
     const edgeInfo = findNoteEdge(x, y);
