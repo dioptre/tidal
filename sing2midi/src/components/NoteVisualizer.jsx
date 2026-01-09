@@ -1,15 +1,7 @@
 import React, { useMemo, useEffect, useState, useRef } from 'react';
-import { View, StyleSheet, Dimensions, Platform } from 'react-native';
+import { View, StyleSheet, Dimensions, Platform, PanResponder } from 'react-native';
 import { Canvas, Rect, Text as SkiaText, Line, Group, matchFont, Skia } from '@shopify/react-native-skia';
 import { JsiSkTypeface } from '@shopify/react-native-skia/lib/module/skia/web/JsiSkTypeface';
-
-// Conditionally import gesture handler only on native platforms
-let Gesture, GestureDetector;
-if (Platform.OS !== 'web') {
-  const gestureHandler = require('react-native-gesture-handler');
-  Gesture = gestureHandler.Gesture;
-  GestureDetector = gestureHandler.GestureDetector;
-}
 
 const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, onHoverNoteChange, fftData, voiceMode, onNotesChange }) => {
   // Get canvas dimensions with web compatibility
@@ -1136,45 +1128,44 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, on
     );
   };
 
-  // Native touch handlers using react-native-gesture-handler (no worklet issues)
-  const nativeTapGesture = Platform.OS !== 'web' ? Gesture.Tap()
-    .numberOfTaps(1)
-    .onEnd((e) => {
-      if (isRecording) return;
-      const x = e.x;
-      const y = e.y;
+  // Native touch handler using PanResponder (no worklet issues, runs on JS thread)
+  const panResponder = useRef(
+    Platform.OS !== 'web' ? PanResponder.create({
+      onStartShouldSetPanResponder: () => !isRecording,
+      onMoveShouldSetPanResponder: () => !isRecording,
 
-      const now = Date.now();
-      const timeSinceLastClick = now - lastClickTimeRef.current;
-      const distance = Math.hypot(x - lastClickPosRef.current.x, y - lastClickPosRef.current.y);
+      onPanResponderGrant: (evt) => {
+        const { locationX, locationY } = evt.nativeEvent;
 
-      // Detect double-tap (within 300ms and 20px)
-      if (timeSinceLastClick < 300 && distance < 20) {
-        handleDoubleClick(x, y);
-        lastClickTimeRef.current = 0;
-      } else {
-        lastClickTimeRef.current = now;
-        lastClickPosRef.current = { x, y };
-      }
-    }) : null;
+        // Check for double-tap
+        const now = Date.now();
+        const timeSinceLastTouch = now - touchStateRef.current.lastTouchTime;
+        const distance = Math.hypot(
+          locationX - touchStateRef.current.lastTouchPos.x,
+          locationY - touchStateRef.current.lastTouchPos.y
+        );
 
-  const nativePanGesture = Platform.OS !== 'web' ? Gesture.Pan()
-    .onBegin((e) => {
-      if (isRecording) return;
-      handleTouchStart(e.x, e.y);
-    })
-    .onUpdate((e) => {
-      if (isRecording) return;
-      handleTouchMove(e.x, e.y);
-    })
-    .onEnd((e) => {
-      if (isRecording) return;
-      handleTouchEnd(e.x, e.y);
-    }) : null;
+        if (timeSinceLastTouch < 300 && distance < 20) {
+          handleDoubleClick(locationX, locationY);
+          touchStateRef.current.lastTouchTime = 0;
+        } else {
+          touchStateRef.current.lastTouchTime = now;
+          touchStateRef.current.lastTouchPos = { x: locationX, y: locationY };
+          handleTouchStart(locationX, locationY);
+        }
+      },
 
-  const nativeComposedGesture = Platform.OS !== 'web'
-    ? Gesture.Race(nativeTapGesture, nativePanGesture)
-    : null;
+      onPanResponderMove: (evt) => {
+        const { locationX, locationY } = evt.nativeEvent;
+        handleTouchMove(locationX, locationY);
+      },
+
+      onPanResponderRelease: (evt) => {
+        const { locationX, locationY } = evt.nativeEvent;
+        handleTouchEnd(locationX, locationY);
+      },
+    }) : null
+  ).current;
 
   // Add event listeners for web (mouse and wheel)
   useEffect(() => {
@@ -1298,14 +1289,9 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, on
     <View
       style={styles.container}
       ref={canvasRef}
+      {...(Platform.OS !== 'web' && panResponder ? panResponder.panHandlers : {})}
     >
-      {Platform.OS !== 'web' ? (
-        <GestureDetector gesture={nativeComposedGesture}>
-          {canvasContent}
-        </GestureDetector>
-      ) : (
-        canvasContent
-      )}
+      {canvasContent}
     </View>
   );
 };

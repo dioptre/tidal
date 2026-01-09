@@ -1,5 +1,6 @@
 const NodePolyfillPlugin = require('node-polyfill-webpack-plugin');
 const path = require('path');
+const webpack = require('webpack');
 
 // Support PUBLIC_URL environment variable for deployment base path
 // Examples:
@@ -35,7 +36,13 @@ module.exports = {
   },
   webpack: {
     plugins: {
-      add: [new NodePolyfillPlugin()]
+      add: [
+        new NodePolyfillPlugin(),
+        new webpack.NormalModuleReplacementPlugin(
+          /^react-native\/Libraries\/Image\/AssetRegistry$/,
+          path.resolve(__dirname, 'node_modules/react-native-web/dist/cjs/modules/AssetRegistry/index.js')
+        )
+      ]
     },
     configure: (webpackConfig) => {
       // Remove the ModuleScopePlugin which restricts imports to src/
@@ -67,7 +74,6 @@ module.exports = {
         ...webpackConfig.resolve.alias,
         'react-native$': 'react-native-web',
         'react-native-reanimated': 'react-native-reanimated/lib/module/web',
-        'react-native/Libraries/Image/AssetRegistry': 'react-native-web/dist/modules/AssetRegistry',
         '@react-native-async-storage/async-storage': '@react-native-async-storage/async-storage/lib/commonjs',
         'expo-modules-core': false,
         'react-native-fs': false,
