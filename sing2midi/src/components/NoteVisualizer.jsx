@@ -101,7 +101,12 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, on
 
   // Render animated Möbius strip when idle
   const renderMobiusStrip = () => {
-    if (notes.length > 0 || isRecording) return null;
+    if (notes.length > 0 || isRecording) {
+      console.log('[Möbius] Skipping - notes:', notes.length, 'recording:', isRecording);
+      return null;
+    }
+
+    console.log('[Möbius] Rendering at time:', animationTime, 'dims:', width, height);
 
     const centerX = width / 2;
     const centerY = height / 2;
@@ -314,10 +319,17 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, on
       return null; // Font not loaded yet
     } else {
       // On native, use matchFont
-      return matchFont({
-        fontFamily: 'sans-serif',
-        fontSize: 12,
-      });
+      try {
+        const nativeFont = matchFont({
+          fontFamily: 'sans-serif',
+          fontSize: 12,
+        });
+        console.log('[Font] Created native font with matchFont');
+        return nativeFont;
+      } catch (e) {
+        console.error('[Font] Failed to create native font:', e);
+        return null;
+      }
     }
   }, [fontTypeface]);
 
@@ -335,11 +347,18 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, on
       }
       return null; // Font not loaded yet
     } else {
-      return matchFont({
-        fontFamily: 'sans-serif',
-        fontSize: 14,
-        fontWeight: 'bold',
-      });
+      try {
+        const nativeTitleFont = matchFont({
+          fontFamily: 'sans-serif',
+          fontSize: 14,
+          fontWeight: 'bold',
+        });
+        console.log('[Font] Created native title font with matchFont');
+        return nativeTitleFont;
+      } catch (e) {
+        console.error('[Font] Failed to create native title font:', e);
+        return null;
+      }
     }
   }, [titleFontTypeface]);
 
@@ -786,7 +805,12 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, on
 
   // Render FFT visualization bars
   const renderFFT = () => {
-    if (!isRecording || voiceMode || !fftData) return null;
+    if (!isRecording || voiceMode || !fftData) {
+      console.log('[FFT] Skipping - recording:', isRecording, 'voiceMode:', voiceMode, 'fftData:', !!fftData);
+      return null;
+    }
+
+    console.log('[FFT] Rendering', fftData.length, 'samples');
 
     const bufferLength = fftData.length;
     const numBars = 64;
@@ -862,7 +886,12 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, on
 
   // Render notes as rectangles
   const renderNotes = () => {
-    if (notes.length === 0) return null;
+    if (notes.length === 0) {
+      console.log('[Notes] Skipping - no notes');
+      return null;
+    }
+
+    console.log('[Notes] Rendering', notes.length, 'notes');
 
     const noteRects = [];
 
@@ -1251,6 +1280,17 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, on
     return <View style={styles.container} />;
   }
 
+  // Debug logging for iOS
+  console.log('[NoteVisualizer] Render:', {
+    platform: Platform.OS,
+    width,
+    height,
+    notesCount: notes.length,
+    isRecording,
+    font: font ? 'loaded' : 'null',
+    titleFont: titleFont ? 'loaded' : 'null',
+  });
+
   const canvasContent = (
     <Canvas
       style={{ width, height }}
@@ -1258,6 +1298,8 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, on
     >
         {/* Background */}
         <Rect x={0} y={0} width={width} height={height} color="#0a0a0a" />
+        {/* Test rect to verify canvas is drawing */}
+        <Rect x={20} y={20} width={50} height={50} color="red" />
 
         {/* Möbius strip animation (when idle) */}
         {renderMobiusStrip()}
