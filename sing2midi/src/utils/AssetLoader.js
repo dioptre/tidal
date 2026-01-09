@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 import RNFS from 'react-native-fs';
+import Logger from './Logger';
 
 /**
  * Asset loader for iOS to use bundled files instead of CDN
@@ -19,18 +20,18 @@ class AssetLoader {
       // Check if file exists
       const exists = await RNFS.exists(bundlePath);
       if (!exists) {
-        console.warn(`[AssetLoader] Bundled asset not found: ${bundlePath}`);
-        console.warn('[AssetLoader] Falling back to CDN');
+        Logger.warn(`[AssetLoader] Bundled asset not found: ${bundlePath}`);
+        Logger.warn('[AssetLoader] Falling back to CDN');
         return null;
       }
 
-      console.log(`[AssetLoader] Using bundled asset: ${bundlePath}`);
+      Logger.log(`[AssetLoader] Using bundled asset: ${bundlePath}`);
       // Return file:// URL that TensorFlow.js can load
       return `file://${bundlePath}`;
     } else if (Platform.OS === 'android') {
       // Android: Similar approach, using assets folder
       // TODO: Implement Android asset loading
-      console.warn('[AssetLoader] Android bundled assets not yet implemented');
+      Logger.warn('[AssetLoader] Android bundled assets not yet implemented');
       return null;
     } else {
       // Web: Use CDN (browser caches automatically)
@@ -72,13 +73,13 @@ class AssetLoader {
     // Check if already copied
     const exists = await RNFS.exists(destPath);
     if (exists) {
-      console.log(`[AssetLoader] Asset already copied: ${destPath}`);
+      Logger.log(`[AssetLoader] Asset already copied: ${destPath}`);
       return destPath;
     }
 
     // Copy file
     await RNFS.copyFile(sourcePath, destPath);
-    console.log(`[AssetLoader] Copied asset: ${sourcePath} -> ${destPath}`);
+    Logger.log(`[AssetLoader] Copied asset: ${sourcePath} -> ${destPath}`);
     return destPath;
   }
 }

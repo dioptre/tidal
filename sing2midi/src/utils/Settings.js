@@ -5,6 +5,7 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import DeviceCapabilities from './DeviceCapabilities';
+import Logger from './Logger';
 
 const SETTINGS_KEY = 'sing2midi_settings';
 
@@ -24,15 +25,15 @@ class Settings {
     try {
       const stored = await AsyncStorage.getItem(SETTINGS_KEY);
       if (!stored) {
-        console.log('No stored settings found, using defaults');
+        Logger.log('No stored settings found, using defaults');
         return { ...this.DEFAULTS };
       }
 
       const settings = JSON.parse(stored);
-      console.log('Loaded settings:', settings);
+      Logger.log('Loaded settings:', settings);
       return settings;
     } catch (error) {
-      console.error('Failed to load settings:', error);
+      Logger.error('Failed to load settings:', error);
       return { ...this.DEFAULTS };
     }
   }
@@ -49,9 +50,9 @@ class Settings {
       };
 
       await AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify(settingsWithTimestamp));
-      console.log('Settings saved:', settingsWithTimestamp);
+      Logger.log('Settings saved:', settingsWithTimestamp);
     } catch (error) {
-      console.error('Failed to save settings:', error);
+      Logger.error('Failed to save settings:', error);
       throw error;
     }
   }
@@ -62,14 +63,14 @@ class Settings {
    * @returns {Promise<Object>} Initialized settings
    */
   static async initializeSettings() {
-    console.log('Initializing settings...');
+    Logger.log('Initializing settings...');
 
     // Load existing settings
     let settings = await this.loadSettings();
 
     // If no device capabilities detected yet, detect now
     if (!settings.deviceCapabilities) {
-      console.log('First run - detecting device capabilities...');
+      Logger.log('First run - detecting device capabilities...');
       const capabilities = await DeviceCapabilities.detectCapabilities();
 
       settings = {
@@ -81,9 +82,9 @@ class Settings {
       // Save for next time
       await this.saveSettings(settings);
 
-      console.log(`Auto-selected ${capabilities.recommendedMethod}: ${capabilities.reason}`);
+      Logger.log(`Auto-selected ${capabilities.recommendedMethod}: ${capabilities.reason}`);
     } else {
-      console.log(`Using existing settings: ${settings.pitchDetectionMethod}`);
+      Logger.log(`Using existing settings: ${settings.pitchDetectionMethod}`);
     }
 
     return settings;
@@ -100,13 +101,13 @@ class Settings {
     if (settings.deviceCapabilities) {
       const validation = DeviceCapabilities.validateMethod(method, settings.deviceCapabilities);
       if (!validation.valid) {
-        console.warn(`Method ${method} not optimal for this device:`, validation.warning);
+        Logger.warn(`Method ${method} not optimal for this device:`, validation.warning);
       }
     }
 
     settings.pitchDetectionMethod = method;
     await this.saveSettings(settings);
-    console.log(`Pitch detection method changed to: ${method}`);
+    Logger.log(`Pitch detection method changed to: ${method}`);
   }
 
   /**
@@ -123,7 +124,7 @@ class Settings {
    * Useful if user changed browsers or device settings
    */
   static async redetectCapabilities() {
-    console.log('Re-detecting device capabilities...');
+    Logger.log('Re-detecting device capabilities...');
     const capabilities = await DeviceCapabilities.detectCapabilities();
 
     const settings = await this.loadSettings();
@@ -131,7 +132,7 @@ class Settings {
 
     // Suggest new method but don't force it
     if (capabilities.recommendedMethod !== settings.pitchDetectionMethod) {
-      console.log(`Capabilities changed. Recommended: ${capabilities.recommendedMethod}, Current: ${settings.pitchDetectionMethod}`);
+      Logger.log(`Capabilities changed. Recommended: ${capabilities.recommendedMethod}, Current: ${settings.pitchDetectionMethod}`);
     }
 
     await this.saveSettings(settings);
@@ -142,7 +143,7 @@ class Settings {
    * Reset settings to defaults (will re-detect on next init)
    */
   static async resetSettings() {
-    console.log('Resetting settings to defaults...');
+    Logger.log('Resetting settings to defaults...');
     await AsyncStorage.removeItem(SETTINGS_KEY);
   }
 

@@ -1,9 +1,10 @@
 import React from 'react';
 import { Canvas, Fill } from '@shopify/react-native-skia';
+import Logger from './utils/Logger';
 
 function TestSkia() {
-  console.log('[TestSkia] Rendering');
-  console.log('[TestSkia] CanvasKit:', typeof global.CanvasKit);
+  Logger.log('[TestSkia] Rendering');
+  Logger.log('[TestSkia] CanvasKit:', typeof global.CanvasKit);
 
   // Try the EXACT pattern from Shopify example
   const canvases = [];

@@ -25,20 +25,12 @@ const SettingsPanel = ({ visible, onClose, onLoadSession, onMethodChange, initia
     }
   }, [visible, initialTab]);
 
-  // Subscribe to logger updates
+  // Load logs when switching to developer tab
   useEffect(() => {
-    const handleLogUpdate = (newLogs) => {
-      setLogs(newLogs);
-    };
-
-    Logger.addListener(handleLogUpdate);
-    // Initial load
-    setLogs(Logger.getLogs());
-
-    return () => {
-      Logger.removeListener(handleLogUpdate);
-    };
-  }, []);
+    if (activeTab === 'developer') {
+      setLogs(Logger.getLogs());
+    }
+  }, [activeTab]);
 
   const loadSessions = async () => {
     const allSessions = await Storage.getAllSessions();
@@ -90,13 +82,17 @@ const SettingsPanel = ({ visible, onClose, onLoadSession, onMethodChange, initia
 
   const handleEnableDevMode = () => {
     setDevModeEnabled(true);
-    Logger.enableCapture();
-    console.log('[DevMode] Developer mode enabled');
+    Logger.log('[DevMode] Developer mode enabled');
   };
 
   const handleClearLogs = () => {
     Logger.clearLogs();
-    console.log('[DevMode] Logs cleared');
+    setLogs([]);
+    Logger.log('[DevMode] Logs cleared');
+  };
+
+  const handleRefreshLogs = () => {
+    setLogs(Logger.getLogs());
   };
 
   const formatDate = (timestamp) => {
@@ -435,14 +431,22 @@ const SettingsPanel = ({ visible, onClose, onLoadSession, onMethodChange, initia
 
                 <View style={styles.developerHeader}>
                   <Text style={styles.developerInfo}>
-                    {logs.length} logs captured (max {Logger.getFilters ? '1000' : '1000'})
+                    {logs.length} logs captured (max 1000)
                   </Text>
-                  <TouchableOpacity
-                    style={styles.clearLogsButton}
-                    onPress={handleClearLogs}
-                  >
-                    <Text style={styles.clearLogsButtonText}>Clear Logs</Text>
-                  </TouchableOpacity>
+                  <View style={styles.developerButtons}>
+                    <TouchableOpacity
+                      style={styles.refreshLogsButton}
+                      onPress={handleRefreshLogs}
+                    >
+                      <Text style={styles.refreshLogsButtonText}>Refresh</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.clearLogsButton}
+                      onPress={handleClearLogs}
+                    >
+                      <Text style={styles.clearLogsButtonText}>Clear</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
 
                 <ScrollView
@@ -885,6 +889,22 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.TEXT_SECONDARY,
     fontFamily: Colors.FONT_TECHNICAL,
+  },
+  developerButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  refreshLogsButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: Colors.WAVEFORM_BLUE,
+    borderRadius: 6,
+  },
+  refreshLogsButtonText: {
+    fontSize: 12,
+    color: Colors.TEXT_PRIMARY,
+    fontWeight: '600',
+    fontFamily: Colors.FONT_UI,
   },
   clearLogsButton: {
     paddingHorizontal: 12,

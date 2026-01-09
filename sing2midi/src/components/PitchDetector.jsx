@@ -2,6 +2,7 @@ import { Component } from 'react';
 import { Platform } from 'react-native';
 import { BasicPitch, addPitchBendsToNoteEvents, noteFramesToTime, outputToNotesPoly } from '@spotify/basic-pitch';
 import AssetLoader from '../utils/AssetLoader';
+import Logger from '../utils/Logger';
 
 // Import Web Audio API polyfill for React Native
 let AudioContext, OfflineAudioContext, AudioRecorder, RecorderAdapterNode, AudioManager;
@@ -45,18 +46,18 @@ class PitchDetector extends Component {
   // Lazy-load BasicPitch model to ensure fetch polyfill is ready
   initBasicPitchModel = async () => {
     if (this.basicPitch) {
-      console.log('BasicPitch model already loaded');
+      Logger.log('BasicPitch model already loaded');
       return this.basicPitch;
     }
 
     if (this.basicPitchModelPromise) {
-      console.log('BasicPitch model already loading, waiting...');
+      Logger.log('BasicPitch model already loading, waiting...');
       return this.basicPitchModelPromise;
     }
 
-    console.log('Initializing BasicPitch model...');
-    console.log('fetch available:', typeof fetch !== 'undefined');
-    console.log('Platform:', Platform.OS);
+    Logger.log('Initializing BasicPitch model...');
+    Logger.log('fetch available:', typeof fetch !== 'undefined');
+    Logger.log('Platform:', Platform.OS);
 
     this.basicPitchModelPromise = (async () => {
       try {
@@ -64,7 +65,7 @@ class PitchDetector extends Component {
 
         if (Platform.OS === 'web') {
           // Web: use standard @tensorflow/tfjs (NOT react-native version)
-          console.log('Web detected, initializing TensorFlow.js for web...');
+          Logger.log('Web detected, initializing TensorFlow.js for web...');
 
           const tf = require('@tensorflow/tfjs');
 
@@ -72,21 +73,21 @@ class PitchDetector extends Component {
           // TensorFlow.js will automatically fall back to CPU if WebGL is not available
           try {
             await tf.setBackend('webgl');
-            console.log('Successfully set backend to WebGL (GPU)');
+            Logger.log('Successfully set backend to WebGL (GPU)');
           } catch (e) {
-            console.log('WebGL not available, falling back to CPU:', e.message);
+            Logger.log('WebGL not available, falling back to CPU:', e.message);
           }
 
           // Wait for TensorFlow backend to initialize
           await tf.ready();
-          console.log('TensorFlow.js backend ready:', tf.getBackend());
+          Logger.log('TensorFlow.js backend ready:', tf.getBackend());
 
           // Use CDN model URL for web - TensorFlow.js will handle the download and cache it
           modelUrl = 'https://cdn.jsdelivr.net/npm/@spotify/basic-pitch@1.0.1/model/model.json';
-          console.log('Using CDN model for web (will be cached after first download)');
+          Logger.log('Using CDN model for web (will be cached after first download)');
         } else {
           // React Native: Wait for TensorFlow.js backend to be ready
-          console.log('React Native detected, ensuring TensorFlow.js backend is ready...');
+          Logger.log('React Native detected, ensuring TensorFlow.js backend is ready...');
 
           const tf = require('@tensorflow/tfjs');
           require('@tensorflow/tfjs-react-native');
@@ -94,46 +95,46 @@ class PitchDetector extends Component {
           // Wait for TensorFlow backend to initialize
           await tf.ready();
           const currentBackend = tf.getBackend();
-          console.log('TensorFlow.js React Native backend ready:', currentBackend);
+          Logger.log('TensorFlow.js React Native backend ready:', currentBackend);
 
           // Note: tfjs-react-native typically uses 'cpu' backend
           // GPU support on mobile is experimental and often slower than CPU
           if (currentBackend !== 'cpu' && currentBackend !== 'webgl') {
-            console.log(`Unusual backend detected: ${currentBackend}`);
+            Logger.log(`Unusual backend detected: ${currentBackend}`);
           }
 
           // Try to use bundled model first (much faster boot time!)
-          console.log('Checking for bundled Basic Pitch model...');
+          Logger.log('Checking for bundled Basic Pitch model...');
           const bundledModelPath = await AssetLoader.getBasicPitchModelPath();
 
           if (bundledModelPath) {
             modelUrl = bundledModelPath;
-            console.log('✅ Using BUNDLED model (fast boot!):', modelUrl);
+            Logger.log('✅ Using BUNDLED model (fast boot!):', modelUrl);
           } else {
             // Fallback to CDN model URL - TensorFlow.js will handle the download and cache it
             modelUrl = 'https://cdn.jsdelivr.net/npm/@spotify/basic-pitch@1.0.1/model/model.json';
-            console.log('Using CDN model for React Native (will be cached after first download)');
+            Logger.log('Using CDN model for React Native (will be cached after first download)');
           }
         }
 
-        console.log('Loading BasicPitch model from:', modelUrl);
+        Logger.log('Loading BasicPitch model from:', modelUrl);
         this.basicPitch = new BasicPitch(modelUrl);
-        console.log('BasicPitch model initialized successfully');
+        Logger.log('BasicPitch model initialized successfully');
 
         // Debug: Check what's actually in the model
         if (Platform.OS === 'web') {
-          console.log('[DEBUG] Checking loaded model...');
+          Logger.log('[DEBUG] Checking loaded model...');
           const model = await this.basicPitch.model;
-          console.log('[DEBUG] Model type:', model.constructor.name);
-          console.log('[DEBUG] Model has execute:', typeof model.execute);
-          console.log('[DEBUG] Model has predict:', typeof model.predict);
-          console.log('[DEBUG] Model methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(model)).filter(m => typeof model[m] === 'function'));
+          Logger.log('[DEBUG] Model type:', model.constructor.name);
+          Logger.log('[DEBUG] Model has execute:', typeof model.execute);
+          Logger.log('[DEBUG] Model has predict:', typeof model.predict);
+          Logger.log('[DEBUG] Model methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(model)).filter(m => typeof model[m] === 'function'));
         }
 
         return this.basicPitch;
       } catch (error) {
-        console.error('Failed to initialize BasicPitch model:', error);
-        console.error('Error details:', {
+        Logger.error('Failed to initialize BasicPitch model:', error);
+        Logger.error('Error details:', {
           message: error.message,
           stack: error.stack,
           fetchAvailable: typeof fetch !== 'undefined',
@@ -149,42 +150,42 @@ class PitchDetector extends Component {
 
   start = async () => {
     try {
-      console.log('========================================');
-      console.log('🎤 PitchDetector.start() called');
-      console.log('Platform:', Platform.OS);
-      console.log('voiceMode:', this.props.voiceMode);
-      console.log('pitchDetectionMethod:', this.props.pitchDetectionMethod);
-      console.log('========================================');
+      Logger.log('========================================');
+      Logger.log('🎤 PitchDetector.start() called');
+      Logger.log('Platform:', Platform.OS);
+      Logger.log('voiceMode:', this.props.voiceMode);
+      Logger.log('pitchDetectionMethod:', this.props.pitchDetectionMethod);
+      Logger.log('========================================');
 
       // Initialize BasicPitch model first
-      console.log('Initializing BasicPitch model...');
+      Logger.log('Initializing BasicPitch model...');
       try {
         await this.initBasicPitchModel();
-        console.log('BasicPitch model ready');
+        Logger.log('BasicPitch model ready');
       } catch (error) {
-        console.error('Failed to initialize BasicPitch model:', error);
+        Logger.error('Failed to initialize BasicPitch model:', error);
         throw new Error(`BasicPitch initialization failed: ${error.message}`);
       }
 
-      console.log('Creating AudioContext...');
+      Logger.log('Creating AudioContext...');
       // For React Native, create AudioContext with 44100 Hz for iOS compatibility
       if (Platform.OS !== 'web') {
         this.audioContext = new AudioContext({ sampleRate: 44100 });
 
         // Create AudioRecorder for React Native (do this once during setup)
         if (!this.audioRecorder) {
-          console.log('Creating AudioRecorder instance...');
+          Logger.log('Creating AudioRecorder instance...');
           this.audioRecorder = new AudioRecorder({
             sampleRate: 44100,
             numberOfChannels: 1,
             bufferLengthInSamples: 44100, // 1 second buffers
           });
-          console.log('AudioRecorder instance created');
+          Logger.log('AudioRecorder instance created');
         }
       } else {
         this.audioContext = new AudioContext();
       }
-      console.log('AudioContext created, sampleRate:', this.audioContext.sampleRate);
+      Logger.log('AudioContext created, sampleRate:', this.audioContext.sampleRate);
 
       // Platform-specific microphone setup
       let stream;
@@ -223,7 +224,7 @@ class PitchDetector extends Component {
           frameCount++;
           if (frameCount % 10 === 0) {
             const rms = Math.sqrt(inputData.reduce((sum, val) => sum + val * val, 0) / inputData.length);
-            console.log('Audio RMS:', rms.toFixed(4));
+            Logger.log('Audio RMS:', rms.toFixed(4));
           }
 
           // Run pitch detection based on mode and method
@@ -231,7 +232,7 @@ class PitchDetector extends Component {
 
           // Debug logging (only log every 30 frames to avoid spam)
           if (frameCount % 30 === 0) {
-            console.log(`[Frame ${frameCount}] voiceMode=${this.props.voiceMode}, method=${method}, liveDetections=${this.liveDetections.length}`);
+            Logger.log(`[Frame ${frameCount}] voiceMode=${this.props.voiceMode}, method=${method}, liveDetections=${this.liveDetections.length}`);
           }
 
           if (this.props.voiceMode) {
@@ -245,7 +246,7 @@ class PitchDetector extends Component {
                 timestamp
               });
 
-              console.log('PitchDetector: Live detection -', detection.note, detection.frequency.toFixed(1), 'Hz');
+              Logger.log('PitchDetector: Live detection -', detection.note, detection.frequency.toFixed(1), 'Hz');
 
               // Send live detection to visualizer
               this.props.onLiveDetection?.({
@@ -276,7 +277,7 @@ class PitchDetector extends Component {
                   timestamp
                 });
 
-                console.log('PitchDetector (raw mode): Live detection -', detection.note, detection.frequency.toFixed(1), 'Hz');
+                Logger.log('PitchDetector (raw mode): Live detection -', detection.note, detection.frequency.toFixed(1), 'Hz');
 
                 // Send live detection to visualizer
                 this.props.onLiveDetection?.({
@@ -313,15 +314,15 @@ class PitchDetector extends Component {
       } else {
         // React Native: Set up audio graph with AudioRecorder
         // Based on: https://gist.github.com/mdydek/298bdb700e85127221a78bc56bf98c10
-        console.log('Setting up AudioRecorder with audio graph...');
+        Logger.log('Setting up AudioRecorder with audio graph...');
 
         // IMPORTANT: Deactivate first, then configure session
         // From GitHub issue: needed to put setAudioSessionActivity(false) after setAudioSessionOptions
         try {
           await AudioManager.setAudioSessionActivity(false);
-          console.log('Audio session deactivated');
+          Logger.log('Audio session deactivated');
         } catch (e) {
-          console.log('Ignoring audio session deactivation error:', e.message);
+          Logger.log('Ignoring audio session deactivation error:', e.message);
         }
 
         // Configure audio session for recording with mixing enabled
@@ -335,23 +336,23 @@ class PitchDetector extends Component {
           ],
         });
 
-        console.log('Audio session configured with mixing enabled');
+        Logger.log('Audio session configured with mixing enabled');
 
         // Activate audio session
         const activated = await AudioManager.setAudioSessionActivity(true);
-        console.log('Audio session activation result:', activated);
+        Logger.log('Audio session activation result:', activated);
 
         // Ensure AudioContext is running
         if (this.audioContext.state === 'suspended') {
           await this.audioContext.resume();
         }
 
-        console.log('AudioContext state:', this.audioContext.state);
+        Logger.log('AudioContext state:', this.audioContext.state);
 
         // Create RecorderAdapterNode and connect AudioRecorder to it
         this.recorderAdapter = this.audioContext.createRecorderAdapter();
         this.audioRecorder.connect(this.recorderAdapter);
-        console.log('AudioRecorder connected to RecorderAdapterNode');
+        Logger.log('AudioRecorder connected to RecorderAdapterNode');
 
         // Create gain node with zero output to prevent feedback
         // This is the key to avoiding Core Audio error 10875
@@ -361,13 +362,13 @@ class PitchDetector extends Component {
         // Connect: RecorderAdapter → GainNode → Destination
         this.recorderAdapter.connect(gainNode);
         gainNode.connect(this.audioContext.destination);
-        console.log('Audio graph connected: AudioRecorder → RecorderAdapter → Gain(0) → Destination');
+        Logger.log('Audio graph connected: AudioRecorder → RecorderAdapter → Gain(0) → Destination');
 
         // Set up callback to capture audio data and perform live pitch detection
         let frameCount = 0;
         this.audioRecorder.onAudioReady((event) => {
           const { buffer, numFrames } = event;
-          console.log('AudioRecorder buffer ready:', buffer.duration, 'seconds,', numFrames, 'frames');
+          Logger.log('AudioRecorder buffer ready:', buffer.duration, 'seconds,', numFrames, 'frames');
           if (buffer && buffer.length > 0) {
             this.recordedBuffers.push(buffer);
 
@@ -386,7 +387,7 @@ class PitchDetector extends Component {
                     timestamp
                   });
 
-                  console.log('PitchDetector (iOS): Live detection -', detection.note, detection.frequency.toFixed(1), 'Hz');
+                  Logger.log('PitchDetector (iOS): Live detection -', detection.note, detection.frequency.toFixed(1), 'Hz');
 
                   // Send live detection to visualizer
                   this.props.onLiveDetection?.({
@@ -408,7 +409,7 @@ class PitchDetector extends Component {
                       timestamp
                     });
 
-                    console.log('PitchDetector (iOS, raw mode): Live detection -', detection.note, detection.frequency.toFixed(1), 'Hz');
+                    Logger.log('PitchDetector (iOS, raw mode): Live detection -', detection.note, detection.frequency.toFixed(1), 'Hz');
 
                     // Send live detection to visualizer
                     this.props.onLiveDetection?.({
@@ -434,7 +435,7 @@ class PitchDetector extends Component {
 
         // Start recording
         this.audioRecorder.start();
-        console.log('AudioRecorder started');
+        Logger.log('AudioRecorder started');
       }
 
       this.audioChunks = [];
@@ -443,10 +444,10 @@ class PitchDetector extends Component {
       this.startTimeMs = Date.now();
       this.isRecording = true;
 
-      console.log('✓ Recording started with live pitch detection + Basic Pitch ML');
+      Logger.log('✓ Recording started with live pitch detection + Basic Pitch ML');
       return true;
     } catch (error) {
-      console.error('Microphone access error:', error);
+      Logger.error('Microphone access error:', error);
       throw error;
     }
   };
@@ -831,22 +832,22 @@ class PitchDetector extends Component {
   // Cepstral + KNN with posterior probabilities
   // Processes whole audio buffer with past/future context
   detectPitchCepstralKNN(audioBuffer, sampleRate) {
-    console.log('=== Cepstral+KNN with posterior probabilities ===');
-    console.log(`Processing ${audioBuffer.length} samples at ${sampleRate}Hz`);
+    Logger.log('=== Cepstral+KNN with posterior probabilities ===');
+    Logger.log(`Processing ${audioBuffer.length} samples at ${sampleRate}Hz`);
 
     // STEP 1: Aggressive downsampling to 11025Hz for maximum speed (~8x faster)
     // Nyquist = 5.5kHz, still covers full vocal range (typical max ~4kHz)
     const targetSampleRate = 11025;
     const downsampleFactor = Math.round(sampleRate / targetSampleRate);
 
-    console.log(`Downsampling by ${downsampleFactor}x: ${sampleRate}Hz → ${targetSampleRate}Hz`);
+    Logger.log(`Downsampling by ${downsampleFactor}x: ${sampleRate}Hz → ${targetSampleRate}Hz`);
 
     const downsampled = new Float32Array(Math.floor(audioBuffer.length / downsampleFactor));
     for (let i = 0; i < downsampled.length; i++) {
       downsampled[i] = audioBuffer[i * downsampleFactor];
     }
 
-    console.log(`Downsampled: ${audioBuffer.length} → ${downsampled.length} samples (${(downsampled.length/targetSampleRate).toFixed(2)}s)`);
+    Logger.log(`Downsampled: ${audioBuffer.length} → ${downsampled.length} samples (${(downsampled.length/targetSampleRate).toFixed(2)}s)`);
 
     // Optimized parameters for speed/accuracy trade-off
     const hopSize = 1024;   // ~93ms at 11.025kHz
@@ -871,7 +872,7 @@ class PitchDetector extends Component {
       }
     }
 
-    console.log(`Cepstral: ${rawDetections.length} raw detections`);
+    Logger.log(`Cepstral: ${rawDetections.length} raw detections`);
 
     if (rawDetections.length === 0) return [];
 
@@ -901,7 +902,7 @@ class PitchDetector extends Component {
       });
     }
 
-    console.log(`After posterior refinement: ${refinedDetections.length} detections`);
+    Logger.log(`After posterior refinement: ${refinedDetections.length} detections`);
     return refinedDetections;
   }
 
@@ -982,7 +983,7 @@ class PitchDetector extends Component {
         return this.detectPitchAutocorrelation(buffer, sampleRate);
 
       default:
-        console.warn(`Unknown pitch detection method: ${method}, falling back to YIN`);
+        Logger.warn(`Unknown pitch detection method: ${method}, falling back to YIN`);
         return this.detectPitchAutocorrelation(buffer, sampleRate);
     }
   }
@@ -1098,7 +1099,7 @@ class PitchDetector extends Component {
       return audioBuffer;
     }
 
-    console.log(`Converting audio: ${audioBuffer.numberOfChannels} channels @ ${audioBuffer.sampleRate}Hz → 1 channel @ ${targetSampleRate}Hz`);
+    Logger.log(`Converting audio: ${audioBuffer.numberOfChannels} channels @ ${audioBuffer.sampleRate}Hz → 1 channel @ ${targetSampleRate}Hz`);
 
     // Create offline context at target sample rate with mono output
     const offlineContext = new OfflineAudioContext(
@@ -1115,7 +1116,7 @@ class PitchDetector extends Component {
 
     // Render and return converted buffer
     const convertedBuffer = await offlineContext.startRendering();
-    console.log(`✓ Converted to 1 channel @ ${convertedBuffer.sampleRate}Hz`);
+    Logger.log(`✓ Converted to 1 channel @ ${convertedBuffer.sampleRate}Hz`);
     return convertedBuffer;
   };
 
@@ -1130,8 +1131,8 @@ class PitchDetector extends Component {
       minNoteDuration = 0.15   // 150ms minimum
     } = options;
 
-    console.log('=== Post-processing detections ===');
-    console.log(`Input: ${detections.length} detections, useKNN: ${useKNN}`);
+    Logger.log('=== Post-processing detections ===');
+    Logger.log(`Input: ${detections.length} detections, useKNN: ${useKNN}`);
 
     if (detections.length === 0) return [];
 
@@ -1203,14 +1204,14 @@ class PitchDetector extends Component {
       }
     }
 
-    console.log(`After growing: ${grownNotes.length} notes`);
+    Logger.log(`After growing: ${grownNotes.length} notes`);
 
     // STEP 2: Optional KNN Clustering
     // Groups nearby notes with similar pitches for further refinement
     let refinedNotes = grownNotes;
     if (useKNN && grownNotes.length > 3) {
       refinedNotes = this.knnClusterNotes(grownNotes, { k: 3, pitchTolerance });
-      console.log(`After KNN clustering: ${refinedNotes.length} notes`);
+      Logger.log(`After KNN clustering: ${refinedNotes.length} notes`);
     }
 
     // STEP 3: Final merge pass - combine adjacent notes of same pitch
@@ -1226,7 +1227,7 @@ class PitchDetector extends Component {
 
         // Merge if gap < 300ms and same pitch
         if (gap < 0.3 && pitchDiff < 1) {
-          console.log(`Merging adjacent notes: ${currentMerged.midi.toFixed(1)} + ${note.midi.toFixed(1)} (${gap.toFixed(3)}s gap)`);
+          Logger.log(`Merging adjacent notes: ${currentMerged.midi.toFixed(1)} + ${note.midi.toFixed(1)} (${gap.toFixed(3)}s gap)`);
           currentMerged.endTime = note.endTime;
           currentMerged.duration = currentMerged.endTime - currentMerged.startTime;
         } else {
@@ -1240,7 +1241,7 @@ class PitchDetector extends Component {
       mergedNotes.push(currentMerged);
     }
 
-    console.log(`Final: ${mergedNotes.length} notes after post-processing`);
+    Logger.log(`Final: ${mergedNotes.length} notes after post-processing`);
     return mergedNotes;
   }
 
@@ -1319,7 +1320,7 @@ class PitchDetector extends Component {
       }
     }
 
-    console.log(`KNN: ${features.length} notes → ${clusters.length} clusters`);
+    Logger.log(`KNN: ${features.length} notes → ${clusters.length} clusters`);
 
     // Merge notes in each cluster
     const clusteredNotes = clusters.map(cluster => {
@@ -1366,16 +1367,16 @@ class PitchDetector extends Component {
   // Convert live detections to note format (for non-ONNX methods)
   // Uses advanced post-processing pipeline with growing notes + optional KNN
   convertLiveDetectionsToNotes() {
-    console.log('=== convertLiveDetectionsToNotes called ===');
-    console.log('liveDetections:', this.liveDetections?.length || 0, 'detections');
+    Logger.log('=== convertLiveDetectionsToNotes called ===');
+    Logger.log('liveDetections:', this.liveDetections?.length || 0, 'detections');
 
     if (!this.liveDetections || this.liveDetections.length === 0) {
-      console.error('⚠️ NO LIVE DETECTIONS! Pitch detection may not have run during recording.');
-      console.error('Check: voiceMode prop, pitchDetectionMethod prop, and live detection logic');
+      Logger.error('⚠️ NO LIVE DETECTIONS! Pitch detection may not have run during recording.');
+      Logger.error('Check: voiceMode prop, pitchDetectionMethod prop, and live detection logic');
       return [];
     }
 
-    console.log(`Converting ${this.liveDetections.length} live detections to notes`);
+    Logger.log(`Converting ${this.liveDetections.length} live detections to notes`);
 
     // Use new post-processing pipeline
     const method = this.props.pitchDetectionMethod || 'yin';
@@ -1397,7 +1398,7 @@ class PitchDetector extends Component {
   convertProcessedNoteToFinalFormat(note) {
     const noteName = this.midiToNoteName(Math.round(note.midi));
 
-    console.log(`Note: ${noteName} @ ${note.startTime.toFixed(2)}s, dur=${note.duration.toFixed(2)}s, detections=${note.detectionCount}, conf=${note.confidence.toFixed(2)}`);
+    Logger.log(`Note: ${noteName} @ ${note.startTime.toFixed(2)}s, dur=${note.duration.toFixed(2)}s, detections=${note.detectionCount}, conf=${note.confidence.toFixed(2)}`);
 
     return {
       startTimeSeconds: note.startTime,
@@ -1416,16 +1417,16 @@ class PitchDetector extends Component {
 
   // OLD VERSION - Keep for reference/fallback
   convertLiveDetectionsToNotes_OLD() {
-    console.log('=== convertLiveDetectionsToNotes_OLD called ===');
-    console.log('liveDetections:', this.liveDetections?.length || 0, 'detections');
+    Logger.log('=== convertLiveDetectionsToNotes_OLD called ===');
+    Logger.log('liveDetections:', this.liveDetections?.length || 0, 'detections');
 
     if (!this.liveDetections || this.liveDetections.length === 0) {
-      console.error('⚠️ NO LIVE DETECTIONS! Pitch detection may not have run during recording.');
-      console.error('Check: voiceMode prop, pitchDetectionMethod prop, and live detection logic');
+      Logger.error('⚠️ NO LIVE DETECTIONS! Pitch detection may not have run during recording.');
+      Logger.error('Check: voiceMode prop, pitchDetectionMethod prop, and live detection logic');
       return [];
     }
 
-    console.log(`Converting ${this.liveDetections.length} live detections to notes`);
+    Logger.log(`Converting ${this.liveDetections.length} live detections to notes`);
 
     const sortedDetections = [...this.liveDetections].sort((a, b) => a.timestamp - b.timestamp);
 
@@ -1482,7 +1483,7 @@ class PitchDetector extends Component {
       notes.push(this.finalizeNote(currentNote));
     }
 
-    console.log(`First pass: ${notes.length} raw notes`);
+    Logger.log(`First pass: ${notes.length} raw notes`);
 
     // STEP 2: Post-process to merge adjacent notes of same pitch
     // This catches cases where there was a brief silence/gap but it's the same sung note
@@ -1498,7 +1499,7 @@ class PitchDetector extends Component {
 
         // Merge if gap < 300ms and same pitch
         if (gap < 0.3 && pitchDiff < 1) {
-          console.log(`Merging notes: ${currentMerged.midi.toFixed(1)} (${gap.toFixed(3)}s gap)`);
+          Logger.log(`Merging notes: ${currentMerged.midi.toFixed(1)} (${gap.toFixed(3)}s gap)`);
           currentMerged.endTime = note.endTime;
           currentMerged.duration = currentMerged.endTime - currentMerged.startTime;
         } else {
@@ -1512,18 +1513,18 @@ class PitchDetector extends Component {
       mergedNotes.push(currentMerged);
     }
 
-    console.log(`After merging: ${mergedNotes.length} notes`);
+    Logger.log(`After merging: ${mergedNotes.length} notes`);
 
     // STEP 3: Filter out very short notes (< 150ms)
     const finalNotes = mergedNotes.filter(note => {
       if (note.duration < 0.15) {
-        console.log(`Filtered out short note: ${note.duration.toFixed(3)}s at ${note.midi.toFixed(1)}`);
+        Logger.log(`Filtered out short note: ${note.duration.toFixed(3)}s at ${note.midi.toFixed(1)}`);
         return false;
       }
       return true;
     });
 
-    console.log(`Final: ${finalNotes.length} notes (filtered short notes)`);
+    Logger.log(`Final: ${finalNotes.length} notes (filtered short notes)`);
     return finalNotes;
   }
 
@@ -1546,7 +1547,7 @@ class PitchDetector extends Component {
     const confidence = Math.min(noteData.detectionCount / 10, 1.0);
 
     const noteName = this.midiToNoteName(Math.round(medianPitch));
-    console.log(`Note: ${noteName} @ ${noteData.startTime.toFixed(2)}s, dur=${duration.toFixed(2)}s, detections=${noteData.detectionCount}, conf=${confidence.toFixed(2)}`);
+    Logger.log(`Note: ${noteName} @ ${noteData.startTime.toFixed(2)}s, dur=${duration.toFixed(2)}s, detections=${noteData.detectionCount}, conf=${confidence.toFixed(2)}`);
 
     return {
       startTimeSeconds: noteData.startTime,
@@ -1574,14 +1575,14 @@ class PitchDetector extends Component {
   }
 
   runBasicPitch = async (audioBuffer) => {
-    console.log('runBasicPitch called');
+    Logger.log('runBasicPitch called');
 
     const method = this.props.pitchDetectionMethod || 'hybrid';
-    console.log(`Pitch detection method: ${method}`);
+    Logger.log(`Pitch detection method: ${method}`);
 
     // Cepstral+KNN: Process whole audio buffer with posterior probabilities
     if (method === 'cepstral_knn') {
-      console.log('Method cepstral_knn: Processing whole audio with posterior probabilities');
+      Logger.log('Method cepstral_knn: Processing whole audio with posterior probabilities');
 
       // Get raw audio data
       const audioData = audioBuffer.getChannelData(0);
@@ -1605,16 +1606,16 @@ class PitchDetector extends Component {
 
     // For non-ONNX methods, skip ML model and use live detections only
     if (method === 'yin' || method === 'fft' || method === 'pca' || method === 'cepstral') {
-      console.log(`Method ${method}: Using live detections only, skipping ONNX`);
+      Logger.log(`Method ${method}: Using live detections only, skipping ONNX`);
       return this.convertLiveDetectionsToNotes();
     }
 
     // For ONNX and hybrid methods, run the ML model
-    console.log(`Method ${method}: Running ONNX model`);
+    Logger.log(`Method ${method}: Running ONNX model`);
 
     // Ensure model is loaded
     if (!this.basicPitch) {
-      console.log('BasicPitch model not loaded, initializing...');
+      Logger.log('BasicPitch model not loaded, initializing...');
       await this.initBasicPitchModel();
     }
 
@@ -1622,12 +1623,12 @@ class PitchDetector extends Component {
     const onsets = [];
     const contours = [];
 
-    console.log('Resampling audio buffer to 22050 Hz...');
+    Logger.log('Resampling audio buffer to 22050 Hz...');
     // Resample to 22050 Hz (required by Basic Pitch)
     const resampledBuffer = await this.resampleAudioBuffer(audioBuffer, 22050);
-    console.log('Resampled buffer length:', resampledBuffer.length);
+    Logger.log('Resampled buffer length:', resampledBuffer.length);
 
-    console.log('Running BasicPitch evaluateModel...');
+    Logger.log('Running BasicPitch evaluateModel...');
     // Run Basic Pitch model
     await this.basicPitch.evaluateModel(
       resampledBuffer,
@@ -1637,7 +1638,7 @@ class PitchDetector extends Component {
         contours.push(...c);
       },
       (percent) => {
-        console.log(`Basic Pitch processing: ${(percent * 100).toFixed(0)}%`);
+        Logger.log(`Basic Pitch processing: ${(percent * 100).toFixed(0)}%`);
       }
     );
 
@@ -1648,10 +1649,10 @@ class PitchDetector extends Component {
 
     // If voice mode is enabled and we have live detections, use them to smooth/filter the ML results
     if (this.props.voiceMode && this.liveDetections.length > 0) {
-      console.log(`Voice mode ON: Smoothing ${notes.length} ML notes with ${this.liveDetections.length} live detections`);
+      Logger.log(`Voice mode ON: Smoothing ${notes.length} ML notes with ${this.liveDetections.length} live detections`);
       notes = this.smoothWithLiveDetections(notes);
     } else if (!this.props.voiceMode) {
-      console.log(`Voice mode OFF: Using raw ONNX output (${notes.length} notes)`);
+      Logger.log(`Voice mode OFF: Using raw ONNX output (${notes.length} notes)`);
     }
 
     return notes;
@@ -1717,7 +1718,7 @@ class PitchDetector extends Component {
       } else {
         // No nearby live detections - likely spurious detection
         // Filter out notes without any live support (they're usually artifacts/harmonics)
-        console.log(`Filtering ML note without live support: ${this.midiToNoteName(mlNote.pitchMidi)} @ ${mlNote.startTimeSeconds.toFixed(2)}s (duration: ${(mlNote.durationSeconds * 1000).toFixed(0)}ms)`);
+        Logger.log(`Filtering ML note without live support: ${this.midiToNoteName(mlNote.pitchMidi)} @ ${mlNote.startTimeSeconds.toFixed(2)}s (duration: ${(mlNote.durationSeconds * 1000).toFixed(0)}ms)`);
       }
     }
 
@@ -1739,7 +1740,7 @@ class PitchDetector extends Component {
     // Merge consecutive notes with same/similar pitch (this fixes "f-3 f-3" -> "f-3" and fills dark green gaps)
     filtered = this.mergeConsecutiveNotes(filtered);
 
-    console.log(`Filtered ${mlNotes.length - filtered.length} artifacts, kept ${filtered.length} notes`);
+    Logger.log(`Filtered ${mlNotes.length - filtered.length} artifacts, kept ${filtered.length} notes`);
     return filtered;
   };
 
@@ -1782,7 +1783,7 @@ class PitchDetector extends Component {
 
           // If gap is tiny (< 100ms), this is likely a duplicate - skip it
           if (gap < 0.1) {
-            console.log(`Skipping duplicate consecutive ${this.midiToNoteName(currentNote.pitchMidi)} at ${currentNote.startTimeSeconds.toFixed(2)}s (${(gap * 1000).toFixed(0)}ms after previous)`);
+            Logger.log(`Skipping duplicate consecutive ${this.midiToNoteName(currentNote.pitchMidi)} at ${currentNote.startTimeSeconds.toFixed(2)}s (${(gap * 1000).toFixed(0)}ms after previous)`);
             continue; // Skip this note
           }
         }
@@ -1828,7 +1829,7 @@ class PitchDetector extends Component {
         prevMidi = chosen.pitchMidi;
 
         if (overlapping.length > 1) {
-          console.log(`Removed ${overlapping.length - 1} overlapping notes at ${currentNote.startTimeSeconds.toFixed(1)}s, kept ${this.midiToNoteName(chosen.pitchMidi)}`);
+          Logger.log(`Removed ${overlapping.length - 1} overlapping notes at ${currentNote.startTimeSeconds.toFixed(1)}s, kept ${this.midiToNoteName(chosen.pitchMidi)}`);
         }
 
         // Skip the overlapping notes we just processed
@@ -1888,9 +1889,9 @@ class PitchDetector extends Component {
         const reason = notesOverlap && pitchDiff <= 1 ? 'overlap+same-pitch' :
                        pitchDiff === 0 && gap < 0.5 ? 'exact-pitch+close-time' :
                        'exact-pitch+live-bridge';
-        console.log(`🔗 MERGE ${this.midiToNoteName(currentMerged.pitchMidi)} + ${this.midiToNoteName(nextNote.pitchMidi)} (reason: ${reason}, gap: ${(gap*1000).toFixed(0)}ms, pitch diff: ${pitchDiff})`);
+        Logger.log(`🔗 MERGE ${this.midiToNoteName(currentMerged.pitchMidi)} + ${this.midiToNoteName(nextNote.pitchMidi)} (reason: ${reason}, gap: ${(gap*1000).toFixed(0)}ms, pitch diff: ${pitchDiff})`);
       } else {
-        console.log(`⛔ NO MERGE ${this.midiToNoteName(currentMerged.pitchMidi)} → ${this.midiToNoteName(nextNote.pitchMidi)} (gap: ${(gap*1000).toFixed(0)}ms, pitch diff: ${pitchDiff}, overlap: ${notesOverlap})`);
+        Logger.log(`⛔ NO MERGE ${this.midiToNoteName(currentMerged.pitchMidi)} → ${this.midiToNoteName(nextNote.pitchMidi)} (gap: ${(gap*1000).toFixed(0)}ms, pitch diff: ${pitchDiff}, overlap: ${notesOverlap})`);
       }
 
       if (shouldMerge) {
@@ -1917,7 +1918,7 @@ class PitchDetector extends Component {
 
           // Keep the note with more live detection support (or closest pitch if tied)
           if (nextSupport > currentSupport) {
-            console.log(`Overlap: Replacing ${this.midiToNoteName(currentMerged.pitchMidi)} with ${this.midiToNoteName(nextNote.pitchMidi)} (live support: ${currentSupport} vs ${nextSupport})`);
+            Logger.log(`Overlap: Replacing ${this.midiToNoteName(currentMerged.pitchMidi)} with ${this.midiToNoteName(nextNote.pitchMidi)} (live support: ${currentSupport} vs ${nextSupport})`);
             currentMerged = nextNote;
           } else if (nextSupport === currentSupport && nextSupport > 0) {
             // Tied - find closest live detection pitch
@@ -1931,10 +1932,10 @@ class PitchDetector extends Component {
               const currentDiff = Math.abs(Math.round(currentMerged.pitchMidi) - Math.round(avgLiveMidi));
               const nextDiff = Math.abs(Math.round(nextNote.pitchMidi) - Math.round(avgLiveMidi));
               if (nextDiff < currentDiff) {
-                console.log(`Overlap: Replacing ${this.midiToNoteName(currentMerged.pitchMidi)} with ${this.midiToNoteName(nextNote.pitchMidi)} (closer to live pitch)`);
+                Logger.log(`Overlap: Replacing ${this.midiToNoteName(currentMerged.pitchMidi)} with ${this.midiToNoteName(nextNote.pitchMidi)} (closer to live pitch)`);
                 currentMerged = nextNote;
               } else {
-                console.log(`Overlap: Keeping ${this.midiToNoteName(currentMerged.pitchMidi)} over ${this.midiToNoteName(nextNote.pitchMidi)} (closer to live pitch)`);
+                Logger.log(`Overlap: Keeping ${this.midiToNoteName(currentMerged.pitchMidi)} over ${this.midiToNoteName(nextNote.pitchMidi)} (closer to live pitch)`);
                 // Extend current to cover next if needed
                 const nextEnd = nextNote.startTimeSeconds + nextNote.durationSeconds;
                 if (nextEnd > currentEnd) {
@@ -1947,10 +1948,10 @@ class PitchDetector extends Component {
                 }
               }
             } else {
-              console.log(`Overlap: Keeping ${this.midiToNoteName(currentMerged.pitchMidi)} over ${this.midiToNoteName(nextNote.pitchMidi)} (no live support for either)`);
+              Logger.log(`Overlap: Keeping ${this.midiToNoteName(currentMerged.pitchMidi)} over ${this.midiToNoteName(nextNote.pitchMidi)} (no live support for either)`);
             }
           } else {
-            console.log(`Overlap: Keeping ${this.midiToNoteName(currentMerged.pitchMidi)} over ${this.midiToNoteName(nextNote.pitchMidi)} (live support: ${currentSupport} vs ${nextSupport})`);
+            Logger.log(`Overlap: Keeping ${this.midiToNoteName(currentMerged.pitchMidi)} over ${this.midiToNoteName(nextNote.pitchMidi)} (live support: ${currentSupport} vs ${nextSupport})`);
             // Extend current to cover next if needed
             const nextEnd = nextNote.startTimeSeconds + nextNote.durationSeconds;
             if (nextEnd > currentEnd) {
@@ -1974,7 +1975,7 @@ class PitchDetector extends Component {
             merged: true,
             originalNote: currentMerged.originalNote // Preserve original unchanged
           };
-          console.log(`Merged ${this.midiToNoteName(currentMerged.pitchMidi)} with next note (gap: ${(gap * 1000).toFixed(0)}ms, pitch diff: ${pitchDiff} semitones${hasLiveBridge ? ', has live bridge' : ''})`);
+          Logger.log(`Merged ${this.midiToNoteName(currentMerged.pitchMidi)} with next note (gap: ${(gap * 1000).toFixed(0)}ms, pitch diff: ${pitchDiff} semitones${hasLiveBridge ? ', has live bridge' : ''})`);
         }
       } else {
         // Before pushing, extend edges if there are live detections nearby
@@ -1988,7 +1989,7 @@ class PitchDetector extends Component {
     currentMerged = this.extendToLiveDetections(currentMerged);
     result.push(currentMerged);
 
-    console.log(`Merge complete: ${sorted.length} notes → ${result.length} notes`);
+    Logger.log(`Merge complete: ${sorted.length} notes → ${result.length} notes`);
     return result;
   };
 
@@ -2032,7 +2033,7 @@ class PitchDetector extends Component {
 
       // DEBUG: Log what's happening
       if (timeMatch && roundedMatch && !centsMatch) {
-        console.log(`⚠️ REJECTED live detection for ${this.midiToNoteName(originalPitch)}: liveMidi=${liveMidi.toFixed(2)} (${this.midiToNoteName(liveMidi)}), diff=${Math.abs(liveMidi - originalPitch).toFixed(3)} semitones (> 0.15)`);
+        Logger.log(`⚠️ REJECTED live detection for ${this.midiToNoteName(originalPitch)}: liveMidi=${liveMidi.toFixed(2)} (${this.midiToNoteName(liveMidi)}), diff=${Math.abs(liveMidi - originalPitch).toFixed(3)} semitones (> 0.15)`);
       }
 
       // Live detection is after note end, within tolerance, and EXACT same pitch
@@ -2045,7 +2046,7 @@ class PitchDetector extends Component {
       const earliestStart = Math.min(...nearStart.map(l => l.timestamp));
       if (earliestStart < newStart) {
         newStart = earliestStart;
-        console.log(`Extended ${this.midiToNoteName(note.pitchMidi)} start by ${((note.startTimeSeconds - earliestStart) * 1000).toFixed(0)}ms to cover ${nearStart.length} exact-pitch live detections`);
+        Logger.log(`Extended ${this.midiToNoteName(note.pitchMidi)} start by ${((note.startTimeSeconds - earliestStart) * 1000).toFixed(0)}ms to cover ${nearStart.length} exact-pitch live detections`);
       }
     }
 
@@ -2054,7 +2055,7 @@ class PitchDetector extends Component {
       const latestEnd = Math.max(...nearEnd.map(l => l.timestamp));
       if (latestEnd > newEnd) {
         newEnd = latestEnd;
-        console.log(`Extended ${this.midiToNoteName(note.pitchMidi)} end by ${((latestEnd - noteEnd) * 1000).toFixed(0)}ms to cover ${nearEnd.length} exact-pitch live detections`);
+        Logger.log(`Extended ${this.midiToNoteName(note.pitchMidi)} end by ${((latestEnd - noteEnd) * 1000).toFixed(0)}ms to cover ${nearEnd.length} exact-pitch live detections`);
       }
     }
 
@@ -2071,11 +2072,11 @@ class PitchDetector extends Component {
   // Synthesize missing notes from continuous live detections that ML model missed
   synthesizeMissingNotes(mlNotes) {
     if (!this.liveDetections || this.liveDetections.length === 0) {
-      console.log('No live detections available for synthesis');
+      Logger.log('No live detections available for synthesis');
       return mlNotes;
     }
 
-    console.log(`Synthesizing missing notes from ${this.liveDetections.length} live detections`);
+    Logger.log(`Synthesizing missing notes from ${this.liveDetections.length} live detections`);
 
     // Sort ML notes by time
     const sortedMLNotes = [...mlNotes].sort((a, b) => a.startTimeSeconds - b.startTimeSeconds);
@@ -2115,7 +2116,7 @@ class PitchDetector extends Component {
       }
     }
 
-    console.log(`Found ${gaps.length} gaps to check for synthesis`);
+    Logger.log(`Found ${gaps.length} gaps to check for synthesis`);
 
     // For each gap, look for continuous sequences of live detections
     const synthesizedNotes = [];
@@ -2128,7 +2129,7 @@ class PitchDetector extends Component {
 
       if (liveInGap.length === 0) return;
 
-      console.log(`Gap ${gapIndex} (${gap.start.toFixed(2)}s - ${gap.end.toFixed(2)}s): ${liveInGap.length} live detections`);
+      Logger.log(`Gap ${gapIndex} (${gap.start.toFixed(2)}s - ${gap.end.toFixed(2)}s): ${liveInGap.length} live detections`);
 
       // Group consecutive live detections by pitch (within 1 semitone) and time proximity (< 150ms gap)
       const clusters = [];
@@ -2175,7 +2176,7 @@ class PitchDetector extends Component {
         clusters.push(currentCluster);
       }
 
-      console.log(`  Found ${clusters.length} live detection clusters in this gap`);
+      Logger.log(`  Found ${clusters.length} live detection clusters in this gap`);
 
       // Create synthetic notes from clusters that are long enough (> 50ms minimum)
       clusters.forEach((cluster, clusterIndex) => {
@@ -2205,14 +2206,14 @@ class PitchDetector extends Component {
           };
 
           synthesizedNotes.push(syntheticNote);
-          console.log(`  Created synthetic note: ${this.midiToNoteName(medianPitch)} @ ${cluster.startTime.toFixed(2)}s, duration: ${(duration * 1000).toFixed(0)}ms (${cluster.detections.length} live detections)`);
+          Logger.log(`  Created synthetic note: ${this.midiToNoteName(medianPitch)} @ ${cluster.startTime.toFixed(2)}s, duration: ${(duration * 1000).toFixed(0)}ms (${cluster.detections.length} live detections)`);
         } else {
-          console.log(`  Skipped cluster ${clusterIndex}: too short (${(duration * 1000).toFixed(0)}ms, ${cluster.detections.length} detections)`);
+          Logger.log(`  Skipped cluster ${clusterIndex}: too short (${(duration * 1000).toFixed(0)}ms, ${cluster.detections.length} detections)`);
         }
       });
     });
 
-    console.log(`Synthesized ${synthesizedNotes.length} missing notes from live detections`);
+    Logger.log(`Synthesized ${synthesizedNotes.length} missing notes from live detections`);
 
     // Combine original ML notes with synthesized notes
     return [...mlNotes, ...synthesizedNotes];
@@ -2250,7 +2251,7 @@ class PitchDetector extends Component {
             pitchMidi: smoothedPitch,
             smoothedPitch: true
           });
-          console.log(`Smoothed ${this.midiToNoteName(note.pitchMidi)} → ${this.midiToNoteName(smoothedPitch)}`);
+          Logger.log(`Smoothed ${this.midiToNoteName(note.pitchMidi)} → ${this.midiToNoteName(smoothedPitch)}`);
         } else {
           result.push(note);
         }
@@ -2265,7 +2266,7 @@ class PitchDetector extends Component {
 
   processFile = async (file) => {
     try {
-      console.log(`Processing file: ${file.name} (${file.size} bytes)`);
+      Logger.log(`Processing file: ${file.name} (${file.size} bytes)`);
 
       // Read the file as an ArrayBuffer
       const arrayBuffer = await file.arrayBuffer();
@@ -2274,13 +2275,13 @@ class PitchDetector extends Component {
       const tempAudioContext = new AudioContext();
       const audioBuffer = await tempAudioContext.decodeAudioData(arrayBuffer);
 
-      console.log(`AudioBuffer duration: ${audioBuffer.duration}s, sample rate: ${audioBuffer.sampleRate}Hz`);
+      Logger.log(`AudioBuffer duration: ${audioBuffer.duration}s, sample rate: ${audioBuffer.sampleRate}Hz`);
 
       // Run Basic Pitch inference
-      console.log('Running Basic Pitch model on uploaded file...');
+      Logger.log('Running Basic Pitch model on uploaded file...');
       const notes = await this.runBasicPitch(audioBuffer);
 
-      console.log(`✓ Basic Pitch detected ${notes.length} notes from file`);
+      Logger.log(`✓ Basic Pitch detected ${notes.length} notes from file`);
 
       // Convert Basic Pitch notes to our format
       notes.forEach((note, index) => {
@@ -2298,18 +2299,18 @@ class PitchDetector extends Component {
         };
 
         // Send each detected note to the parent component
-        console.log(`Note ${index + 1}/${notes.length}: ${noteData.note} @ ${startTimeSeconds.toFixed(2)}s, ${durationSeconds.toFixed(2)}s, ${noteData.frequency.toFixed(1)} Hz${synthesized ? ' (synthesized)' : ''}`);
+        Logger.log(`Note ${index + 1}/${notes.length}: ${noteData.note} @ ${startTimeSeconds.toFixed(2)}s, ${durationSeconds.toFixed(2)}s, ${noteData.frequency.toFixed(1)} Hz${synthesized ? ' (synthesized)' : ''}`);
         this.props.onNoteDetected?.(noteData);
       });
 
       await tempAudioContext.close();
 
       // Signal that processing is complete
-      console.log('✓ File processing complete');
+      Logger.log('✓ File processing complete');
       this.props.onProcessingComplete?.();
 
     } catch (error) {
-      console.error('File processing error:', error);
+      Logger.error('File processing error:', error);
       this.props.onProcessingComplete?.();
       throw error;
     }
@@ -2317,11 +2318,11 @@ class PitchDetector extends Component {
 
   processRecording = async () => {
     try {
-      console.log('Processing audio with Basic Pitch...');
+      Logger.log('Processing audio with Basic Pitch...');
 
       // Convert audio chunks to blob
       const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
-      console.log(`Audio blob size: ${audioBlob.size} bytes`);
+      Logger.log(`Audio blob size: ${audioBlob.size} bytes`);
 
       // Send audio blob to parent if callback exists
       this.props.onAudioCaptured?.(audioBlob);
@@ -2330,13 +2331,13 @@ class PitchDetector extends Component {
       const arrayBuffer = await audioBlob.arrayBuffer();
       const tempAudioContext = new AudioContext();
       const audioBuffer = await tempAudioContext.decodeAudioData(arrayBuffer);
-      console.log(`AudioBuffer duration: ${audioBuffer.duration}s, sample rate: ${audioBuffer.sampleRate}Hz`);
+      Logger.log(`AudioBuffer duration: ${audioBuffer.duration}s, sample rate: ${audioBuffer.sampleRate}Hz`);
 
       // Run Basic Pitch inference
-      console.log('Running Basic Pitch model...');
+      Logger.log('Running Basic Pitch model...');
       const notes = await this.runBasicPitch(audioBuffer);
 
-      console.log(`✓ Basic Pitch detected ${notes.length} notes`);
+      Logger.log(`✓ Basic Pitch detected ${notes.length} notes`);
 
       // Convert Basic Pitch notes to our format
       notes.forEach((note, index) => {
@@ -2354,18 +2355,18 @@ class PitchDetector extends Component {
         };
 
         // Send each detected note to the parent component
-        console.log(`Note ${index + 1}/${notes.length}: ${noteData.note} @ ${startTimeSeconds.toFixed(2)}s, ${durationSeconds.toFixed(2)}s, ${noteData.frequency.toFixed(1)} Hz${synthesized ? ' (synthesized)' : ''}`);
+        Logger.log(`Note ${index + 1}/${notes.length}: ${noteData.note} @ ${startTimeSeconds.toFixed(2)}s, ${durationSeconds.toFixed(2)}s, ${noteData.frequency.toFixed(1)} Hz${synthesized ? ' (synthesized)' : ''}`);
         this.props.onNoteDetected?.(noteData);
       });
 
       await tempAudioContext.close();
 
       // Signal that processing is complete
-      console.log('✓ Processing complete');
+      Logger.log('✓ Processing complete');
       this.props.onProcessingComplete?.();
 
     } catch (error) {
-      console.error('Basic Pitch processing error:', error);
+      Logger.error('Basic Pitch processing error:', error);
       this.props.onProcessingComplete?.();
       throw error;
     }
@@ -2374,11 +2375,11 @@ class PitchDetector extends Component {
   // Process recording from React Native AudioRecorder buffers
   processRecordingFromBuffers = async () => {
     try {
-      console.log('Processing audio from buffers with Basic Pitch...');
-      console.log(`Recorded ${this.recordedBuffers.length} audio buffers`);
+      Logger.log('Processing audio from buffers with Basic Pitch...');
+      Logger.log(`Recorded ${this.recordedBuffers.length} audio buffers`);
 
       if (this.recordedBuffers.length === 0) {
-        console.warn('No audio buffers recorded');
+        Logger.warn('No audio buffers recorded');
         this.props.onProcessingComplete?.();
         return;
       }
@@ -2389,7 +2390,7 @@ class PitchDetector extends Component {
       const sampleRate = firstBuffer.sampleRate;
       const numberOfChannels = firstBuffer.numberOfChannels;
 
-      console.log(`Creating combined buffer: ${totalLength} samples, ${sampleRate}Hz, ${numberOfChannels} channels`);
+      Logger.log(`Creating combined buffer: ${totalLength} samples, ${sampleRate}Hz, ${numberOfChannels} channels`);
 
       // Create a new offline context to build the combined buffer
       const tempAudioContext = new AudioContext();
@@ -2406,17 +2407,17 @@ class PitchDetector extends Component {
         offset += buffer.length;
       }
 
-      console.log(`Combined AudioBuffer duration: ${combinedBuffer.duration}s`);
+      Logger.log(`Combined AudioBuffer duration: ${combinedBuffer.duration}s`);
 
       // Convert to blob for parent component (if needed)
       // Note: We skip blob creation for React Native since we already have the AudioBuffer
       this.props.onAudioCaptured?.(combinedBuffer);
 
       // Run Basic Pitch inference
-      console.log('Running Basic Pitch model...');
+      Logger.log('Running Basic Pitch model...');
       const notes = await this.runBasicPitch(combinedBuffer);
 
-      console.log(`✓ Basic Pitch detected ${notes.length} notes`);
+      Logger.log(`✓ Basic Pitch detected ${notes.length} notes`);
 
       // Convert Basic Pitch notes to our format
       notes.forEach((note, index) => {
@@ -2433,18 +2434,18 @@ class PitchDetector extends Component {
           synthesized: synthesized,
         };
 
-        console.log(`Note ${index + 1}/${notes.length}: ${noteData.note} @ ${startTimeSeconds.toFixed(2)}s, ${durationSeconds.toFixed(2)}s, ${noteData.frequency.toFixed(1)} Hz${synthesized ? ' (synthesized)' : ''}`);
+        Logger.log(`Note ${index + 1}/${notes.length}: ${noteData.note} @ ${startTimeSeconds.toFixed(2)}s, ${durationSeconds.toFixed(2)}s, ${noteData.frequency.toFixed(1)} Hz${synthesized ? ' (synthesized)' : ''}`);
         this.props.onNoteDetected?.(noteData);
       });
 
       await tempAudioContext.close();
 
       // Signal that processing is complete
-      console.log('✓ Processing complete');
+      Logger.log('✓ Processing complete');
       this.props.onProcessingComplete?.();
 
     } catch (error) {
-      console.error('Buffer processing error:', error);
+      Logger.error('Buffer processing error:', error);
       this.props.onProcessingComplete?.();
       throw error;
     }

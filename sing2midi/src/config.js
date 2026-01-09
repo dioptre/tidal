@@ -2,6 +2,7 @@
 // This allows the app to work on GitHub Pages, native iOS/Android, and local development
 
 import { Platform } from 'react-native';
+import Logger from './utils/Logger';
 
 // Check if running on web
 const isWeb = Platform.OS === 'web';
@@ -46,7 +47,7 @@ export const getAssetSource = (assetName) => {
 
   const fileName = assetMap[assetName];
   if (!fileName) {
-    console.warn(`Unknown asset: ${assetName}`);
+    Logger.warn(`Unknown asset: ${assetName}`);
     return null;
   }
 

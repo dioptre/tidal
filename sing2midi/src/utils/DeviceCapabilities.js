@@ -5,6 +5,7 @@
  */
 
 import { Platform } from 'react-native';
+import Logger from './Logger';
 
 class DeviceCapabilities {
   /**
@@ -12,7 +13,7 @@ class DeviceCapabilities {
    * @returns {Promise<Object>} Device capabilities
    */
   static async detectCapabilities() {
-    console.log('Detecting device capabilities...');
+    Logger.log('Detecting device capabilities...');
 
     try {
       if (Platform.OS === 'web') {
@@ -21,7 +22,7 @@ class DeviceCapabilities {
         return await this.detectNativeCapabilities();
       }
     } catch (error) {
-      console.error('Failed to detect capabilities:', error);
+      Logger.error('Failed to detect capabilities:', error);
       // Fallback to safe defaults
       return {
         hasGPU: false,
@@ -44,7 +45,7 @@ class DeviceCapabilities {
     await tf.ready();
 
     const backend = tf.getBackend();
-    console.log('TensorFlow backend:', backend);
+    Logger.log('TensorFlow backend:', backend);
 
     // Check for WebGL/WebGPU support (GPU acceleration)
     let hasGPU = false;
@@ -55,28 +56,28 @@ class DeviceCapabilities {
       const webglVersion = tf.env().getNumber('WEBGL_VERSION');
       hasGPU = webglVersion > 0;
       gpuDetails = `WebGL ${webglVersion}`;
-      console.log(`WebGL version: ${webglVersion}`);
+      Logger.log(`WebGL version: ${webglVersion}`);
     } else if (backend === 'webgpu') {
       // WebGPU is available (cutting edge)
       hasGPU = true;
       gpuDetails = 'WebGPU';
-      console.log('WebGPU detected');
+      Logger.log('WebGPU detected');
     } else if (backend === 'cpu' || backend === 'wasm') {
       // CPU or WASM backend - no GPU
       hasGPU = false;
       gpuDetails = backend.toUpperCase();
-      console.log(`CPU-only backend: ${backend}`);
+      Logger.log(`CPU-only backend: ${backend}`);
     }
 
     // Additional check: WebGPU API availability
     const hasWebGPUAPI = typeof navigator !== 'undefined' && 'gpu' in navigator;
     if (hasWebGPUAPI && !hasGPU) {
-      console.log('WebGPU API available but not enabled in TensorFlow');
+      Logger.log('WebGPU API available but not enabled in TensorFlow');
     }
 
     const recommendedMethod = hasGPU ? 'hybrid' : 'cepstral';
 
-    console.log(`Web capabilities: GPU=${hasGPU}, Backend=${backend}, Recommended=${recommendedMethod}`);
+    Logger.log(`Web capabilities: GPU=${hasGPU}, Backend=${backend}, Recommended=${recommendedMethod}`);
 
     return {
       hasGPU,
@@ -102,7 +103,7 @@ class DeviceCapabilities {
     await tf.ready();
 
     const backend = tf.getBackend();
-    console.log('TensorFlow RN backend:', backend);
+    Logger.log('TensorFlow RN backend:', backend);
 
     // On iOS/Android, tfjs-react-native typically uses CPU backend
     // GPU support exists but is often slower than CPU (especially in simulator)
@@ -119,7 +120,7 @@ class DeviceCapabilities {
       hasGPU = false;
       recommendedMethod = 'cepstral';
       reason = 'iOS Simulator detected, using cepstral for robust detection';
-      console.log('Running in iOS Simulator - using cepstral for accuracy');
+      Logger.log('Running in iOS Simulator - using cepstral for accuracy');
     } else {
       // Real device - tfjs-react-native can use GPU on some devices
       // Check backend to see if GPU is available
@@ -127,12 +128,12 @@ class DeviceCapabilities {
         hasGPU = true;
         recommendedMethod = 'hybrid';
         reason = `GPU backend detected (${backend}), using hybrid ONNX+YIN`;
-        console.log(`Real device with GPU backend: ${backend}`);
+        Logger.log(`Real device with GPU backend: ${backend}`);
       } else {
         hasGPU = false;
         recommendedMethod = 'cepstral';
         reason = `CPU backend (${backend}), using cepstral for robust detection`;
-        console.log(`Real device with CPU backend: ${backend}`);
+        Logger.log(`Real device with CPU backend: ${backend}`);
       }
     }
 

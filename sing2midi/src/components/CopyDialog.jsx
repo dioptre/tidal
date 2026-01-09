@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal, ScrollView } from 'react-native';
 import * as Colors from '../styles/colors';
+import Logger from '../utils/Logger';
 
 const CopyDialog = ({ visible, onClose, title, content }) => {
   const [showTooltip, setShowTooltip] = useState(false);
@@ -14,7 +15,7 @@ const CopyDialog = ({ visible, onClose, title, content }) => {
           setTimeout(() => setShowTooltip(false), 2000);
         })
         .catch((err) => {
-          console.error('Failed to copy text:', err);
+          Logger.error('Failed to copy text:', err);
           alert('Failed to copy to clipboard');
         });
     } else {
@@ -31,7 +32,7 @@ const CopyDialog = ({ visible, onClose, title, content }) => {
         setShowTooltip(true);
         setTimeout(() => setShowTooltip(false), 2000);
       } catch (err) {
-        console.error('Failed to copy text:', err);
+        Logger.error('Failed to copy text:', err);
         alert('Failed to copy to clipboard');
       }
       document.body.removeChild(textArea);

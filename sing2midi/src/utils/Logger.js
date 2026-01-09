@@ -2,134 +2,101 @@
  * Logger utility for capturing console output to display in Developer tab
  *
  * Configuration:
- * - CAPTURE_FROM_START: Set to true to capture logs from app start, false to only capture after dev mode enabled
+ * - CAPTURE_ENABLED: Set to true to enable log capture
  * - MAX_LOGS: Maximum number of log entries to keep in memory
  * - LOG_FILTERS: Array of strings to filter out from logs
  */
 
 // Configuration
-const CAPTURE_FROM_START = false; // Change to false to only capture after clicking "by"
+const CAPTURE_ENABLED = true; // Master switch for log capture
 const MAX_LOGS = 1000;
 const LOG_FILTERS = [
   '[Playhead]',
   'The kernel',
 ];
 
-// EMERGENCY KILL SWITCH - Set to true to completely disable logger
-const LOGGER_DISABLED = true;
-
 class Logger {
   constructor() {
-    this.logs = [];
-    this.listeners = [];
-    this.isCapturing = CAPTURE_FROM_START;
-    this.originalConsole = {
-      log: console.log,
-      error: console.error,
-      warn: console.warn,
-      info: console.info,
-    };
-
-    // Monkey-patch console methods
-    this.patchConsole();
+    this.logs = []; // Plain array - no React state, no listeners, just raw storage
   }
 
-  patchConsole() {
-    // Skip patching if logger is disabled
-    if (LOGGER_DISABLED) {
-      return;
+  log(...args) {
+    console.log(...args);
+    if (CAPTURE_ENABLED) {
+      this.capture('log', args);
     }
+  }
 
-    const self = this;
+  error(...args) {
+    console.error(...args);
+    if (CAPTURE_ENABLED) {
+      this.capture('error', args);
+    }
+  }
 
-    console.log = function (...args) {
-      self.capture('log', args);
-      self.originalConsole.log.apply(console, args);
-    };
+  warn(...args) {
+    console.warn(...args);
+    if (CAPTURE_ENABLED) {
+      this.capture('warn', args);
+    }
+  }
 
-    console.error = function (...args) {
-      self.capture('error', args);
-      self.originalConsole.error.apply(console, args);
-    };
-
-    console.warn = function (...args) {
-      self.capture('warn', args);
-      self.originalConsole.warn.apply(console, args);
-    };
-
-    console.info = function (...args) {
-      self.capture('info', args);
-      self.originalConsole.info.apply(console, args);
-    };
+  info(...args) {
+    console.info(...args);
+    if (CAPTURE_ENABLED) {
+      this.capture('info', args);
+    }
   }
 
   capture(level, args) {
-    if (!this.isCapturing || LOGGER_DISABLED) return;
+    // Store raw args - we'll stringify only when viewing logs
+    const timestamp = new Date().toISOString().split('T')[1].split('.')[0]; // HH:MM:SS
 
-    // Convert args to string
-    const message = args.map(arg => {
-      if (typeof arg === 'object') {
-        try {
-          return JSON.stringify(arg, null, 2);
-        } catch (e) {
-          return String(arg);
-        }
-      }
-      return String(arg);
-    }).join(' ');
-
-    // Apply filters
-    const shouldFilter = LOG_FILTERS.some(filter => message.includes(filter));
+    // Quick string conversion for filtering only
+    const quickString = args.map(arg => String(arg)).join(' ');
+    const shouldFilter = LOG_FILTERS.some(filter => quickString.includes(filter));
     if (shouldFilter) return;
 
-    // Create log entry
-    const timestamp = new Date().toISOString().split('T')[1].split('.')[0]; // HH:MM:SS
+    // Store raw entry - stringify later when needed
     const logEntry = {
-      id: Date.now() + Math.random(), // Unique ID
+      id: Date.now() + Math.random(),
       timestamp,
       level,
-      message,
+      args, // Store raw args, not stringified
     };
 
-    // Add to logs array
     this.logs.push(logEntry);
 
     // Trim to max size
     if (this.logs.length > MAX_LOGS) {
       this.logs = this.logs.slice(-MAX_LOGS);
     }
-
-    // Notify listeners
-    this.notifyListeners();
-  }
-
-  enableCapture() {
-    this.isCapturing = true;
-  }
-
-  disableCapture() {
-    this.isCapturing = false;
   }
 
   getLogs() {
-    return this.logs;
+    // Stringify on demand when logs are requested
+    return this.logs.map(log => ({
+      id: log.id,
+      timestamp: log.timestamp,
+      level: log.level,
+      message: log.args.map(arg => {
+        if (typeof arg === 'object') {
+          try {
+            const stringified = JSON.stringify(arg, null, 2);
+            return stringified.length > 1000 ? stringified.slice(0, 1000) + '...' : stringified;
+          } catch (e) {
+            const str = String(arg);
+            return str.length > 1000 ? str.slice(0, 1000) + '...' : str;
+          }
+        }
+        const str = String(arg);
+        return str.length > 1000 ? str.slice(0, 1000) + '...' : str;
+      }).join(' ')
+    }));
   }
 
   clearLogs() {
     this.logs = [];
-    this.notifyListeners();
-  }
-
-  addListener(callback) {
-    this.listeners.push(callback);
-  }
-
-  removeListener(callback) {
-    this.listeners = this.listeners.filter(l => l !== callback);
-  }
-
-  notifyListeners() {
-    this.listeners.forEach(callback => callback(this.logs));
   }
 
   // Add a filter at runtime

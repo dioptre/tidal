@@ -115,17 +115,17 @@ export default function App() {
   useEffect(() => {
     async function initializeApp() {
       try {
-        console.log('Initializing app settings...');
+        Logger.log('Initializing app settings...');
         const settings = await Settings.initializeSettings();
         setPitchDetectionMethod(settings.pitchDetectionMethod);
-        console.log(`Pitch detection method: ${settings.pitchDetectionMethod}`);
+        Logger.log(`Pitch detection method: ${settings.pitchDetectionMethod}`);
 
         if (settings.deviceCapabilities) {
-          console.log('Device capabilities:', settings.deviceCapabilities);
-          console.log('→', settings.deviceCapabilities.reason);
+          Logger.log('Device capabilities:', settings.deviceCapabilities);
+          Logger.log('→', settings.deviceCapabilities.reason);
         }
       } catch (error) {
-        console.error('Failed to initialize settings:', error);
+        Logger.error('Failed to initialize settings:', error);
         // Fallback to hybrid
         setPitchDetectionMethod('hybrid');
       }
@@ -140,25 +140,25 @@ export default function App() {
   };
 
   const handleStartRecording = async () => {
-    console.log('handleStartRecording called');
-    console.log('pitchDetectorRef.current:', pitchDetectorRef.current);
+    Logger.log('handleStartRecording called');
+    Logger.log('pitchDetectorRef.current:', pitchDetectorRef.current);
 
     if (!pitchDetectorRef.current) {
-      console.error('PitchDetector ref is null!');
+      Logger.error('PitchDetector ref is null!');
       alert('PitchDetector not initialized');
       return;
     }
 
     try {
-      console.log('Calling pitchDetectorRef.current.start()...');
+      Logger.log('Calling pitchDetectorRef.current.start()...');
       await pitchDetectorRef.current.start();
-      console.log('PitchDetector started successfully');
+      Logger.log('PitchDetector started successfully');
       setIsRecording(true);
       setNotes([]);
       setTidalCode('');
     } catch (error) {
-      console.error('Failed to start recording:', error);
-      console.error('Error stack:', error.stack);
+      Logger.error('Failed to start recording:', error);
+      Logger.error('Error stack:', error.stack);
       alert(`Failed to access microphone: ${error.message}`);
     }
   };
@@ -167,14 +167,14 @@ export default function App() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    console.log('Processing uploaded file:', file.name);
+    Logger.log('Processing uploaded file:', file.name);
     setNotes([]);
     setTidalCode('');
 
     try {
       await pitchDetectorRef.current?.processFile(file);
     } catch (error) {
-      console.error('Failed to process file:', error);
+      Logger.error('Failed to process file:', error);
       alert('Failed to process audio file');
     }
   };
@@ -183,17 +183,17 @@ export default function App() {
     pitchDetectorRef.current?.stop();
     setIsRecording(false);
     setIsProcessing(true); // Start showing loading indicator
-    console.log('Recording stopped, waiting for processing...');
+    Logger.log('Recording stopped, waiting for processing...');
   };
 
   const handleNoteDetected = (noteData) => {
-    console.log('App received note:', noteData);
+    Logger.log('App received note:', noteData);
     // Mark ML-detected notes with isML flag for debug comparison
     setNotes(prev => [...prev, { ...noteData, isML: true }]);
   };
 
   const handleLiveDetection = (liveData) => {
-    console.log('Live detection received:', liveData);
+    Logger.log('Live detection received:', liveData);
     // Only show live detections during recording
     if (isRecording) {
       // Update the current live note display
@@ -211,11 +211,11 @@ export default function App() {
           isLive: true
         };
 
-        console.log('Adding live note to visualizer:', formattedLiveNote);
+        Logger.log('Adding live note to visualizer:', formattedLiveNote);
         return [...prev, formattedLiveNote];
       });
     } else {
-      console.log('Not recording, ignoring live detection');
+      Logger.log('Not recording, ignoring live detection');
       setCurrentLiveNote(null);
     }
   };
@@ -228,12 +228,12 @@ export default function App() {
   };
 
   const handleAudioCaptured = (audioBlob) => {
-    console.log('Audio captured:', audioBlob.size, 'bytes');
+    Logger.log('Audio captured:', audioBlob.size, 'bytes');
     setLastAudioBlob(audioBlob);
   };
 
   const handleProcessingComplete = () => {
-    console.log('Processing complete, generating Tidal code...');
+    Logger.log('Processing complete, generating Tidal code...');
     // Use setTimeout to ensure state has updated
     setTimeout(() => {
       setNotes(currentNotes => {
@@ -242,11 +242,11 @@ export default function App() {
         if (DEBUG_SHOW_COMPARISON) {
           // Keep both live and ML notes for comparison
           finalNotes = currentNotes;
-          console.log(`Debug mode: Keeping ${currentNotes.filter(n => n.isLive).length} live notes + ${currentNotes.filter(n => n.isML).length} ML notes for comparison`);
+          Logger.log(`Debug mode: Keeping ${currentNotes.filter(n => n.isLive).length} live notes + ${currentNotes.filter(n => n.isML).length} ML notes for comparison`);
         } else {
           // Filter out live notes - they'll be replaced by ML-detected notes
           finalNotes = currentNotes.filter(n => !n.isLive);
-          console.log(`Generating pattern from ${finalNotes.length} notes (removed ${currentNotes.length - finalNotes.length} live notes)`);
+          Logger.log(`Generating pattern from ${finalNotes.length} notes (removed ${currentNotes.length - finalNotes.length} live notes)`);
         }
 
         // Generate Tidal pattern only from ML notes
@@ -255,9 +255,9 @@ export default function App() {
           const tidalPattern = TidalGenerator.generatePattern(mlNotes);
           const strudelPattern = TidalGenerator.generateStrudelPattern(mlNotes);
           const noteNamesList = TidalGenerator.generateNoteNames(mlNotes);
-          console.log('Generated Tidal pattern:', tidalPattern);
-          console.log('Generated Strudel pattern:', strudelPattern);
-          console.log('Generated note names:', noteNamesList);
+          Logger.log('Generated Tidal pattern:', tidalPattern);
+          Logger.log('Generated Strudel pattern:', strudelPattern);
+          Logger.log('Generated note names:', noteNamesList);
           setTidalCode(tidalPattern);
           setStrudelCode(strudelPattern);
           setNoteNames(noteNamesList);
@@ -285,16 +285,16 @@ export default function App() {
                   await Storage.saveCurrentSession(sessionData);
                   const sessionId = await Storage.saveSession(sessionData);
                   setCurrentSessionId(sessionId); // Track new session
-                  console.log('Session saved to history:', sessionId);
+                  Logger.log('Session saved to history:', sessionId);
                 };
                 reader.readAsDataURL(lastAudioBlob);
               } catch (error) {
-                console.error('Failed to auto-save session:', error);
+                Logger.error('Failed to auto-save session:', error);
               }
             }
           }, 200);
         } else {
-          console.warn('No notes detected!');
+          Logger.warn('No notes detected!');
         }
 
         // Stop showing loading indicator
@@ -314,7 +314,7 @@ export default function App() {
     try {
       MIDIExporter.exportToMIDI(notes, 'sing2midi-recording.mid');
     } catch (error) {
-      console.error('Failed to export MIDI:', error);
+      Logger.error('Failed to export MIDI:', error);
       alert('Failed to export MIDI file');
     }
   };
@@ -486,7 +486,7 @@ export default function App() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      console.log('Audio download initiated');
+      Logger.log('Audio download initiated');
     } else {
       // TODO: Implement file download for React Native using react-native-fs or similar
       alert('Audio download not yet supported on mobile');
@@ -521,7 +521,7 @@ export default function App() {
       URL.revokeObjectURL(url);
     };
     audio.onerror = (e) => {
-      console.error('Audio playback error:', e);
+      Logger.error('Audio playback error:', e);
       setIsPlayingAudio(false);
       URL.revokeObjectURL(url);
       alert('Failed to play audio');
@@ -529,7 +529,7 @@ export default function App() {
 
     setIsPlayingAudio(true);
     audio.play().catch(err => {
-      console.error('Failed to play audio:', err);
+      Logger.error('Failed to play audio:', err);
       setIsPlayingAudio(false);
       URL.revokeObjectURL(url);
       alert('Failed to play audio');
@@ -537,7 +537,7 @@ export default function App() {
   };
 
   const handleLoadSession = (session) => {
-    console.log('Loading session:', session.id);
+    Logger.log('Loading session:', session.id);
 
     // Track which session is loaded so we can update it later
     setCurrentSessionId(session.id);
@@ -549,7 +549,7 @@ export default function App() {
     // Restore undo stack if available
     if (session.undoStack && Array.isArray(session.undoStack)) {
       setUndoStack(session.undoStack);
-      console.log('Undo stack restored:', session.undoStack.length, 'states');
+      Logger.log('Undo stack restored:', session.undoStack.length, 'states');
     } else {
       // If no undo stack in session, clear it
       setUndoStack([]);
@@ -573,13 +573,13 @@ export default function App() {
         const byteArray = new Uint8Array(byteNumbers);
         const blob = new Blob([byteArray], { type: 'audio/wav' });
         setLastAudioBlob(blob);
-        console.log('Audio restored from session');
+        Logger.log('Audio restored from session');
       } catch (err) {
-        console.error('Failed to restore audio:', err);
+        Logger.error('Failed to restore audio:', err);
       }
     }
 
-    console.log(`Session loaded: ${restoredNotes.length} notes restored`);
+    Logger.log(`Session loaded: ${restoredNotes.length} notes restored`);
   };
 
   // Handle note changes from visualizer (drag, create, delete)
@@ -614,7 +614,7 @@ export default function App() {
         setStrudelCode(strudelPattern);
         setNoteNames(noteNamesList);
 
-        console.log('Patterns regenerated after note edit');
+        Logger.log('Patterns regenerated after note edit');
 
         // Auto-save session
         if (lastAudioBlob) {
@@ -637,16 +637,16 @@ export default function App() {
               // If we have a loaded session from history, update it too
               if (currentSessionId) {
                 await Storage.updateSession(currentSessionId, sessionData);
-                console.log('Session updated in history:', currentSessionId);
+                Logger.log('Session updated in history:', currentSessionId);
               }
 
-              console.log('Session auto-saved after edit');
+              Logger.log('Session auto-saved after edit');
             } catch (error) {
-              console.error('Failed to auto-save after edit:', error);
+              Logger.error('Failed to auto-save after edit:', error);
             }
           };
           reader.onerror = (error) => {
-            console.error('Failed to read audio blob:', error);
+            Logger.error('Failed to read audio blob:', error);
           };
           reader.readAsDataURL(lastAudioBlob);
         } else {
@@ -666,19 +666,19 @@ export default function App() {
             if (!currentSessionId) {
               Storage.saveSession(sessionData).then(newSessionId => {
                 setCurrentSessionId(newSessionId);
-                console.log('New manual session created:', newSessionId);
+                Logger.log('New manual session created:', newSessionId);
               });
             } else {
               // Update existing session
               Storage.updateSession(currentSessionId, sessionData);
-              console.log('Manual session updated:', currentSessionId);
+              Logger.log('Manual session updated:', currentSessionId);
             }
 
             // Always save to current session
             Storage.saveCurrentSession(sessionData);
-            console.log('Manual mode session auto-saved');
+            Logger.log('Manual mode session auto-saved');
           } catch (error) {
-            console.error('Failed to auto-save manual session:', error);
+            Logger.error('Failed to auto-save manual session:', error);
           }
         }
       }
@@ -1025,7 +1025,7 @@ export default function App() {
         onClose={() => setSettingsPanelVisible(false)}
         onLoadSession={handleLoadSession}
         onMethodChange={(method) => {
-          console.log(`Pitch detection method changed to: ${method}`);
+          Logger.log(`Pitch detection method changed to: ${method}`);
           setPitchDetectionMethod(method);
         }}
         initialTab={settingsPanelInitialTab}

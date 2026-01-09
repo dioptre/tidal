@@ -2,6 +2,7 @@ import React, { useMemo, useEffect, useState, useRef } from 'react';
 import { View, StyleSheet, Dimensions, Platform, PanResponder } from 'react-native';
 import { Canvas, Rect, Text as SkiaText, Line, Group, matchFont, Skia } from '@shopify/react-native-skia';
 import { JsiSkTypeface } from '@shopify/react-native-skia/lib/module/skia/web/JsiSkTypeface';
+import Logger from '../utils/Logger';
 
 const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, onHoverNoteChange, fftData, voiceMode, onNotesChange, playheadPosition, onNoteClick }) => {
   // Audio context for click preview sounds
@@ -30,7 +31,7 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, on
     // Resume audio context if it's suspended (required on mobile browsers)
     if (audioContext.state === 'suspended' && audioContext.resume) {
       audioContext.resume().catch(err => {
-        console.warn('[Audio] Failed to resume audio context:', err);
+        Logger.warn('[Audio] Failed to resume audio context:', err);
       });
     }
     const oscillator = audioContext.createOscillator();
@@ -64,7 +65,7 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, on
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       const w = Math.floor(window.innerWidth);
       const h = Math.floor(window.innerHeight);
-      console.log('[NoteVisualizer] Initial dimensions:', w, h);
+      Logger.log('[NoteVisualizer] Initial dimensions:', w, h);
       return { width: w, height: h };
     }
     const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -84,7 +85,7 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, on
           const rect = canvasRef.current.getBoundingClientRect();
           const w = Math.floor(rect.width);
           const h = Math.floor(rect.height);
-          console.log('[NoteVisualizer] Update dimensions from container:', w, h);
+          Logger.log('[NoteVisualizer] Update dimensions from container:', w, h);
           if (w > 0 && h > 0) {
             setDimensions({ width: w, height: h });
           }
@@ -157,11 +158,11 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, on
   // Render animated Möbius strip when idle
   const renderMobiusStrip = () => {
     if (notes.length > 0 || isRecording) {
-      // console.log('[Möbius] Skipping - notes:', notes.length, 'recording:', isRecording);
+      // Logger.log('[Möbius] Skipping - notes:', notes.length, 'recording:', isRecording);
       return null;
     }
 
-    // console.log('[Möbius] Rendering at time:', animationTime, 'dims:', width, height);
+    // Logger.log('[Möbius] Rendering at time:', animationTime, 'dims:', width, height);
 
     const centerX = width / 2;
     const centerY = height / 2;
@@ -245,57 +246,57 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, on
   useEffect(() => {
     if (Platform.OS === 'web') {
       // Load Inter Regular font
-      console.log('[Font] Loading Inter-Regular.ttf...');
+      Logger.log('[Font] Loading Inter-Regular.ttf...');
       fetch('/Inter-Regular.ttf')
         .then(response => response.arrayBuffer())
         .then(buffer => {
-          console.log('[Font] Loaded buffer, size:', buffer.byteLength);
+          Logger.log('[Font] Loaded buffer, size:', buffer.byteLength);
           const uint8Array = new Uint8Array(buffer);
 
           // Try using CanvasKit directly
           const CanvasKit = window.CanvasKit || global.CanvasKit;
           if (CanvasKit && CanvasKit.Typeface) {
-            console.log('[Font] Available CanvasKit.Typeface methods:', Object.keys(CanvasKit.Typeface));
+            Logger.log('[Font] Available CanvasKit.Typeface methods:', Object.keys(CanvasKit.Typeface));
 
             // Try all available methods
             let canvasKitTypeface = null;
 
             // Try MakeTypefaceFromData first (simpler API)
             if (CanvasKit.Typeface.MakeTypefaceFromData) {
-              console.log('[Font] Trying MakeTypefaceFromData...');
+              Logger.log('[Font] Trying MakeTypefaceFromData...');
               canvasKitTypeface = CanvasKit.Typeface.MakeTypefaceFromData(uint8Array);
               if (canvasKitTypeface) {
-                console.log('[Font] MakeTypefaceFromData succeeded!');
+                Logger.log('[Font] MakeTypefaceFromData succeeded!');
               }
             }
 
             // Try MakeFreeTypeFaceFromData if first method failed
             if (!canvasKitTypeface && CanvasKit.Typeface.MakeFreeTypeFaceFromData) {
-              console.log('[Font] Trying MakeFreeTypeFaceFromData...');
+              Logger.log('[Font] Trying MakeFreeTypeFaceFromData...');
               canvasKitTypeface = CanvasKit.Typeface.MakeFreeTypeFaceFromData(uint8Array);
               if (canvasKitTypeface) {
-                console.log('[Font] MakeFreeTypeFaceFromData succeeded!');
+                Logger.log('[Font] MakeFreeTypeFaceFromData succeeded!');
               }
             }
 
             if (canvasKitTypeface) {
-              console.log('[Font] CanvasKit typeface created successfully, wrapping it...');
+              Logger.log('[Font] CanvasKit typeface created successfully, wrapping it...');
               // Wrap in JsiSkTypeface for Skia compatibility
               const wrappedTypeface = new JsiSkTypeface(CanvasKit, canvasKitTypeface);
               setFontTypeface(wrappedTypeface);
             } else {
-              console.warn('[Font] All typeface creation methods returned null');
+              Logger.warn('[Font] All typeface creation methods returned null');
             }
           }
         })
-        .catch(err => console.error('[Font] Failed to load Inter-Regular.ttf:', err));
+        .catch(err => Logger.error('[Font] Failed to load Inter-Regular.ttf:', err));
 
       // Load Inter SemiBold font
-      console.log('[Font] Loading Inter-SemiBold.ttf...');
+      Logger.log('[Font] Loading Inter-SemiBold.ttf...');
       fetch('/Inter-SemiBold.ttf')
         .then(response => response.arrayBuffer())
         .then(buffer => {
-          console.log('[Font] Loaded title buffer, size:', buffer.byteLength);
+          Logger.log('[Font] Loaded title buffer, size:', buffer.byteLength);
           const uint8Array = new Uint8Array(buffer);
 
           const CanvasKit = window.CanvasKit || global.CanvasKit;
@@ -304,53 +305,52 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, on
 
             // Try MakeTypefaceFromData first
             if (CanvasKit.Typeface.MakeTypefaceFromData) {
-              console.log('[Font] Trying MakeTypefaceFromData for title...');
+              Logger.log('[Font] Trying MakeTypefaceFromData for title...');
               canvasKitTypeface = CanvasKit.Typeface.MakeTypefaceFromData(uint8Array);
               if (canvasKitTypeface) {
-                console.log('[Font] Title MakeTypefaceFromData succeeded!');
+                Logger.log('[Font] Title MakeTypefaceFromData succeeded!');
               }
             }
 
             // Try MakeFreeTypeFaceFromData if first method failed
             if (!canvasKitTypeface && CanvasKit.Typeface.MakeFreeTypeFaceFromData) {
-              console.log('[Font] Trying MakeFreeTypeFaceFromData for title...');
+              Logger.log('[Font] Trying MakeFreeTypeFaceFromData for title...');
               canvasKitTypeface = CanvasKit.Typeface.MakeFreeTypeFaceFromData(uint8Array);
               if (canvasKitTypeface) {
-                console.log('[Font] Title MakeFreeTypeFaceFromData succeeded!');
+                Logger.log('[Font] Title MakeFreeTypeFaceFromData succeeded!');
               }
             }
 
             if (canvasKitTypeface) {
-              console.log('[Font] CanvasKit title typeface created successfully, wrapping it...');
+              Logger.log('[Font] CanvasKit title typeface created successfully, wrapping it...');
               // Wrap in JsiSkTypeface for Skia compatibility
               const wrappedTypeface = new JsiSkTypeface(CanvasKit, canvasKitTypeface);
               setTitleFontTypeface(wrappedTypeface);
             } else {
-              console.warn('[Font] All title typeface creation methods returned null');
+              Logger.warn('[Font] All title typeface creation methods returned null');
             }
           }
         })
-        .catch(err => console.error('[Font] Failed to load Inter-SemiBold.ttf:', err));
+        .catch(err => Logger.error('[Font] Failed to load Inter-SemiBold.ttf:', err));
 
       // If font loading fails, use GetDefault as fallback
       const CanvasKit = window.CanvasKit || global.CanvasKit;
       if (CanvasKit && CanvasKit.Typeface && CanvasKit.Typeface.GetDefault) {
-        console.log('[Font] Getting default typeface as fallback...');
+        Logger.log('[Font] Getting default typeface as fallback...');
         const canvasKitDefaultTypeface = CanvasKit.Typeface.GetDefault();
         if (canvasKitDefaultTypeface) {
-          console.log('[Font] Default typeface available, wrapping it...');
+          Logger.log('[Font] Default typeface available, wrapping it...');
           // Wrap the CanvasKit typeface in JsiSkTypeface so Skia.Font can use it
           const wrappedTypeface = new JsiSkTypeface(CanvasKit, canvasKitDefaultTypeface);
-          console.log('[Font] Wrapped default typeface:', wrappedTypeface);
 
           // Set both fonts to default for now so we get SOME text
           setTimeout(() => {
             if (!fontTypeface) {
-              console.log('[Font] Using default typeface for main font');
+              Logger.log('[Font] Using default typeface for main font');
               setFontTypeface(wrappedTypeface);
             }
             if (!titleFontTypeface) {
-              console.log('[Font] Using default typeface for title font');
+              Logger.log('[Font] Using default typeface for title font');
               setTitleFontTypeface(wrappedTypeface);
             }
           }, 1000); // Give custom fonts 1 second to load
@@ -364,10 +364,10 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, on
       if (fontTypeface) {
         try {
           const font = Skia.Font(fontTypeface, 12);
-          console.log('[Font] Created font with Inter Regular, size 12');
+          Logger.log('[Font] Created font with Inter Regular, size 12');
           return font;
         } catch (e) {
-          console.warn('[Font] Failed to create font:', e);
+          Logger.warn('[Font] Failed to create font:', e);
           return null;
         }
       }
@@ -379,10 +379,10 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, on
           fontFamily: 'sans-serif',
           fontSize: 12,
         });
-        console.log('[Font] Created native font with matchFont');
+        Logger.log('[Font] Created native font with matchFont');
         return nativeFont;
       } catch (e) {
-        console.error('[Font] Failed to create native font:', e);
+        Logger.error('[Font] Failed to create native font:', e);
         return null;
       }
     }
@@ -393,10 +393,10 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, on
       if (titleFontTypeface) {
         try {
           const font = Skia.Font(titleFontTypeface, 14);
-          console.log('[Font] Created title font with Inter SemiBold, size 14');
+          Logger.log('[Font] Created title font with Inter SemiBold, size 14');
           return font;
         } catch (e) {
-          console.warn('[Font] Failed to create title font:', e);
+          Logger.warn('[Font] Failed to create title font:', e);
           return null;
         }
       }
@@ -408,10 +408,10 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, on
           fontSize: 14,
           fontWeight: 'bold',
         });
-        console.log('[Font] Created native title font with matchFont');
+        Logger.log('[Font] Created native title font with matchFont');
         return nativeTitleFont;
       } catch (e) {
-        console.error('[Font] Failed to create native title font:', e);
+        Logger.error('[Font] Failed to create native title font:', e);
         return null;
       }
     }
@@ -890,11 +890,11 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, on
   // Render FFT visualization bars
   const renderFFT = () => {
     if (!isRecording || voiceMode || !fftData) {
-      // console.log('[FFT] Skipping - recording:', isRecording, 'voiceMode:', voiceMode, 'fftData:', !!fftData);
+      // Logger.log('[FFT] Skipping - recording:', isRecording, 'voiceMode:', voiceMode, 'fftData:', !!fftData);
       return null;
     }
 
-    // console.log('[FFT] Rendering', fftData.length, 'samples');
+    // Logger.log('[FFT] Rendering', fftData.length, 'samples');
 
     const bufferLength = fftData.length;
     const numBars = 64;
@@ -971,7 +971,7 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, on
   // Render notes as rectangles
   const renderNotes = () => {
     if (notes.length === 0) {
-      // console.log('[Notes] Skipping - no notes');
+      // Logger.log('[Notes] Skipping - no notes');
       return null;
     }
 
@@ -979,7 +979,7 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, on
     const liveCount = notes.filter(n => n.isLive).length;
     const mlCount = notes.filter(n => n.isML).length;
     if (notes.length > 0 && liveCount + mlCount === notes.length) {
-      console.log(`[Notes] Rendering ${notes.length} total (${liveCount} live, ${mlCount} ML)`);
+      Logger.log(`[Notes] Rendering ${notes.length} total (${liveCount} live, ${mlCount} ML)`);
     }
 
     const noteRects = [];
@@ -1077,13 +1077,13 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, on
       });
     } else {
       // Normal rendering (during recording or without debug mode)
-      // console.log('[Notes] Normal rendering mode, isRecording:', isRecording);
+      // Logger.log('[Notes] Normal rendering mode, isRecording:', isRecording);
       notes.forEach((note, i) => {
         const noteStart = note.startTime || 0;
         const x = (noteStart - timeOffset) * timeScale;
 
         // if (i < 3 || note.isLive) {
-        //   console.log('[Notes] Note', i, ':', {
+        //   Logger.log('[Notes] Note', i, ':', {
         //     isLive: note.isLive,
         //     note: note.note,
         //     startTime: noteStart,
@@ -1098,7 +1098,7 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, on
         // }
 
         if (x + (note.duration || 0.1) * timeScale < 0 || x > width) {
-          // if (i < 3 || note.isLive) console.log('[Notes] Skipping - out of horizontal bounds');
+          // if (i < 3 || note.isLive) Logger.log('[Notes] Skipping - out of horizontal bounds');
           return;
         }
 
@@ -1107,7 +1107,7 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, on
         const noteHeight = (height / midiRangeAdjusted) * 0.8;
 
         if (y < -noteHeight || y > height + noteHeight) {
-          // if (i < 3 || note.isLive) console.log('[Notes] Skipping - out of vertical bounds, y:', y, 'height:', height);
+          // if (i < 3 || note.isLive) Logger.log('[Notes] Skipping - out of vertical bounds, y:', y, 'height:', height);
           return;
         }
 
@@ -1409,12 +1409,12 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, on
 
   // Don't render if dimensions are invalid
   if (width <= 0 || height <= 0) {
-    // console.log('[NoteVisualizer] Invalid dimensions, skipping render:', width, height);
+    // Logger.log('[NoteVisualizer] Invalid dimensions, skipping render:', width, height);
     return <View style={styles.container} />;
   }
 
   // Debug logging for iOS
-  // console.log('[NoteVisualizer] Render:', {
+  // Logger.log('[NoteVisualizer] Render:', {
   //   platform: Platform.OS,
   //   width,
   //   height,

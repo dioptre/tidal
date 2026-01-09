@@ -4,6 +4,7 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Logger from './Logger';
 
 const STORAGE_PREFIX = 'sing2midi_';
 const SESSIONS_KEY = `${STORAGE_PREFIX}sessions`;
@@ -30,13 +31,13 @@ class Storage {
 
       // Save as the current session (overwrites previous)
       await AsyncStorage.setItem(CURRENT_SESSION_KEY, JSON.stringify(session));
-      console.log(`Current session saved: ${sessionId}`);
+      Logger.log(`Current session saved: ${sessionId}`);
       return sessionId;
     } catch (error) {
-      console.error('Failed to save current session:', error);
+      Logger.error('Failed to save current session:', error);
       // If quota exceeded, just overwrite (no history to clear)
       if (error.name === 'QuotaExceededError') {
-        console.warn('Storage quota exceeded, cannot save session');
+        Logger.warn('Storage quota exceeded, cannot save session');
       }
       throw error;
     }
@@ -54,7 +55,7 @@ class Storage {
       }
       return JSON.parse(sessionJson);
     } catch (error) {
-      console.error('Failed to load current session:', error);
+      Logger.error('Failed to load current session:', error);
       return null;
     }
   }
@@ -93,13 +94,13 @@ class Storage {
       // Save to storage
       await AsyncStorage.setItem(SESSIONS_KEY, JSON.stringify(trimmedSessions));
 
-      console.log(`Session saved: ${sessionId}`);
+      Logger.log(`Session saved: ${sessionId}`);
       return sessionId;
     } catch (error) {
-      console.error('Failed to save session:', error);
+      Logger.error('Failed to save session:', error);
       // Check if quota exceeded
       if (error.name === 'QuotaExceededError') {
-        console.warn('Storage quota exceeded, clearing old sessions...');
+        Logger.warn('Storage quota exceeded, clearing old sessions...');
         await this.clearOldSessions(10); // Keep only last 10 sessions
         // Retry once
         try {
@@ -112,7 +113,7 @@ class Storage {
           await AsyncStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions));
           return sessions[0].id;
         } catch (retryError) {
-          console.error('Failed to save session after clearing:', retryError);
+          Logger.error('Failed to save session after clearing:', retryError);
           throw retryError;
         }
       }
@@ -132,7 +133,7 @@ class Storage {
       const index = sessions.findIndex(s => s.id === sessionId);
 
       if (index === -1) {
-        console.warn(`Session ${sessionId} not found in history`);
+        Logger.warn(`Session ${sessionId} not found in history`);
         return false;
       }
 
@@ -146,7 +147,7 @@ class Storage {
       await AsyncStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions));
       return true;
     } catch (error) {
-      console.error('Failed to update session:', error);
+      Logger.error('Failed to update session:', error);
       throw error;
     }
   }
@@ -163,7 +164,7 @@ class Storage {
       }
       return JSON.parse(sessionsJson);
     } catch (error) {
-      console.error('Failed to load sessions:', error);
+      Logger.error('Failed to load sessions:', error);
       return [];
     }
   }
@@ -193,10 +194,10 @@ class Storage {
       }
 
       await AsyncStorage.setItem(SESSIONS_KEY, JSON.stringify(filtered));
-      console.log(`Session deleted: ${sessionId}`);
+      Logger.log(`Session deleted: ${sessionId}`);
       return true;
     } catch (error) {
-      console.error('Failed to delete session:', error);
+      Logger.error('Failed to delete session:', error);
       throw error;
     }
   }
@@ -210,9 +211,9 @@ class Storage {
       const sessions = await this.getAllSessions();
       const trimmed = sessions.slice(0, keepCount);
       await AsyncStorage.setItem(SESSIONS_KEY, JSON.stringify(trimmed));
-      console.log(`Cleared old sessions, keeping ${keepCount} most recent`);
+      Logger.log(`Cleared old sessions, keeping ${keepCount} most recent`);
     } catch (error) {
-      console.error('Failed to clear old sessions:', error);
+      Logger.error('Failed to clear old sessions:', error);
       throw error;
     }
   }
@@ -223,9 +224,9 @@ class Storage {
   static async clearAllSessions() {
     try {
       await AsyncStorage.removeItem(SESSIONS_KEY);
-      console.log('All sessions cleared');
+      Logger.log('All sessions cleared');
     } catch (error) {
-      console.error('Failed to clear all sessions:', error);
+      Logger.error('Failed to clear all sessions:', error);
       throw error;
     }
   }
