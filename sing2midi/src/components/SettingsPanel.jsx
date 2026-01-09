@@ -349,6 +349,17 @@ const SettingsPanel = ({ visible, onClose, onLoadSession, onMethodChange, initia
               <View style={styles.helpContent}>
                 <Text style={styles.helpTitle}>Help & Controls</Text>
 
+                {/* iOS/Android mute switch warning */}
+                <View style={styles.muteSwitchWarning}>
+                  <Text style={styles.muteSwitchWarningTitle}>⚠️ Important</Text>
+                  <Text style={styles.muteSwitchWarningText}>
+                    On iOS and Android, make sure your device's mute switch (on the left side) is OFF to hear note previews.
+                    {'\n'}
+                    {'\n'}
+                    The orange indicator means sound is muted.
+                  </Text>
+                </View>
+
                 <View style={styles.helpSection}>
                   <Text style={styles.helpSectionTitle}>🎵 Creating Notes</Text>
                   <Text style={styles.helpText}>
@@ -661,6 +672,27 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: Colors.TEXT_PRIMARY,
     marginBottom: 20,
+    fontFamily: Colors.FONT_UI,
+  },
+  muteSwitchWarning: {
+    backgroundColor: 'rgba(255, 152, 0, 0.15)',
+    borderLeftWidth: 4,
+    borderLeftColor: '#FF9800',
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 24,
+  },
+  muteSwitchWarningTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#FF9800',
+    marginBottom: 8,
+    fontFamily: Colors.FONT_UI,
+  },
+  muteSwitchWarningText: {
+    fontSize: 14,
+    color: Colors.TEXT_PRIMARY,
+    lineHeight: 20,
     fontFamily: Colors.FONT_UI,
   },
   helpSection: {
