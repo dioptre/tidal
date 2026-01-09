@@ -43,6 +43,7 @@ export default function App() {
   const [strudelCode, setStrudelCode] = useState('');
   const [noteNames, setNoteNames] = useState('');
   const [isPlaying, setIsPlaying] = useState(false);
+  const [playheadPosition, setPlayheadPosition] = useState(null); // Playback position in seconds
   const [isPlayingAudio, setIsPlayingAudio] = useState(false); // Track recorded audio playback
   const [voiceMode, setVoiceMode] = useState(true); // Toggle for voice-optimized mode
   const [dialogVisible, setDialogVisible] = useState(false);
@@ -81,8 +82,18 @@ export default function App() {
   const audioContextRef = useRef(null);
   const audioElementRef = useRef(null); // For playing recorded audio
   const playbackTimeoutRef = useRef(null); // For stopping playback timeout
+  const playbackAnimationRef = useRef(null); // For requestAnimationFrame
+  const playbackStartTimeRef = useRef(null); // When playback started
+  const playbackDurationRef = useRef(null); // Total duration of playback
+  const shouldLoopRef = useRef(false); // Track if playback should loop
+  const notesRef = useRef(notes); // Keep current notes ref for playback loop
   const spinnerRotation = useRef(new Animated.Value(0)).current;
   const saveTimeoutRef = useRef(null); // For debounced save
+
+  // Update notesRef whenever notes change
+  useEffect(() => {
+    notesRef.current = notes;
+  }, [notes]);
 
   // Animate spinner rotation
   useEffect(() => {
@@ -321,6 +332,15 @@ export default function App() {
   const handlePlayback = async () => {
     // Stop if already playing
     if (isPlaying) {
+      // Stop looping
+      shouldLoopRef.current = false;
+
+      // Clear animation frame
+      if (playbackAnimationRef.current) {
+        cancelAnimationFrame(playbackAnimationRef.current);
+        playbackAnimationRef.current = null;
+      }
+
       // Clear timeout
       if (playbackTimeoutRef.current) {
         clearTimeout(playbackTimeoutRef.current);
@@ -334,6 +354,7 @@ export default function App() {
       }
 
       setIsPlaying(false);
+      setPlayheadPosition(null); // Hide playhead
       return;
     }
 
@@ -350,51 +371,97 @@ export default function App() {
     }
 
     setIsPlaying(true);
+    shouldLoopRef.current = true;
 
-    // Create new audio context
-    audioContextRef.current = new AudioContext();
-    const audioContext = audioContextRef.current;
+    // Start looping playback
+    const playLoop = async () => {
+      // Check if we should still be playing
+      if (!shouldLoopRef.current) return;
 
-    // Sort notes by start time
-    const sortedNotes = [...mlNotes].sort((a, b) => a.startTime - b.startTime);
+      // Get fresh notes from ref (allows edits during playback)
+      const currentMlNotes = notesRef.current.filter(n => n.isML);
+      if (currentMlNotes.length === 0) {
+        shouldLoopRef.current = false;
+        return;
+      }
 
-    // Play each note
-    const startTime = audioContext.currentTime;
-    sortedNotes.forEach(note => {
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
+      // Sort notes by start time
+      const sortedNotes = [...currentMlNotes].sort((a, b) => a.startTime - b.startTime);
 
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
+      // Calculate total duration
+      const lastNote = sortedNotes[sortedNotes.length - 1];
+      const totalDuration = lastNote.startTime + lastNote.duration;
+      playbackDurationRef.current = totalDuration;
 
-      // Set frequency from MIDI note
-      const frequency = 440 * Math.pow(2, (note.midiNote - 69) / 12);
-      oscillator.frequency.value = frequency;
-      oscillator.type = 'sine';
+      // Close previous audio context if exists
+      if (audioContextRef.current) {
+        await audioContextRef.current.close();
+      }
 
-      // ADSR envelope
-      const noteStart = startTime + note.startTime;
-      const noteEnd = noteStart + note.duration;
+      // Create new audio context
+      const audioContext = new AudioContext();
+      audioContextRef.current = audioContext;
 
-      gainNode.gain.setValueAtTime(0, noteStart);
-      gainNode.gain.linearRampToValueAtTime(0.3, noteStart + 0.01); // Attack
-      gainNode.gain.linearRampToValueAtTime(0.2, noteStart + 0.05); // Decay
-      gainNode.gain.setValueAtTime(0.2, noteEnd - 0.05); // Sustain
-      gainNode.gain.linearRampToValueAtTime(0, noteEnd); // Release
+      // Play each note
+      const startTime = audioContext.currentTime;
+      sortedNotes.forEach(note => {
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
 
-      oscillator.start(noteStart);
-      oscillator.stop(noteEnd);
-    });
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
 
-    // Calculate total duration
-    const lastNote = sortedNotes[sortedNotes.length - 1];
-    const totalDuration = (lastNote.startTime + lastNote.duration) * 1000;
+        // Set frequency from MIDI note
+        const frequency = 440 * Math.pow(2, (note.midiNote - 69) / 12);
+        oscillator.frequency.value = frequency;
+        oscillator.type = 'sine';
 
-    // Reset playing state after playback completes
-    playbackTimeoutRef.current = setTimeout(() => {
-      setIsPlaying(false);
-      playbackTimeoutRef.current = null;
-    }, totalDuration);
+        // ADSR envelope
+        const noteStart = startTime + note.startTime;
+        const noteEnd = noteStart + note.duration;
+
+        gainNode.gain.setValueAtTime(0, noteStart);
+        gainNode.gain.linearRampToValueAtTime(0.3, noteStart + 0.01); // Attack
+        gainNode.gain.linearRampToValueAtTime(0.2, noteStart + 0.05); // Decay
+        gainNode.gain.setValueAtTime(0.2, noteEnd - 0.05); // Sustain
+        gainNode.gain.linearRampToValueAtTime(0, noteEnd); // Release
+
+        oscillator.start(noteStart);
+        oscillator.stop(noteEnd);
+      });
+
+      // Record when this loop started (use AudioContext time for sync)
+      playbackStartTimeRef.current = startTime;
+
+      // Schedule next loop
+      playbackTimeoutRef.current = setTimeout(() => {
+        playLoop(); // Loop again
+      }, totalDuration * 1000);
+    };
+
+    // Start first loop
+    playLoop();
+
+    // Animate playhead synced to AudioContext time
+    const animatePlayhead = () => {
+      if (!shouldLoopRef.current) {
+        console.log('[Playback] Animation stopped');
+        playbackAnimationRef.current = null;
+        return;
+      }
+
+      // Use AudioContext's currentTime for perfect sync with audio
+      if (audioContextRef.current && playbackDurationRef.current) {
+        const elapsed = audioContextRef.current.currentTime - playbackStartTimeRef.current;
+        const position = elapsed % playbackDurationRef.current; // Loop position
+        console.log('[Playback] Animation frame', { elapsed, position, totalDuration: playbackDurationRef.current });
+        setPlayheadPosition(position);
+      }
+
+      playbackAnimationRef.current = requestAnimationFrame(animatePlayhead);
+    };
+    console.log('[Playback] Starting animation');
+    animatePlayhead();
   };
 
   const handleDownloadAudio = () => {
@@ -609,6 +676,7 @@ export default function App() {
           debugShowComparison={DEBUG_SHOW_COMPARISON}
           onNotesChange={handleNotesChange}
           hoverNote={hoverNote}
+          playheadPosition={playheadPosition}
           onHoverNoteChange={(noteName, isRealNote) => {
             setHoverNote(noteName);
             setIsHoveringRealNote(isRealNote);

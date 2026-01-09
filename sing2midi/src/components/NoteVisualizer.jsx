@@ -3,7 +3,7 @@ import { View, StyleSheet, Dimensions, Platform, PanResponder } from 'react-nati
 import { Canvas, Rect, Text as SkiaText, Line, Group, matchFont, Skia } from '@shopify/react-native-skia';
 import { JsiSkTypeface } from '@shopify/react-native-skia/lib/module/skia/web/JsiSkTypeface';
 
-const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, onHoverNoteChange, fftData, voiceMode, onNotesChange }) => {
+const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, onHoverNoteChange, fftData, voiceMode, onNotesChange, playheadPosition }) => {
   // Get canvas dimensions with web compatibility
   const [dimensions, setDimensions] = useState(() => {
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
@@ -1143,6 +1143,31 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, on
     );
   };
 
+  // Render playback playhead
+  const renderPlayhead = () => {
+    if (playheadPosition === null || playheadPosition === undefined) return null;
+
+    const playheadX = (playheadPosition - timeOffset) * timeScale;
+
+    console.log('[Playhead]', { playheadPosition, timeOffset, timeScale, playheadX, width, height });
+
+    // Only render if visible on screen
+    if (playheadX < 0 || playheadX > width) {
+      console.log('[Playhead] Not visible on screen');
+      return null;
+    }
+
+    console.log('[Playhead] Rendering line');
+    return (
+      <Line
+        p1={{ x: playheadX, y: 0 }}
+        p2={{ x: playheadX, y: height }}
+        color="rgba(128, 128, 128, 0.5)"
+        strokeWidth={1}
+      />
+    );
+  };
+
   // Render time labels
   const renderTimeLabels = () => {
     const labels = [];
@@ -1326,8 +1351,6 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, on
     >
         {/* Background */}
         <Rect x={0} y={0} width={width} height={height} color="#0a0a0a" />
-        {/* Test rect to verify canvas is drawing */}
-        <Rect x={20} y={20} width={50} height={50} color="red" />
 
         {/* Möbius strip animation (when idle) */}
         {renderMobiusStrip()}
@@ -1346,6 +1369,9 @@ const NoteVisualizer = ({ notes, isRecording, debugShowComparison, hoverNote, on
 
         {/* Time Cursor */}
         {renderTimeCursor()}
+
+        {/* Playback Playhead */}
+        {renderPlayhead()}
 
         {/* Time Labels */}
         {renderTimeLabels()}
