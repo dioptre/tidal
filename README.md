@@ -6,6 +6,8 @@ This is a rapid start for people wanting to get started with Tidal esp on a Mac.
 
 Put the repo in ~/Documents/tidal and change my name to yours in all references.
 
+If you have little music experience like me I also made a voice to tidal/strudel/midi web app (best on desktop) for converting your singing or recordings here https://dioptre.github.io/tidal/ so you can get started with melodies that might be buzzing around your head.
+
 ### Install
 
 
