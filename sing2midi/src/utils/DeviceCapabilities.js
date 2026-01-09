@@ -226,7 +226,7 @@ class DeviceCapabilities {
       hybrid: {
         name: 'Hybrid (YIN + ONNX)',
         description: 'Combines real-time YIN with ML post-processing. Best quality, requires GPU.',
-        speed: 'moderate',
+        speed: 'slow',
         accuracy: 'excellent',
         gpuRequired: true
       }
