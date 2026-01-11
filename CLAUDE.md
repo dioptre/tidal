@@ -4,11 +4,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a **TidalCycles live coding music environment** configured for electronic music production. TidalCycles is a Haskell-based language for pattern generation that communicates with SuperCollider's SuperDirt audio engine.
+This is a **TidalCycles live coding music environment** configured for electronic music production, plus a **voice-to-MIDI/Tidal web application** (sing2midi). TidalCycles is a Haskell-based language for pattern generation that communicates with SuperCollider's SuperDirt audio engine.
+
+### Repository Structure
+
+- **Root**: TidalCycles setup with SuperCollider configuration and custom effects
+- **sing2midi/**: React-based voice-to-MIDI converter (dual platform: iOS + web)
+- **samples-extra/**: Additional sample banks beyond SuperDirt defaults
+- **samples-strudel/**: 126 instruments from Strudel's Virtual Community Sample Library
+- **impulse-responses/**: 52+ IRs for custom convolution reverb
+- **effects/**: Custom SuperDirt effects (convolution, compressor, spectral-delay)
+- **mi-UGens/**: Mutable Instruments eurorack module ports
 
 ## System Architecture
 
-### Three-Layer Architecture
+### TidalCycles: Three-Layer Architecture
 
 1. **Tidal (Haskell)** - Pattern generation language
    - `.tidal` files contain live coding patterns
@@ -21,12 +31,28 @@ This is a **TidalCycles live coding music environment** configured for electroni
    - Manages 12 orbits (audio channels) with independent effect chains
 
 3. **Custom Extensions**
-   - `mi-UGens/` - Mutable Instruments eurorack module ports (Braids, Plaits, Clouds, etc.)
-   - `effects/convolveir/` - Custom convolution reverb system with 52+ impulse responses
-   - `impulse-responses/` - .wav files for convolution (halls, cathedrals, tape, bass-boost)
-   - `samples-extra/` - Additional sample banks beyond SuperDirt defaults
+   - `mi-UGens/` - Mutable Instruments eurorack module ports (Braids, Plaits, Clouds, Verb, etc.)
+   - `effects/convolveir/` - Custom convolution reverb with Super IR creation system
+   - `effects/compressor/` - Four compression types (standard, sidechain, limiter, multiband)
+   - `effects/spectral-delay/` - Spectral delay effect filtering signal into frequency bands
 
-## Starting a Session
+### sing2midi: Voice Composer Application
+
+A React application that converts voice/audio to MIDI and Tidal patterns using ML inference.
+
+**Platforms:**
+- Web: https://dioptre.github.io/tidal/ (GitHub Pages at `/tidal/` path)
+- iOS: Voice Composer (bundle ID: `io.sfpl.sing2midi`)
+
+**Technology Stack:**
+- React 18 with dual build system (Vite for web, Metro for React Native)
+- TensorFlow.js for ML inference (web only, iOS pending)
+- react-native-skia for canvas rendering on iOS
+- GitHub Actions CI/CD for web deployment
+
+## Common Development Commands
+
+### TidalCycles Session
 
 ### 1. Start SuperCollider
 ```supercollider
@@ -69,7 +95,48 @@ panic
 
 -- Set tempo (174 BPM example)
 setcps (174/60/4)
+
+-- Record audio in SuperCollider
+s.record;
+s.stopRecording;
 ```
+
+### sing2midi Development
+
+**Prerequisites:**
+```bash
+nvm use                    # Use Node 20.19.4+ (see .nvmrc)
+npm install                # Install dependencies (run from sing2midi/)
+```
+
+**Web Development:**
+```bash
+cd sing2midi
+npm run dev                # Start Vite dev server → http://localhost:5176/tidal/
+npm run build              # Build for production (outputs to build/)
+npm test                   # Run Playwright tests
+```
+
+**iOS Development:**
+```bash
+cd sing2midi
+npm run pod-install        # Install CocoaPods dependencies (first time only)
+npm run xcode              # Open in Xcode (use .xcworkspace, NOT .xcodeproj)
+npm start                  # Start Metro bundler (in separate terminal)
+npm run ios                # Build and run on simulator
+npm run ios:clean          # Clean Xcode build artifacts
+npm run pod-clean          # Reinstall all CocoaPods dependencies
+```
+
+**iOS Build in Xcode:**
+1. Open `sing2midi/ios/sing2midi.xcworkspace` (NOT .xcodeproj)
+2. Select simulator (e.g., iPhone 16 Pro)
+3. Press ⌘R to build and run
+4. Metro bundler must be running in separate terminal (`npm start`)
+
+**Deployment:**
+- Web: Automatic via GitHub Actions on push to master (deploys to GitHub Pages)
+- iOS: Archive in Xcode (Product → Archive) then submit to App Store
 
 ## Key File Purposes
 
@@ -87,22 +154,42 @@ setcps (174/60/4)
 - **`mi-UGens/Setup/mi-ugens-params.hs`** - Tidal parameter definitions for mi-UGens
 - **`effects/convolveir/convolution-effect.scd`** - Custom convolution reverb implementation
 - **`effects/convolveir/convolution-params.hs`** - Tidal convolution parameters and presets
+- **`effects/compressor/compressor-effect.scd`** - Four compression types (compress, sidechain, limit, multiband)
+- **`effects/compressor/compressor-params.hs`** - Tidal compressor parameters and presets
+- **`effects/spectral-delay/spectral-delay-effect.scd`** - Spectral delay implementation
+- **`effects/spectral-delay/spectral-delay-params.hs`** - Tidal spectral delay parameters
+
+### sing2midi Files
+- **`sing2midi/src/App.jsx`** - Main React application component
+- **`sing2midi/src/config.js`** - Platform-specific configuration (web vs iOS)
+- **`sing2midi/src/components/NoteVisualizer.jsx`** - Piano roll (canvas on web, react-native-canvas on iOS)
+- **`sing2midi/vite.config.js`** - Web build configuration (Vite)
+- **`sing2midi/metro.config.js`** - React Native bundler configuration
+- **`sing2midi/ios/sing2midi.xcworkspace`** - Xcode workspace (open this, NOT .xcodeproj)
+- **`sing2midi/.nvmrc`** - Node version specification (20.19.4+)
+- **`.github/workflows/deploy-sing2midi.yml`** - GitHub Actions deployment pipeline
 
 ## Path Dependencies
 
 **Critical:** The following files contain hardcoded absolute paths that must match the system:
 
-1. **`startup.scd`** (lines 21-24):
+1. **`startup.scd`** (lines 21-28):
    ```supercollider
    load("/Users/andrewgrosser/Library/Application Support/SuperCollider/synthdefs/mi-ugens.scd");
    load("/Users/andrewgrosser/Documents/tidal/effects/convolveir/convolution-effect.scd");
+   load("/Users/andrewgrosser/Documents/tidal/effects/compressor/compressor-effect.scd");
+   load("/Users/andrewgrosser/Documents/tidal/effects/spectral-delay/spectral-delay-effect.scd");
    ~dirt.loadSoundFiles("/Users/andrewgrosser/Documents/tidal/samples-extra/*");
+   ~dirt.loadSoundFiles("/Users/andrewgrosser/Documents/tidal/samples-strudel/*");
+   ~dirt.loadSoundFiles("/Users/andrewgrosser/Documents/tidal/sounds/bbc/*");
    ```
 
-2. **`BootTidal.hs`** (lines 38-39):
+2. **`BootTidal.hs`** (lines 38-41):
    ```haskell
    :script "/Users/andrewgrosser/Documents/tidal/mi-UGens/Setup/mi-ugens-params.hs"
    :script "/Users/andrewgrosser/Documents/tidal/effects/convolveir/convolution-params.hs"
+   :script "/Users/andrewgrosser/Documents/tidal/effects/compressor/compressor-params.hs"
+   :script "/Users/andrewgrosser/Documents/tidal/effects/spectral-delay/spectral-delay-params.hs"
    ```
 
 When working on different systems, update these paths to match the actual file locations.
@@ -146,8 +233,56 @@ Synth modules from Mutable Instruments:
 - **ripples** - 4-pole analog filter
 - **warps** - Wave-shaping and cross-modulation
 
+### Compressor Effects System
+- **Four compression types**: Standard (`#compress`), sidechain pumping (`#sidechain`), brick-wall limiter (`#limit`), multiband compression (`#multiband`)
+- **Wet/dry architecture**: Similar to convolution reverb for mixing processed and dry signals
+- **Parameters:**
+  - `compress` - Wet/dry mix (0-1)
+  - `compressratio` - Compression ratio (1-20)
+  - `compressthresh` - Threshold (0-1)
+  - `compressattack` - Attack time (0.0001-0.1s)
+  - `compressrelease` - Release time (0.01-1s)
+  - `compressmakeup` - Makeup gain (0-2)
+  - `compressknee` - Knee (0-1)
+
+- **Presets:**
+  - `glueCompress` - Gentle mix bus glue compression
+  - `punchyCompress` - Punchy drum compression
+  - `heavyLimit` - Aggressive brick-wall limiting
+  - `pump` - Classic sidechain pumping effect
+  - `vocalCompress` - Vocal-optimized compression
+  - `tightBass` - Bass compression for punch
+
+**Example usage:**
+```haskell
+d1 $ s "bd*4" # punchyCompress
+d1 $ s "bass:1*8" # pump
+d1 $ s "[bd sn cp hh]" # glueCompress
+d1 $ s "superpiano" # gain 1.5 # limit 0.8 # limitthresh 0.9
+```
+
+### Spectral Delay
+- **Frequency-selective delay**: Filters signal into frequency bands and delays them with bitwise patterns
+- **Parameters:**
+  - `tsdelay` - Time scale for delay (0-1), controls overall delay time
+  - `xsdelay` - Delay structure pattern (integer), determines which frequency bands are delayed via bitwise AND
+
+**Example usage:**
+```haskell
+d1 $ s "arpy*4" # xsdelay 0.5 # tsdelay 0.3
+```
+
 ### Extended Channels
 Channels d1-d16 are standard, but `BootTidal.hs` adds d17-d24 for complex arrangements (see `dnb.tidal` for usage).
+
+### Strudel REPL Application
+A local Strudel REPL application is included in the repository (`Strudel REPL-darwin-arm64/`).
+
+**Commands:**
+```bash
+npm run strudel        # Open local Strudel REPL app
+npm run strudel:install  # Install/reinstall Strudel REPL
+```
 
 ## Pattern Development Workflow
 
@@ -179,6 +314,62 @@ do
 - `(n,k)` - Euclidean rhythm: `bd(3,8)` = 3 pulses over 8 steps
 - `?` - Random removal: `bd?` or `bd?0.5`
 
+## sing2midi Architecture & Key Patterns
+
+### Dual Platform Build System
+
+The application uses **two build systems** for maximum code reuse:
+
+1. **Vite (Web)**: Fast dev server and optimized production builds
+   - Entry: `index.html` → `src/App.jsx`
+   - Output: `build/` directory
+   - Config: `vite.config.js`, `craco.config.js`
+
+2. **Metro (React Native)**: iOS bundler
+   - Entry: `index.js` → `src/App.jsx`
+   - Config: `metro.config.js`, `babel.config.js`
+
+### Platform-Specific Code Patterns
+
+**Platform Detection:**
+```javascript
+import { Platform } from 'react-native-web';  // Works on both platforms
+
+if (Platform.OS === 'ios') {
+  // iOS-specific code
+} else {
+  // Web-specific code
+}
+```
+
+**Canvas Rendering:**
+- Web: HTML5 Canvas (`<canvas>`)
+- iOS: react-native-skia (`<Canvas>` component)
+- Both implementations in `src/components/NoteVisualizer.jsx`
+
+**File Structure:**
+```
+sing2midi/src/
+├── App.jsx                 # Main application (platform-agnostic)
+├── config.js               # Platform detection & configuration
+└── components/
+    ├── NoteVisualizer.jsx  # Piano roll (platform-specific canvas)
+    └── ...                 # Other components
+```
+
+### Important Configuration Files
+
+- **`ios/.xcode.env.local`**: Sets Node path for Xcode (gitignored, auto-generated)
+- **`metro.config.js`**: Includes web extensions (.web.js) for React Native Web compatibility
+- **`vite.config.js`**: Configures `/tidal/` base path for GitHub Pages deployment
+- **`.nvmrc`**: Locks Node version to 20.19.4+ (important for React Native 0.83.1)
+
+### Known Limitations
+
+- **iOS**: ML inference (TensorFlow.js) not yet implemented
+- **iOS**: Audio recording not yet implemented
+- **Web**: Fully functional with CREPE pitch detection model
+
 ## Debugging
 
 ### SuperCollider Issues
@@ -203,6 +394,51 @@ SuperDirt.start;
 - Check paths in `startup.scd` match actual directories
 - SuperCollider Post window shows sample loading progress
 
+### sing2midi Issues
+
+**Metro bundler connection error (iOS):**
+```bash
+# Ensure Metro is running
+cd sing2midi && npm start
+
+# In Xcode: Clean (⌘⇧K) then rebuild (⌘R)
+```
+
+**Node version mismatch:**
+```bash
+cd sing2midi
+nvm use                    # Use version from .nvmrc
+# Or install required version:
+nvm install 20.19.4 && nvm use 20.19.4
+```
+
+**CocoaPods issues:**
+```bash
+cd sing2midi
+npm run pod-clean          # Reinstall all pods
+npm run pod-update         # Update pods
+```
+
+**Xcode build errors:**
+```bash
+cd sing2midi
+npm run ios:clean          # Clean build artifacts
+# In Xcode: Clean (⌘⇧K) then rebuild (⌘R)
+```
+
+**Module not found errors:**
+```bash
+cd sing2midi
+rm -rf node_modules package-lock.json
+npm install
+npm run pod-install
+```
+
+**Web deployment issues:**
+- Check GitHub Actions logs: `.github/workflows/deploy-sing2midi.yml`
+- Ensure `PUBLIC_URL=/tidal/` is set correctly in build environment
+- Build outputs to `sing2midi/build/` (not `dist/`)
+
 ## Reference Resources
 
 - **`README.md`** - Complete setup guide, installation steps, troubleshooting
@@ -212,6 +448,21 @@ SuperDirt.start;
 
 ### Default SuperDirt Samples
 808, 909, arpy, bass, bd, cp, hh, sn, and 200+ others (see README.md for full list)
+
+### samples-strudel (126 instruments)
+Complete Strudel VCSL (Virtual Community Sample Library) including:
+- Orchestral: timpani, glockenspiel, marimba, xylophone, tubular bells
+- Pianos: kawai, steinway, piano (higher quality than superpiano)
+- Wind: recorder (alto/bass/soprano/tenor), sax, ocarina, harmonica
+- Strings: harp, kalimba (5 variations), psaltery
+- Drums: snare_modern (72 articulations), tom, cowbell, bongo, conga
+- Ethnic: balafon, dantranh, darbuka, didgeridoo, slitdrum
+- Electronic: clavisynth, fmpiano, super64 (C64 SID chip)
+- Organs: pipeorgan, organ_4inch/8inch/full
+
+Access via: `d1 $ s "kawai:0 kawai:15 kawai:30"`
+
+**Note**: `piano` samples have "infinitely better" quality than `superpiano` per repository author.
 
 ### samples-extra
 Additional banks: break, cpu, cpu2, dbass, foley, kick, rash, snare, etc.
