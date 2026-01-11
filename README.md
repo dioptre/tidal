@@ -448,7 +448,115 @@ xattr -d com.apple.quarantine *
 - xmas (1)
 - yeah (31)
 
-#### Additional Sample Banks (from samples-extra) (https://slab.org/tmp/samples-extra.zip)
+#### Additional Sample Banks 
+
+##### samples-strudel (https://strudel.cc / https://github.com/felixroos/VCSL)
+126 instruments from Strudel's VCSL (Virtual Community Sample Library):
+- agogo (5) - Brazilian agogo bells
+- anvil (9) - Orchestral anvil strikes
+- balafon (5/5/5) - West African wooden xylophone in hard/soft/normal variations
+- ballwhistle (2) - Ball whistle toy
+- bassdrum1 (8) - Orchestral bass drum
+- bassdrum2 (30) - Concert bass drum with rolls and dynamics
+- belltree (3) - Mark tree/bar chimes
+- bongo (28) - Afro-Cuban hand drums
+- brakedrum (17) - Brake drum percussion
+- cabasa (6) - Afro-Brazilian shaker
+- cajon (18) - Peruvian box drum
+- clap (10) - Hand claps
+- clash (10) - Orchestral crash cymbals
+- clash2 (5) - Additional crash cymbal variations
+- clave (6) - Latin percussion claves
+- clavisynth (13) - FM synth electric piano
+- conga (34) - Afro-Cuban conga drums
+- cowbell (13) - Latin cowbell
+- dantranh (5/4/4) - Vietnamese zither in normal/tremolo/vibrato
+- darbuka (20) - Middle Eastern goblet drum
+- didgeridoo (12) - Australian wind instrument
+- fingercymbal (1) - Finger cymbals
+- flexatone (8) - Orchestral effect instrument
+- fmpiano (15) - FM synthesized piano
+- folkharp (15) - Celtic folk harp
+- framedrum (18) - Middle Eastern frame drum
+- glockenspiel (6) - Orchestral glockenspiel
+- gong (7) - Orchestral tam-tam
+- gong2 (6) - Additional gong variations
+- guiro (5) - Latin American scraper
+- handchimes (11) - Handheld chimes
+- harmonica (9/10/10) - Mouth organ in normal/soft/vibrato
+- harp (23) - Concert pedal harp
+- hihat (15) - Hi-hat cymbal
+- kalimba (11) - African thumb piano
+- kalimba2 (25) - Tanzanian kalimba variation
+- kalimba3 (22) - Additional kalimba variation
+- kalimba4 (22) - Additional kalimba variation
+- kalimba5 (14) - Additional kalimba variation
+- kawai (37) - Kawai grand piano
+- marimba (10) - Orchestral marimba
+- marktrees (6) - Wind chimes/mark tree
+- ocarina (11/10/13/10) - Clay flute in normal/small/stacc/vibrato
+- oceandrum (3) - Ocean drum effect
+- organ_4inch (15) - Small pipe organ
+- organ_8inch (15) - Medium pipe organ
+- organ_full (15) - Full pipe organ
+- piano (30) - Sampled piano
+- piano1 (15) - FM piano variation
+- pipeorgan_loud (11) - Loud pipe organ with pedal (5)
+- pipeorgan_quiet (11) - Quiet pipe organ with pedal (5)
+- psaltery_bow (11) - Bowed psaltery
+- psaltery_pluck (11) - Plucked psaltery
+- psaltery_spiccato (11) - Spiccato psaltery
+- ratchet (8) - Ratchet/cog rattle
+- recorder_alto (6/7/7) - Alto recorder stacc/sus/vibrato
+- recorder_bass (14/6/14) - Bass recorder stacc/sus/vibrato
+- recorder_soprano (7/8) - Soprano recorder stacc/sus
+- recorder_tenor (7/8/12) - Tenor recorder stacc/sus/vibrato
+- sax (12/15/12) - Saxophone normal/stacc/vibrato
+- saxello (3/3/2) - Small soprano saxophone normal/stacc/vibrato
+- shaker_large (6) - Large shaker
+- shaker_small (16) - Small shaker
+- siren (5) - Police/ambulance siren
+- slapstick (5) - Wood block clapper
+- sleighbells (6) - Christmas sleigh bells
+- slitdrum (6) - Log drum/tongue drum
+- snare_hi (8) - High-tuned snare drum
+- snare_low (20) - Low-tuned snare drum
+- snare_modern (72) - Modern snare with extensive articulations
+- snare_rim (4) - Rim shot variations
+- steinway (42) - Steinway grand piano
+- strumstick (14) - McNally strumstick
+- super64 (13/13/13) - Commodore 64 SID chip synth normal/accent/vibrato
+- sus_cymbal (25) - Suspended cymbal
+- sus_cymbal2 (23) - Additional suspended cymbal
+- tambourine (7) - Hand tambourine
+- tambourine2 (7) - Additional tambourine
+- timpani (30) - Orchestral kettle drums
+- timpani2 (204) - Extended timpani collection
+- timpani_roll (10) - Timpani rolls
+- tom2_mallet (8) - Tom drum with mallet
+- tom2_rim (6) - Tom rim shots
+- tom2_stick (8) - Tom with stick
+- tom_rim (6) - Additional tom rim shots
+- tom_stick (8) - Additional tom with stick
+- trainwhistle (6) - Toy train whistle
+- triangles (37) - Orchestral triangle
+- tubularbells (6) - Tubular bells/chimes
+- tubularbells2 (11) - Additional tubular bells
+- vibraphone (11) - Vibraphone normal
+- vibraphone_bowed (6) - Bowed vibraphone
+- vibraphone_soft (11) - Soft mallet vibraphone
+- vibraslap (4) - Vibraslap percussion
+- wineglass (1) - Wine glass tone
+- wineglass_slow (1) - Wine glass with slow attack
+- woodblock (10) - Wood block
+- xylophone_hard_ff (8) - Xylophone hard mallet fortissimo
+- xylophone_hard_pp (8) - Xylophone hard mallet pianissimo
+- xylophone_medium_ff (8) - Xylophone medium mallet fortissimo
+- xylophone_medium_pp (8) - Xylophone medium mallet pianissimo
+- xylophone_soft_ff (8) - Xylophone soft mallet fortissimo
+- xylophone_soft_pp (8) - Xylophone soft mallet pianissimo
+
+##### samples-extra (https://slab.org/tmp/samples-extra.zip)
 - break (33)
 - bsbass (9)
 - bsguitar (19)
