@@ -24,6 +24,7 @@ s.reboot { // server options are only updated on reboot
         load("/Users/andrewgrosser/Documents/tidal/effects/spectral-delay/spectral-delay-effect.scd");
 		~dirt.loadSoundFiles;
 		~dirt.loadSoundFiles("/Users/andrewgrosser/Documents/tidal/samples-extra/*");   // load samples (path containing a wildcard can be passed in)
+		~dirt.loadSoundFiles("/Users/andrewgrosser/Documents/tidal/samples-strudel/*"); // load Strudel samples (VCSL + piano)
 		~dirt.loadSoundFiles("/Users/andrewgrosser/Documents/tidal/sounds/bbc/*");
 		// for example: ~dirt.loadSoundFiles("/Users/myUserName/Dirt/samples/*");
 		// s.sync; // optionally: wait for samples to be read
