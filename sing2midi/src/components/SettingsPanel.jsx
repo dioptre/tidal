@@ -5,7 +5,7 @@ import Settings from '../utils/Settings';
 import DeviceCapabilities from '../utils/DeviceCapabilities';
 import Logger from '../utils/Logger';
 import * as Colors from '../styles/colors';
-import { Trash2Icon, MicIcon, WaveformIcon } from './Icons';
+import { Trash2Icon, MicIcon, WaveformIcon, GithubIcon } from './Icons';
 
 const SettingsPanel = ({ visible, onClose, onLoadSession, onMethodChange, initialTab = 'history' }) => {
   const [sessions, setSessions] = useState([]);
@@ -451,6 +451,15 @@ const SettingsPanel = ({ visible, onClose, onLoadSession, onMethodChange, initia
                       Andrew Grosser
                     </Text>
                   </Text>
+                  <TouchableOpacity
+                    style={styles.githubLink}
+                    onPress={() => Linking.openURL('https://github.com/dioptre/tidal')}
+                  >
+                    <GithubIcon size={16} color={Colors.WAVEFORM_BLUE} />
+                    <Text style={styles.creditsLinkText}>
+                      github.com/dioptre/tidal
+                    </Text>
+                  </TouchableOpacity>
                 </View>
               </View>
             ) : (
@@ -919,6 +928,12 @@ const styles = StyleSheet.create({
     color: Colors.WAVEFORM_BLUE,
     fontFamily: Colors.FONT_UI,
     textDecorationLine: 'underline',
+  },
+  githubLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 4,
   },
   // Developer tab styles
   developerContent: {
