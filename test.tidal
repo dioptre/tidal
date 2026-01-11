@@ -233,6 +233,152 @@ d1 $ s "world" <| n (run 3) -- three kit hits, meh
 d1 $ s "xmas" -- voice saying 'merry christmas'
 d1 $ slow 2 $ s "yeah" <| n (run 31) -- big selection of short clicks and pops, usable
 
+-- Strudel Samples
+
+-- Percussion & Drums
+d1 $ s "agogo" <| n (run 5) -- 5 agogo bell hits
+d1 $ s "anvil" <| n (run 9) -- 9 anvil strike sounds
+d1 $ slow 2 $ s "bassdrum1" <| n (run 8) -- 8 bass drum hits
+d1 $ slow 2 $ s "bassdrum2" <| n (run 30) -- 30 bass drum variations
+d1 $ slow 2 $ s "bongo" <| n (run 28) -- 28 bongo hits
+d1 $ s "brakedrum" <| n (run 17) -- 17 brake drum percussion
+d1 $ s "cabasa" <| n (run 6) -- 6 cabasa shaker sounds
+d1 $ slow 2 $ s "cajon" <| n (run 18) -- 18 cajon box drum hits
+d1 $ s "clap" <| n (run 10) -- 10 handclap sounds
+d1 $ s "clash" <| n (run 10) -- 10 cymbal clashes
+d1 $ s "clash2" <| n (run 5) -- 5 additional clash sounds
+d1 $ s "clave" <| n (run 6) -- 6 clave stick hits
+d1 $ slow 2 $ s "conga" <| n (run 34) -- 34 conga drum hits
+d1 $ s "cowbell" <| n (run 13) -- 13 cowbell hits
+d1 $ slow 2 $ s "darbuka" <| n (run 20) -- 20 darbuka goblet drum hits
+d1 $ s "framedrum" <| n (run 18) -- 18 frame drum hits
+d1 $ s "guiro" <| n (run 5) -- 5 guiro scraper sounds
+d1 $ s "hihat" <| n (run 15) -- 15 hi-hat variations
+d1 $ s "ratchet" <| n (run 8) -- 8 ratchet percussion sounds
+d1 $ s "shaker_large" <| n (run 6) -- 6 large shaker sounds
+d1 $ s "shaker_small" <| n (run 16) -- 16 small shaker variations
+d1 $ s "slapstick" <| n (run 5) -- 5 slapstick whip crack sounds
+d1 $ s "sleighbells" <| n (run 6) -- 6 sleighbell jingles
+d1 $ s "slitdrum" <| n (run 6) -- 6 slit/tongue drum hits
+d1 $ s "snare_hi" <| n (run 8) -- 8 high-tuned snare hits
+d1 $ slow 2 $ s "snare_low" <| n (run 20) -- 20 low-tuned snare hits
+d1 $ slow 4 $ s "snare_modern" <| n (run 72) -- 72 modern snare samples!
+d1 $ s "snare_rim" <| n (run 4) -- 4 snare rim shots
+d1 $ s "tambourine" <| n (run 7) -- 7 tambourine hits
+d1 $ s "tambourine2" <| n (run 7) -- 7 alternative tambourine sounds
+d1 $ slow 2 $ s "timpani" <| n (run 30) -- 30 timpani hits
+d1 $ slow 16 $ s "timpani2" <| n (run 204) -- 204 timpani multisamples!
+d1 $ slow 2 $ s "timpani_roll" <| n (run 10) -- 10 timpani roll crescendos
+d1 $ s "tom_rim" <| n (run 6) -- 6 tom rim shots
+d1 $ s "tom_stick" <| n (run 8) -- 8 tom stick hits
+d1 $ s "tom2_mallet" <| n (run 8) -- 8 tom with mallet
+d1 $ s "tom2_rim" <| n (run 6) -- 6 tom rim shots (alternate)
+d1 $ s "tom2_stick" <| n (run 8) -- 8 tom stick hits (alternate)
+d1 $ s "vibraslap" <| n (run 4) -- 4 vibraslap rattles
+d1 $ s "woodblock" <| n (run 10) -- 10 woodblock hits
+
+-- Melodic Percussion & Metallophones
+d1 $ s "balafon" <| n (run 5) -- 5 balafon (African xylophone) notes
+d1 $ s "balafon_hard" <| n (run 5) -- 5 hard-struck balafon notes
+d1 $ s "balafon_soft" <| n (run 5) -- 5 soft balafon notes
+d1 $ s "belltree" <| n (run 3) -- 3 bell tree cascades
+d1 $ s "fingercymbal" <| n (run 1) -- 1 finger cymbal ting
+d1 $ s "flexatone" <| n (run 8) -- 8 flexatone wobble tones
+d1 $ s "glockenspiel" <| n (run 6) -- 6 glockenspiel notes
+d1 $ s "gong" <| n (run 7) -- 7 gong strikes
+d1 $ s "gong2" <| n (run 6) -- 6 alternative gong sounds
+d1 $ s "handchimes" <| n (run 11) -- 11 hand chime notes
+d1 $ slow 2 $ s "kalimba2" <| n (run 25) -- 25 kalimba (thumb piano) notes
+d1 $ slow 2 $ s "kalimba3" <| n (run 22) -- 22 kalimba variations
+d1 $ slow 2 $ s "kalimba4" <| n (run 22) -- 22 more kalimba samples
+d1 $ s "kalimba5" <| n (run 14) -- 14 additional kalimba notes
+d1 $ s "marimba" <| n (run 10) -- 10 marimba notes
+d1 $ s "marktrees" <| n (run 6) -- 6 mark tree chime cascades
+d1 $ slow 2 $ s "triangles" <| n (run 37) -- 37 triangle variations
+d1 $ s "tubularbells" <| n (run 6) -- 6 tubular bell notes
+d1 $ s "tubularbells2" <| n (run 11) -- 11 alternative tubular bells
+d1 $ s "vibraphone" <| n (run 11) -- 11 vibraphone notes
+d1 $ s "vibraphone_bowed" <| n (run 6) -- 6 bowed vibraphone notes
+d1 $ s "vibraphone_soft" <| n (run 11) -- 11 soft vibraphone notes
+d1 $ s "xylophone_hard_ff" <| n (run 8) -- 8 hard xylophone fortissimo
+d1 $ s "xylophone_hard_pp" <| n (run 8) -- 8 hard xylophone pianissimo
+d1 $ s "xylophone_medium_ff" <| n (run 8) -- 8 medium xylophone fortissimo
+d1 $ s "xylophone_medium_pp" <| n (run 8) -- 8 medium xylophone pianissimo
+d1 $ s "xylophone_soft_ff" <| n (run 8) -- 8 soft xylophone fortissimo
+d1 $ s "xylophone_soft_pp" <| n (run 8) -- 8 soft xylophone pianissimo
+d1 $ s "wineglass" <| n (run 1) -- 1 singing wine glass tone
+d1 $ s "wineglass_slow" <| n (run 1) -- 1 slow wine glass sustain
+
+-- Keyboards & Piano
+d1 $ slow 2 $ s "clavisynth" <| n (run 13) -- 13 FM electric piano notes
+d1 $ slow 2 $ s "fmpiano" <| n (run 15) -- 15 FM piano notes
+d1 $ slow 2 $ s "kawai" <| n (run 37) -- 37 Kawai piano samples
+d1 $ slow 2 $ s "piano" <| n (run 30) -- 30 acoustic piano notes
+d1 $ slow 2 $ s "piano1" <| n (run 15) -- 15 alternative piano samples
+d1 $ slow 4 $ s "steinway" <| n (run 42) -- 42 Steinway grand piano notes
+
+-- Organ
+d1 $ slow 2 $ s "organ_4inch" <| n (run 15) -- 15 4-inch organ pipe notes
+d1 $ slow 2 $ s "organ_8inch" <| n (run 15) -- 15 8-inch organ pipe notes
+d1 $ slow 2 $ s "organ_full" <| n (run 15) -- 15 full organ registration notes
+d1 $ slow 2 $ s "pipeorgan_loud" <| n (run 11) -- 11 loud pipe organ notes
+d1 $ slow 2 $ s "pipeorgan_loud_pedal" <| n (run 5) -- 5 loud organ pedal notes
+d1 $ slow 2 $ s "pipeorgan_quiet" <| n (run 11) -- 11 quiet pipe organ notes
+d1 $ slow 2 $ s "pipeorgan_quiet_pedal" <| n (run 5) -- 5 quiet organ pedal notes
+
+-- Plucked Strings
+d1 $ slow 2 $ s "dantranh" <| n (run 5) -- 5 Vietnamese dan tranh zither notes
+d1 $ slow 2 $ s "dantranh_tremolo" <| n (run 4) -- 4 dan tranh tremolo notes
+d1 $ slow 2 $ s "dantranh_vibrato" <| n (run 4) -- 4 dan tranh vibrato notes
+d1 $ slow 2 $ s "folkharp" <| n (run 15) -- 15 folk harp notes
+d1 $ slow 2 $ s "harp" <| n (run 23) -- 23 concert harp notes
+d1 $ slow 2 $ s "psaltery_bow" <| n (run 11) -- 11 bowed psaltery notes
+d1 $ slow 2 $ s "psaltery_pluck" <| n (run 11) -- 11 plucked psaltery notes
+d1 $ slow 2 $ s "psaltery_spiccato" <| n (run 11) -- 11 psaltery spiccato
+d1 $ s "strumstick" <| n (run 14) -- 14 strumstick dulcimer notes
+
+-- Wind Instruments - Recorders
+d1 $ slow 2 $ s "recorder_alto_stacc" <| n (run 6) -- 6 alto recorder staccato
+d1 $ slow 2 $ s "recorder_alto_sus" <| n (run 7) -- 7 alto recorder sustained
+d1 $ slow 2 $ s "recorder_alto_vib" <| n (run 7) -- 7 alto recorder vibrato
+d1 $ slow 2 $ s "recorder_bass_stacc" <| n (run 14) -- 14 bass recorder staccato
+d1 $ slow 2 $ s "recorder_bass_sus" <| n (run 6) -- 6 bass recorder sustained
+d1 $ slow 2 $ s "recorder_bass_vib" <| n (run 14) -- 14 bass recorder vibrato
+d1 $ slow 2 $ s "recorder_soprano_stacc" <| n (run 7) -- 7 soprano recorder staccato
+d1 $ slow 2 $ s "recorder_soprano_sus" <| n (run 8) -- 8 soprano recorder sustained
+d1 $ slow 2 $ s "recorder_tenor_stacc" <| n (run 7) -- 7 tenor recorder staccato
+d1 $ slow 2 $ s "recorder_tenor_sus" <| n (run 8) -- 8 tenor recorder sustained
+d1 $ slow 2 $ s "recorder_tenor_vib" <| n (run 12) -- 12 tenor recorder vibrato
+
+-- Wind Instruments - Other
+d1 $ slow 2 $ s "didgeridoo" <| n (run 12) -- 12 didgeridoo drones
+d1 $ slow 2 $ s "harmonica" <| n (run 9) -- 9 harmonica notes
+d1 $ slow 2 $ s "harmonica_soft" <| n (run 10) -- 10 soft harmonica notes
+d1 $ slow 2 $ s "harmonica_vib" <| n (run 10) -- 10 harmonica vibrato notes
+d1 $ slow 2 $ s "ocarina" <| n (run 11) -- 11 ocarina notes
+d1 $ slow 2 $ s "ocarina_small" <| n (run 10) -- 10 small ocarina notes
+d1 $ slow 2 $ s "ocarina_small_stacc" <| n (run 13) -- 13 small ocarina staccato
+d1 $ slow 2 $ s "ocarina_vib" <| n (run 10) -- 10 ocarina vibrato notes
+d1 $ slow 2 $ s "sax" <| n (run 12) -- 12 saxophone notes
+d1 $ slow 2 $ s "sax_stacc" <| n (run 15) -- 15 saxophone staccato
+d1 $ slow 2 $ s "sax_vib" <| n (run 12) -- 12 saxophone vibrato
+d1 $ slow 2 $ s "saxello" <| n (run 3) -- 3 saxello (soprano sax) notes
+d1 $ slow 2 $ s "saxello_stacc" <| n (run 3) -- 3 saxello staccato
+d1 $ slow 2 $ s "saxello_vib" <| n (run 2) -- 2 saxello vibrato
+d1 $ slow 2 $ s "super64" <| n (run 13) -- 13 Commodore 64 SID chip notes
+d1 $ slow 2 $ s "super64_acc" <| n (run 13) -- 13 C64 accented notes
+d1 $ slow 2 $ s "super64_vib" <| n (run 13) -- 13 C64 vibrato notes
+
+-- Cymbals & Sustained Percussion
+d1 $ slow 2 $ s "sus_cymbal" <| n (run 25) -- 25 suspended cymbal hits
+d1 $ slow 2 $ s "sus_cymbal2" <| n (run 23) -- 23 alternative suspended cymbals
+
+-- Special Effects & Textures
+d1 $ s "ballwhistle" <| n (run 2) -- 2 ball whistle slides
+d1 $ slow 4 $ s "oceandrum" <| n (run 3) -- 3 ocean drum wave textures
+d1 $ s "siren" <| n (run 5) -- 5 siren wails
+d1 $ s "trainwhistle" <| n (run 6) -- 6 train whistle blasts
+
 -- !!!! Likes
 d1 $ slow 4 $ s "em2" <| n (run 6)
 d1 $ slow 2 $ s "flick" <| n (run 17) -- mix of 17 hits couple of long Cs
@@ -271,6 +417,41 @@ d1 $ s "v" <| n (run 6) -- 6 mixed electronic sounds, kind of a kit
 d1 $ s "voodoo" <| n (run 5) -- actually quite a nice five sound kit
 d1 $ slow 2 $ s "wind" <| n (run 10) -- actually filtered white noise hits
 d1 $ slow 2 $ s "yeah" <| n (run 31) -- big selection of short clicks and pops, usable
+
+-- samples-extra Samples
+
+-- Drum & Bass Production Kit (bsXXX series)
+d1 $ s "bsbass" <| n (run 9) -- 9 bass drum samples
+d1 $ slow 2 $ s "bsguitar" <| n (run 19) -- 19 guitar/string hits
+d1 $ s "bshihat" <| n (run 3) -- 3 hi-hat samples
+d1 $ s "bskick" <| n (run 9) -- 9 kick drum samples
+d1 $ slow 2 $ s "bsnoise" <| n (run 22) -- 22 noise/texture samples
+d1 $ s "bsperc" <| n (run 7) -- 7 percussion hits
+d1 $ s "bssnare" <| n (run 8) -- 8 snare drum samples
+d1 $ slow 2 $ s "bsvocals" <| n (run 13) -- 13 vocal chops/samples
+
+-- Electronic Drum Kits
+d1 $ s "clap" <| n (run 8) -- 8 clap samples (distinct from SuperDirt default)
+d1 $ s "kick" <| n (run 21) -- 21 kick drum variations
+d1 $ slow 2 $ s "snare" <| n (run 90) -- 90 snare variations!
+d1 $ s "hi" <| n (run 8) -- 8 high-pitched hits
+d1 $ s "lo" <| n (run 8) -- 8 low-pitched hits
+
+-- CPU & Digital Textures
+d1 $ slow 2 $ s "cpu" <| n (run 23) -- 23 digital/glitch sounds
+d1 $ slow 2 $ s "cpu2" <| n (run 29) -- 29 additional CPU/glitch textures
+
+-- Breakbeats & Loops
+d1 $ slow 4 $ s "break" <| n (run 33) -- 33 breakbeat loops
+d1 $ slow 4 $ s "rash" <| n (run 72) -- 72 Rashad/footwork drum hits
+
+-- Bass & Synth
+d1 $ s "dbass" <| n (run 12) -- 12 deep bass hits
+d1 $ s "dsynth" <| n (run 3) -- 3 synth patches
+
+-- Sound Design & FX
+d1 $ slow 16 $ s "foley" <| n (run 287) -- 287 foley sound effects!
+d1 $ s "claus" <| n (run 16) -- 16 Klaus-style samples (probably Santa/Christmas themed)
 
 hush
 
@@ -1796,4 +1977,4 @@ d1 $ n "<c a f e>" # sound "superpiano"
 
 hush
 
-once $ n (stretch "<c4>") # s "superpiano"
+d1 $ n (stretch "<c4 c2>") # s "piano"
