@@ -1979,5 +1979,6 @@ hush
 
 d1 $ n (stretch "<c4 c2>") # s "piano"
 
-d1 $ note "c a f e" # s "piano"
-d1 $ n "c a f e" # s "piano"
+d1 $ note "c a f e" # s "piano" # n 3
+d1 $ note "c a f e" # s "piano" # n 3
+d1 $ n "c a f e" # s "piano" 
