@@ -1793,3 +1793,7 @@ d1 $ chunk 4 (|- note 5) $ jux rev $
 
 
 d1 $ n "<c a f e>" # sound "superpiano"
+
+hush
+
+once $ n (stretch "<c4>") # s "superpiano"

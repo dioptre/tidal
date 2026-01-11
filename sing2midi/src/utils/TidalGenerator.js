@@ -106,24 +106,8 @@ const TidalGenerator = {
     // Generate the pattern with duration notation (reuse Tidal logic)
     const patternCode = this.generatePatternSegmentWithDurations(notes);
 
-    // Count total steps in pattern (notes + rests)
-    const totalSteps = this.countPatternSteps(patternCode);
-
-    // Calculate slow factor (same as Tidal)
-    const stepsPerCycle = 4;
-    const slowFactor = totalSteps / stepsPerCycle;
-
-    // Build Strudel pattern
-    let strudelCode = `note("${patternCode}").s("piano")`;
-
-    if (slowFactor > 1.2) {
-      strudelCode += `.slow(${slowFactor.toFixed(2)})`;
-    } else if (slowFactor < 0.8) {
-      const fastFactor = 1 / slowFactor;
-      strudelCode += `.fast(${fastFactor.toFixed(2)})`;
-    }
-
-    return strudelCode;
+    // Build Strudel pattern with angle brackets for alternation
+    return `note("<${patternCode}>").s("piano")`;
   },
 
   // Generate Tidal pattern from notes
@@ -151,7 +135,7 @@ const TidalGenerator = {
     // Use 'once' with 'n' and 'stretch' to play pattern exactly once at correct tempo
     // stretch ensures the pattern plays at its natural timing without being compressed
     // Format: cps (BPM/60/4) as per TidalCycles docs
-    return `once $ n (stretch "${patternCode}") # s "superpiano" # cps (${roundedBPM}/60/4)`;
+    return `once $ n (stretch "<${patternCode}>") # s "superpiano"`;
   },
 
   // Count total steps in a pattern string
