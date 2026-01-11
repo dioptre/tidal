@@ -1,0 +1,50 @@
+// https://strudel.cc/#Ly8gRHJ1bSBhbmQgQmFzcyBpbiBTdHJ1ZGVsCnNldGNwcygxNzAvNjAvNCkKCng6IG5vdGUoImcyQDIgYyBhIGYgZSIpLnMoInBpYW5vIikuc2xvdygyLjc1KQoKLy8gPT09IERSVU1TID09PQoKLy8gS2ljayBkcnVtIC0gRm91ci1vbi10aGUtZmxvb3IKZHJ1bXM6IHN0YWNrKAogIHMoImJkIikuZ2FpbigwLjgpLAogIAogIC8vIEZhc3QgaGktaGF0cwogIHMoImhoIikuZmFzdCgyKS5nYWluKDAuNSksCiAgCiAgLy8gU25hcmUgb24gdGhlIDIgYW5kIDQKICBzKCJzZCIpLmV2ZXJ5KDIsIHggPT4geC5kZWxheSgwLjUpKS5nYWluKDAuNyksCiAgCiAKICAvLyBGYXN0IHdvYmJsZSBiYXNzCiAgcygic2F3dG9vdGgiKS5uKCI1IDYgNyA2IikuZHVyKDAuMjUpLmZhc3QoMikKICAgIC5nYWluKDAuMykuY3V0b2ZmKDgwMCkuaHBmKDEwMCksCiAgCiAgLy8gPT09IE1FTE9EWSA9PT0KICAvLyBCcmlnaHQgcGx1Y2sgbGluZQogIHMoInRyaWFuZ2xlIikubigiWzcsIDksIDEyLCA5LCA3LCAxMiwgMTQsIDEyXSIpLmR1cigwLjI1KQogICAgLmdhaW4oMC41KS5hdHRhY2soMC4wMikuZGVjYXkoMC4yKS5jdXRvZmYoMzAwMCksCgogICAgICBzKCJ%2BIH4gfiBoaCBoaCBoaCBoaCBoaCIpLnB1bmNoY2FyZCgpLAogIAogIAopCi5yb29tKDAuMywgMikKCm1lbG9keTogc3RhY2soCiAvLyA9PT0gQkFTUyA9PT0KICAvLyBEZWVwIGJhc3MgbGluZQogIHMoInNpbmUiKS5uKCJbMCwgMywgNSwgM10iKS5kdXIoMC41KQogICAgLmF0dGFjaygwLjAxKS5kZWNheSgwLjMpLmdhaW4oMC42KQogICAgLmN1dG9mZig1MDApLnJlc29uYW5jZSgzKS5fc2NvcGUoKSwKICAKICAgICAgICBuKCJ7NiA0IDIgMCA5IDYgMTAgMTJ9JTQiLCkuc2NhbGUoIkM6bWlub3IiKS5zb3VuZCgicGlhbm8iKS5scGYoMTAwMCkuZGlzdG9ydCgwLjYpLl9waWFub3JvbGwoKSwKCiAgcygic2F3IikubHBmKHRyaS5yYW5nZSgxMDAsIDUwMDApLnNsb3coc2xpZGVyKDEyLDIyKSkpCgopCg%3D%3D
+
+
+x: note("g2@2 c a f e").s("piano").slow(2.75)
+
+// === DRUMS ===
+
+// Kick drum - Four-on-the-floor
+drums: stack(
+  s("bd").gain(0.8),
+  
+  // Fast hi-hats
+  s("hh").fast(2).gain(0.5),
+  
+  // Snare on the 2 and 4
+  s("sd").every(2, x => x.delay(0.5)).gain(0.7),
+  
+ 
+  // Fast wobble bass
+  s("sawtooth").n("5 6 7 6").dur(0.25).fast(2)
+    .gain(0.3).cutoff(800).hpf(100),
+  
+  // === MELODY ===
+  // Bright pluck line
+  s("triangle").n("[7, 9, 12, 9, 7, 12, 14, 12]").dur(0.25)
+    .gain(0.5).attack(0.02).decay(0.2).cutoff(3000),
+
+      s("~ ~ ~ hh hh hh hh hh").punchcard(),
+  
+  
+)
+.room(0.3, 2)
+
+melody: stack(
+ // === BASS ===
+  // Deep bass line
+  s("sine").n("[0, 3, 5, 3]").dur(0.5)
+    .attack(0.01).decay(0.3).gain(0.6)
+    .cutoff(500).resonance(3)._scope(),
+  
+        n("{6 4 2 0 9 6 10 12}%4",).scale("C:minor").sound("piano").lpf(1000).distort(0.6)._pianoroll(),
+
+  s("saw").lpf(tri.range(100, 5000).slow(slider(12,22)))
+
+)
+
+
+note("<[0,4,7] [0,3,7] [0,3,6] [0,4,8]>".add("60"))
+.room(.5)._pitchwheel()
+

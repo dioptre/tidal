@@ -1,6 +1,7 @@
 {
     "files.associations": {
-        "*.tidal": "haskell"
+        "*.tidal": "haskell",
+        "*.strudel": "javascript"
     },
 
     "tidalcycles.ghciPath" : "/Users/andrewgrosser/.ghcup/bin/ghci",

@@ -67,57 +67,9 @@ also ./midi-osc-bridge.pd and https://puredata.info/
    - Don't forget to have /* at the end of the path, and a semicolon ; at the end of the line.
    - Save the file (File -> Save)
    - Mine looks like this:
-```
-/*
-This is an example startup file. You can load it from your startup file
-(to be found in Platform.userAppSupportDir +/+ "startup.scd")
-*/
 
+- **See startup.scd**
 
-(
-s.reboot { // server options are only updated on reboot
-	// configure the sound server: here you could add hardware specific options
-	// see http://doc.sccode.org/Classes/ServerOptions.html
-	s.options.numBuffers = 1024 * 256; // increase this if you need to load more samples
-	s.options.memSize = 8192 * 32; // increase this if you get "alloc failed" messages
-	s.options.numWireBufs = 256; // increase this if you get "exceeded number of interconnect buffers" messages
-	s.options.maxNodes = 1024 * 32; // increase this if you are getting drop outs and the message "too many nodes"
-	s.options.numOutputBusChannels = 2; // set this to your hardware output channel size, if necessary
-	s.options.numInputBusChannels = 2; // set this to your hardware output channel size, if necessary
-	// boot the server and start SuperDirt
-	s.waitForBoot {
-		~dirt.stop; // stop any old ones, avoid duplicate dirt (if it is nil, this won't do anything)
-		~dirt = SuperDirt(2, s); // two output channels, increase if you want to pan across more channels
-		load("/Users/andrewgrosser/Library/Application Support/SuperCollider/synthdefs/mi-ugens.scd");
-		~dirt.loadSoundFiles;
-		~dirt.loadSoundFiles("/Users/andrewgrosser/Documents/tidal/samples-extra/*");   // load samples (path containing a wildcard can be passed in)
-		// for example: ~dirt.loadSoundFiles("/Users/myUserName/Dirt/samples/*");
-		// s.sync; // optionally: wait for samples to be read
-		~dirt.start(57120, 0 ! 12);   // start listening on port 57120, create two busses each sending audio to channel 0
-
-		// optional, needed for convenient access from sclang:
-		(
-			~d1 = ~dirt.orbits[0]; ~d2 = ~dirt.orbits[1]; ~d3 = ~dirt.orbits[2];
-			~d4 = ~dirt.orbits[3]; ~d5 = ~dirt.orbits[4]; ~d6 = ~dirt.orbits[5];
-			~d7 = ~dirt.orbits[6]; ~d8 = ~dirt.orbits[7]; ~d9 = ~dirt.orbits[8];
-			~d10 = ~dirt.orbits[9]; ~d11 = ~dirt.orbits[10]; ~d12 = ~dirt.orbits[11];
-		);
-		~dirt.orbits.do { |x|
-            var clouds = GlobalDirtEffect(\global_mi_clouds, [\cloudspitch, \cloudspos, \cloudssize, \cloudsdens, \cloudstex, \cloudswet, \cloudsgain, \cloudsspread, \cloudsrvb, \cloudsfb, \cloudsfreeze, \cloudsmode, \cloudslofi]);
-            var verb = GlobalDirtEffect(\global_mi_verb, [\verbwet, \verbtime, \verbdamp, \verbhp, \verbfreeze, \verbdiff, \verbgain]);
-            x.globalEffects = x.globalEffects
-              .addFirst(clouds)
-              .addFirst(verb); 
-            x.initNodeTree;    
-        };    
-	};
-
-	s.latency = 0.3; // increase this if you get "late" messages
-};
-);
-
-
-```
 5. Add more synths from https://tidalcycles.org/docs/reference/mi-ugens-installation 
 6. Then run/restart supercollider & run super dirt:
 
@@ -518,6 +470,63 @@ xattr -d com.apple.quarantine *
 - lo (8)
 - rash (72)
 - snare (90)
+
+#### Chord reference
+
+This is a full list of the chords available in Tidal, along with the corresponding notes and alternative names.
+
+| Name       | Notes               | Alternatives     |
+| ---------- | ------------------- | ---------------- |
+| major      | `[0,4,7]`           | maj, M    |
+| aug      | `[0,4,8]`             | plus, sharp5  |
+| six      | `[0,4,7,9]`           | 6  |
+| sixNine      | `[0,4,7,9,14]`    | six9, sixby9, 6by9  |
+| major7      | `[0,4,7,11]`       | maj7    |
+| major9      | `[0,4,7,11,14]`    | maj9    |
+| add9 | `[0,4,7,14]` |   |
+| major11 | `[0,4,7,11,14,17]` | maj11  |
+| add11 | `[0,4,7,17]` |   |
+| major13 | `[0,4,7,11,14,21]` | maj13  |
+| add13 | `[0,4,7,21]` |   |
+| dom7 | `[0,4,7,10]` |  |
+| dom9 | `[0,4,7,14]` |  |
+| dom11 | `[0,4,7,17]`             |  |
+| dom13 | `[0,4,7,21]`             |  |
+| sevenFlat5 | `[0,4,6,10]`        | 7f5 |
+| sevenSharp5 | `[0,4,8,10]`       | 7s5 |
+| sevenFlat9 | `[0,4,7,10,13]`     | 7f9 |
+| nine | `[0,4,7,10,14]`           |  |
+| eleven | `[0,4,7,10,14,17]`      | 11 |
+| thirteen | `[0,4,7,10,14,17,21]` | 13 |
+| minor | `[0,3,7]` | min, m |
+| diminished | `[0,3,6]` | dim |
+| minorSharp5 | `[0,3,8]` | msharp5,mS5 |
+| minor6 | `[0,3,7,9]` | min6, m6 |
+| minorSixNine | `[0,3,9,7,14]` | minor69, min69, minSixNine, m69, mSixNine, m6by9 |
+| minor7flat5 | `[0,3,6,10]` | minor7f5, min7flat5, min7f5, m7flat5, m7f5 |
+| minor7 | `[0,3,7,10]` | min7, m7 |
+| minor7sharp5 | `[0,3,8,10]` | minor7s5, min7sharp5, min7s5, m7sharp5, m7s5 |
+| minor7flat9 | `[0,3,7,10,13]` | minor7f9, min7flat9, min7f9, m7flat9, m7f9  |
+| minor7sharp9 | `[0,3,7,10,14]` | minor7s9, min7sharp9, min7s9, m7sharp9, m7s9  |
+| diminished7 | `[0,3,6,9]` | dim7 |
+| minor9 | `[0,3,7,10,14]` | min9, m9 |
+| minor11 | `[0,3,7,10,14,17]` | min11, m11 |
+| minor13 | `[0,3,7,10,14,17,21]` | min13, m13 |
+| minorMajor7 | `[0,3,7,11]` | minMaj7, mmaj7 |
+| one | `[0]` | 1 |
+| five | `[0,7]` | 5 |
+| sus2 | `[0,2,7]` |  |
+| sus4 | `[0,5,7]` |  |
+| sevenSus2 | `[0,2,7,10]` | 7sus2 |
+| sevenSus4 | `[0,5,7,10]` | 7sus4 |
+| nineSus4 | `[0,5,7,10,14]` | ninesus4, 9sus4 |
+| sevenFlat10 | `[0,4,7,10,15]` | 7f10 |
+| nineSharp5 | `[0,1,13]` | 9sharp5, 9s5 |
+| minor9sharp5 | `[0,1,14]` | minor9s5, min9sharp5, min9s5, m9sharp5, m9s5 |
+| sevenSharp5flat9 | `[0,4,8,10,13]` | 7s5f9 |
+| minor7sharp5flat9 | `[0,3,8,10,13]` |  |
+| elevenSharp | `[0,4,7,10,14,18]` | 11s |
+| minor11sharp | `[0,3,7,10,14,18]` | m11sharp, m11s |
 
 ### Basic Commands
 
@@ -1307,3 +1316,19 @@ Example: `d1 $ s "bd*32" # speed (range 0.8 1.2 $ perlin) # lpf (range 400 4000 
 - `superMega` — Preset: 30-way mega convolution
 - Watch SuperCollider Post window for processing status and new IR index
 - Example: `makeSuperIR [13, 14, 15]` creates tape stack → use with `# convolveir 52`
+
+#### Compressor Effects
+**Setup**: Add to `startup.scd`: `load("/Users/andrewgrosser/Documents/tidal/effects/compressor/compressor-effect.scd");` and in Tidal: `:script /Users/andrewgrosser/Documents/tidal/effects/compressor/compressor-params.hs`
+
+**Four Types**: Standard compressor (`#compress`), sidechain pumping (`#sidechain`), brick-wall limiter (`#limit`), multiband compression (`#multiband`). All use wetness/dryness architecture like convolution reverb.
+
+**Parameters**: `compress` (wet/dry 0-1), `compressratio` (1-20), `compressthresh` (0-1), `compressattack` (0.0001-0.1s), `compressrelease` (0.01-1s), `compressmakeup` (0-2), `compressknee` (0-1)
+
+**Basic Examples**:
+- `d1 $ s "bd*4" # punchyCompress` — Preset: punchy drum compression
+- `d1 $ s "bass:1*8" # pump` — Preset: classic sidechain pumping
+- `d1 $ s "[bd sn cp hh]" # glueCompress` — Preset: gentle mix bus glue
+- `d1 $ s "superpiano" # gain 1.5 # limit 0.8 # limitthresh 0.9` — Brick-wall limiting
+- `d1 $ s "breaks165" # multiband 0.6 # multibandlowratio 6` — Multiband compression
+
+**Presets**: `glueCompress`, `punchyCompress`, `heavyLimit`, `pump`, `vocalCompress`, `tightBass`. See [effects/compressor/README.md](effects/compressor/README.md) for detailed examples.
