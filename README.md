@@ -8,6 +8,8 @@ Put the repo in ~/Documents/tidal and change my name to yours in all references.
 
 If you have little music experience like me I also made a voice to tidal/strudel/midi web app (best on desktop) for converting your singing or recordings here https://dioptre.github.io/tidal/ so you can get started with melodies that might be buzzing around your head.
 
+All the missing samples from strudel have been added to this repo including the missing extra samples. I found the quality of piano to be infinitely better than superpiano so added them.
+
 ### Install
 
 
