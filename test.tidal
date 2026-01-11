@@ -1979,4 +1979,5 @@ hush
 
 d1 $ n (stretch "<c4 c2>") # s "piano"
 
-d1 $ n "<a2@2 ~ f2 fs2 ds2 e2@2>*4" # s "superpiano"
+d1 $ note "c a f e" # s "piano"
+d1 $ n "c a f e" # s "piano"

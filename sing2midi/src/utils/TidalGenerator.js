@@ -135,7 +135,7 @@ const TidalGenerator = {
     // Use 'once' with 'n' and 'stretch' to play pattern exactly once at correct tempo
     // stretch ensures the pattern plays at its natural timing without being compressed
     // Format: cps (BPM/60/4) as per TidalCycles docs
-    return `once $ n (stretch "<${patternCode}>") # s "superpiano"`;
+    return `once $ note (stretch "<${patternCode}>") # s "superpiano"`;
   },
 
   // Count total steps in a pattern string
