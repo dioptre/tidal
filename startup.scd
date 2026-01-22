@@ -8,6 +8,11 @@ This is an example startup file. You can load it from your startup file
 s.reboot { // server options are only updated on reboot
 	// configure the sound server: here you could add hardware specific options
 	// see http://doc.sccode.org/Classes/ServerOptions.html
+
+	// IMPORTANT: Set this to your Aggregate Device name created in Audio MIDI Setup
+	// To create: Open Audio MIDI Setup → + → Create Aggregate Device → Add both speakers and headphones
+	// Comment out this line to use the default system output device
+	s.options.outDevice = "Aggregate Device";  // Replace with your aggregate device name
 	s.options.numBuffers = 1024 * 256; // increase this if you need to load more samples
 	s.options.memSize = 8192 * 32; // increase this if you get "alloc failed" messages
 	s.options.numWireBufs = 256; // increase this if you get "exceeded number of interconnect buffers" messages
@@ -17,7 +22,7 @@ s.reboot { // server options are only updated on reboot
 	// boot the server and start SuperDirt
 	s.waitForBoot {
 		~dirt.stop; // stop any old ones, avoid duplicate dirt (if it is nil, this won't do anything)
-		~dirt = SuperDirt(2, s); // two output channels, increase if you want to pan across more channels
+		~dirt = SuperDirt(2, s); // two channels per orbit (stereo)
 		load("/Users/andrewgrosser/Library/Application Support/SuperCollider/synthdefs/mi-ugens.scd");
         load("/Users/andrewgrosser/Documents/tidal/effects/convolveir/convolution-effect.scd");
         load("/Users/andrewgrosser/Documents/tidal/effects/compressor/compressor-effect.scd");
@@ -28,7 +33,7 @@ s.reboot { // server options are only updated on reboot
 		~dirt.loadSoundFiles("/Users/andrewgrosser/Documents/tidal/sounds/bbc/*");
 		// for example: ~dirt.loadSoundFiles("/Users/myUserName/Dirt/samples/*");
 		// s.sync; // optionally: wait for samples to be read
-		~dirt.start(57120, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2]);   // d1-d12 → speakers (ch 0-1), d13-d14 → headphones (ch 2-3)
+		~dirt.start(57120, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 0, 0]);   // d1-d12 → speakers (ch 0-1), d13-d14 → headphones (ch 2-3), d15-d16 → speakers
 
 		// optional, needed for convenient access from sclang:
 		(
@@ -37,6 +42,7 @@ s.reboot { // server options are only updated on reboot
 			~d7 = ~dirt.orbits[6]; ~d8 = ~dirt.orbits[7]; ~d9 = ~dirt.orbits[8];
 			~d10 = ~dirt.orbits[9]; ~d11 = ~dirt.orbits[10]; ~d12 = ~dirt.orbits[11];
 			~d13 = ~dirt.orbits[12]; ~d14 = ~dirt.orbits[13];
+			~d15 = ~dirt.orbits[14]; ~d16 = ~dirt.orbits[15];
 		);
 		~dirt.orbits.do { |x|
             var clouds = GlobalDirtEffect(\global_mi_clouds, [\cloudspitch, \cloudspos, \cloudssize, \cloudsdens, \cloudstex, \cloudswet, \cloudsgain, \cloudsspread, \cloudsrvb, \cloudsfb, \cloudsfreeze, \cloudsmode, \cloudslofi]);

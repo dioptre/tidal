@@ -24,16 +24,20 @@ instance Tidally where tidal = tidalInst
 -- You can also add your own aliases in this file. For example:
 -- fastsquizzed pat = fast 2 $ pat # squiz 1.5
 
--- Extended channels d17-d24 for more complex arrangements
+-- Extended channels d13-d16 for headphone/speaker routing, d17-d24 for more complex arrangements
 :{
-let d17 = streamReplace tidal 16
-    d18 = streamReplace tidal 17
-    d19 = streamReplace tidal 18
-    d20 = streamReplace tidal 19
-    d21 = streamReplace tidal 20
-    d22 = streamReplace tidal 21
-    d23 = streamReplace tidal 22
-    d24 = streamReplace tidal 23
+let d13 = streamReplace tidal 12 . (|> orbit 12)
+    d14 = streamReplace tidal 13 . (|> orbit 13)
+    d15 = streamReplace tidal 14 . (|> orbit 14)
+    d16 = streamReplace tidal 15 . (|> orbit 15)
+    d17 = streamReplace tidal 16 . (|> orbit 16)
+    d18 = streamReplace tidal 17 . (|> orbit 17)
+    d19 = streamReplace tidal 18 . (|> orbit 18)
+    d20 = streamReplace tidal 19 . (|> orbit 19)
+    d21 = streamReplace tidal 20 . (|> orbit 20)
+    d22 = streamReplace tidal 21 . (|> orbit 21)
+    d23 = streamReplace tidal 22 . (|> orbit 22)
+    d24 = streamReplace tidal 23 . (|> orbit 23)
 :}
 :script "/Users/andrewgrosser/Documents/tidal/mi-UGens/Setup/mi-ugens-params.hs"
 :script "/Users/andrewgrosser/Documents/tidal/effects/convolveir/convolution-params.hs"

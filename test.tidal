@@ -620,7 +620,7 @@ d1 $ n "[0,4,7,10,13] [9,10,23]" # sound "supermandolin"
 
 d1 $ arp "updown thumbup" $ n "<c'maj'4 e'min7'4>" # s "superpiano"
 
-d1 $ jux rev $ arp "<updown thumbup pinkyupdown converge diverge>" $ n "<c4'maj'6 e4'min7'8 g5'maj'5 a5'maj'4>" # s "superpiano" # room 0.3 # sz 0.7
+d1 $ jux rev $ arp "<updown thumbup pinkyupdown converge diverge>" $ n "<c4'maj'6 e4'min7'8 g5'maj'5 a5'maj'4>" # s "piano" # room 0.3 # sz 0.7
 
 -- custom synth
 --https://www.youtube.com/watch?v=ZM8OEcjlkzo
@@ -1210,7 +1210,7 @@ d1 $ s "sax*10"
 #att "0.0001"
 # hold "0.1"
 # rel "0.001"
-#speed "1 2 3 1 2 2.25 1.5 0.5 0.25"
+# speed "1 2 3 1 2 2.25 1.5 0.5 0.25"
 # room "0.9"
 # size "0.99"
 
@@ -2130,4 +2130,18 @@ d2 $ s "{bd cp 808:5}%4" # speed 2
 
 hush
 
-d13 $ s "{bd*2, hh*4, bd hh 808:4}"
+
+-- Should play through HEADPHONES ONLY
+d13 $ s "bd"
+
+d1 $ s "cp*5"
+d2 $ s "cp*8"
+
+d14 $ sound "cp*4"
+d13 $ sound "hh*8"
+
+d1 $ sound "bd" # orbit 12
+
+d13 $ s "cp*4" |> orbit 99
+
+d13 $ s "cp*4" # orbit 12
