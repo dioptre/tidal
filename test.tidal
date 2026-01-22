@@ -2132,6 +2132,7 @@ hush
 
 
 -- Should play through HEADPHONES ONLY
+-- Requires setup of Midi "Aggregate Device"
 d13 $ s "bd"
 
 d1 $ s "cp*5"
