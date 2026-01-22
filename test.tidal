@@ -2155,6 +2155,9 @@ setcps (0.1/60/4)
 once $ s "looper"
 d1 $ s "loop"
 
+d1 $ s "looper" # recordSource "out" # orbit 1 -- orbit 1 == d2
+d2 $ s "superpiano" # note "c'maj7'4"
+
 once $ s "looper" # lname "bubu"
 
 d1 $ s "bubu"
