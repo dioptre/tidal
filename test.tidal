@@ -1,5 +1,5 @@
 -------------------- NOTES
-
+-- Also see https://github.com/tidalcycles/awesome-tidalcycles?tab=readme-ov-file
 -- d13 and d14 are headphone channels for previewing
 
 -------------------- all the samples
@@ -2211,3 +2211,171 @@ d4 $ every 3 (fast 2) $ n "0 1 [~ 2] 3" # sound "arpy scream*6 {feel less}" # le
 d5 $ "fire! ~ [sid*3 808*2]" # squiz 0.5 # decay 0.3
 
 d6 $ chop 16 $ "scream:3 loop*5 scream:4"  # detune 0.3
+
+
+-- euclid
+
+d1 $ s "supervibe*8" # n (run 3)
+d1 $ s "supervibe*16" # n (run 7)
+
+d1 $ sound "cp(1,16)"
+
+-- Euclidean Rhythms: Maximum Evenness, Maximum Groove
+-- From Lawton Hall's article on the Bjorklund algorithm
+-- Notation: (k,n) where k = hits, n = total pulses
+-- Produces maximally-even rhythms with exactly two duration lengths (only 1 integer apart)
+-- This balance between regularity and syncopation creates perfect looping grooves
+
+-- ========== TRADITIONAL RHYTHMS WITH CONTEXT ==========
+
+-- West African: [7,12] - Ewe drumming (Ghana) bell pattern
+d1 $ s "bd(7,12)" -- gankogui/agogô pattern, backbone for all other drums
+
+-- Bulgarian: [4,7] - Ruchenitsa dance rhythm
+d1 $ s "bd(4,7)"
+
+-- Turkish/Balkan: [4,9] - Blue Rondo à la Turk (Dave Brubeck)
+d1 $ s "bd(4,9)" -- "limping" aksak rhythm
+
+-- Cuban: [3,8] - Tresillo (foundation of Latin music)
+d1 $ s "cp(3,8)" -- habanera, tango, mambo, reggaeton (Despacito!)
+
+-- South African: [5,12] - Venda clapping pattern
+d1 $ s "clap(5,12)"
+
+-- Example with duration pattern [3,2,2,3,2,2,2]:
+d1 $ s "hh(7,16)" -- creates subtle agogic accents
+
+-- Sparse pattern with [3,2,3,2,3] durations:
+d1 $ s "hh(5,13)"
+
+-- ========== LAYERING EUCLIDEAN RHYTHMS ==========
+
+-- Basic polyrhythmic texture (different k and n values per layer):
+do
+  d1 $ s "bd(5,8)"
+  d2 $ s "cp(3,7)"
+  d3 $ s "hh(7,12)"
+
+-- More complex layering with different pulse durations:
+do
+  d1 $ s "bd(7,18)" # orbit 0
+  d2 $ fast 2 $ s "sn(5,14)" # orbit 1  -- twice as fast
+  d3 $ fast 4 $ s "hh(6,9)" # orbit 2   -- four times as fast
+
+-- Layering with pitched material (hypnotic minimalist texture):
+do
+  d1 $ n "c3(7,16)" # s "superpiano" # sustain 0.2
+  d2 $ n "g3(5,12)" # s "superpiano" # sustain 0.3
+  d3 $ n "ef4(3,8)" # s "superpiano" # sustain 0.4
+
+-- ========== EVENT DENSITY MANIPULATION ==========
+hush
+-- As k approaches n, rhythm becomes denser:
+d1 $ s "hh(3,16)" -- sparse
+d1 $ s "hh(7,16)" -- medium density
+d1 $ s "hh(12,16)" -- dense
+d1 $ s "hh(16,16)" -- all pulses filled
+
+-- Use density to create contrast between sections:
+do
+  d1 $ s "bd(3,8)" # orbit 0  -- verse: sparse
+  d2 $ s "sn(2,8)" # orbit 1
+
+do
+  d1 $ s "bd(7,8)" # orbit 0  -- chorus: dense
+  d2 $ s "sn(5,8)" # orbit 1
+
+-- ========== ROTATION ==========
+
+-- Euclidean rhythms are cyclical - rotate to create variations
+-- TidalCycles can rotate patterns with <~ (rotate left) or ~> (rotate right)
+
+d1 $ s "bd(7,16)" -- original
+d1 $ 2 <~ s "bd(7,16)" -- rotate left by 2 steps
+d1 $ 3 ~> s "bd(7,16)" -- rotate right by 3 steps
+
+-- Layer same Euclidean rhythm at different rotations:
+do
+  d1 $ s "cp(5,13)"
+  d2 $ 3 <~ s "hh(5,13)" # gain 0.7  -- same pattern, different phase
+
+-- ========== PRACTICAL EXAMPLES ==========
+
+-- Classic four-on-the-floor techno with Euclidean embellishments:
+do
+  d1 $ s "bd(4,4)" # orbit 0                    -- steady kick
+  d2 $ s "{~ ~ cp ~}%4" # orbit 1               -- backbeat
+  d3 $ s "hh(7,16)" # gain 0.8 # orbit 2        -- Euclidean hi-hat groove
+  d4 $ s "rim(5,12)" # gain 0.6 # orbit 3       -- Euclidean rim clicks
+
+-- Drum & Bass with layered Euclidean patterns:
+do
+  setcps (174/60/4)
+  d1 $ s "bd(3,8)" # orbit 0
+  d2 $ s "sn(5,16)" # orbit 1
+  d3 $ fast 2 $ s "hh(13,16)" # gain 0.7 # orbit 2
+  d4 $ s "bass:1(7,16)" # cutoff 800 # orbit 3
+
+-- Blue Rondo à la Turk inspired pattern:
+do
+  setcps (120/60/4)
+  d1 $ s "bd(4,9)" # orbit 0
+  d2 $ s "cp(2,9)" # orbit 1
+  d3 $ s "hh*9" # gain (range 0.6 0.9 $ slow 3 sine) # orbit 2
+
+-- Ewe drumming inspired (West African):
+do
+  d1 $ s "bass:0(3,8)" # orbit 0                -- low drum
+  d2 $ s "drum:1(7,12)" # orbit 1               -- bell pattern
+  d3 $ s "drum:3(5,12)" # gain 0.8 # orbit 2    -- supporting drum
+
+-- Tresillo reggaeton/Latin groove:
+do
+  setcps (95/60/4)
+  d1 $ s "bd(3,8)" # orbit 0                    -- tresillo kick
+  d2 $ s "sn(5,16)" # orbit 1                   -- cinquillo snare
+  d3 $ fast 2 $ s "hh(7,8)" # gain 0.7 # orbit 2
+
+-- ========== EUCLIDEAN + TRANSFORMATIONS ==========
+
+-- Combine Euclidean rhythms with other TidalCycles functions:
+hush
+-- Euclidean with every:
+d1 $ every 4 (fast 2) $ s "bd(5,8)"
+
+-- Euclidean with degrading (random note removal):
+d1 $ degrade $ s "hh(11,16)"
+
+-- Euclidean with effects:
+d1 $ s "bd(7,12)" # lpf (range 400 4000 $ slow 8 sine) # resonance 0.3
+
+-- Euclidean with pitch patterns:
+d1 $ n (scale "minor" "0 2 3 5 7") # s "superpiano(13,16)" # sustain 0.2
+
+-- Multiple Euclidean patterns with different samples:
+d1 $ s "[bd(5,8), cp(3,7), hh(7,12), bass:1(7,16)]"
+
+-- ========== THIRD PARAMETER: ROTATION ==========
+
+-- The third parameter in (k,n,r) rotates the pattern by r steps:
+d1 $ s "bd(3,8)"   -- starting position
+d1 $ s "bd(3,8,1)" -- rotated 1 step
+d1 $ s "bd(3,8,2)" -- rotated 2 steps
+
+-- Compare these rotations:
+d1 $ s "bd(5,13)" # orbit 0      -- [3,2,3,2,3]
+d1 $ s "bd(5,13,1)" # orbit 0    -- [2,3,2,3,3]
+d1 $ s "bd(5,13,2)" # orbit 0    -- [3,2,3,3,2]
+
+-- Use rotation in layered patterns for phasing effects:
+do
+  d1 $ s "cp(7,16)" # orbit 0
+  d2 $ s "cp(7,16,4)" # gain 0.6 # pan 0.3 # orbit 1  -- same pattern, rotated
+
+-- ========== REFERENCES ==========
+-- Article: "Euclidean Rhythms Part 1: Maximum Evenness, Maximum Groove" by Lawton Hall
+-- Source: The Euclidean Algorithm Generates Traditional Musical Rhythms (Toussaint, 2005)
+-- Original algorithm: Euclid of Alexandria (3rd century B.C.)
+-- Musical application: Eric Bjorklund (Los Alamos, 2003) for particle accelerator timing
+-- Key concept: Maximally even distribution creates grooves that balance regularity + syncopation
