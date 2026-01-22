@@ -2152,6 +2152,7 @@ d13 $ s "cp*4" # orbit 12
 hush
 
 setcps (0.1/60/4)
+setcps (150/60/4)
 once $ s "looper"
 d1 $ s "loop"
 
