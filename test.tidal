@@ -1,3 +1,7 @@
+-------------------- NOTES
+
+-- d13 and d14 are headphone channels for previewing
+
 -------------------- all the samples
 hush
 
@@ -2024,3 +2028,106 @@ d1 $ weave 16 (sound "arpy" >| n (run 8))
    vowel "[e o]/3 [i o u]/2",
    speed "1 2 3"
   ]
+
+
+  d1 $ sound "drum ~ drum drum" # n (cycleChoose [0,2,3])
+
+  d1 $ sound "drum ~ drum drum" # n (choose [0,2,3])
+
+  d1 $ someCycles (# crush 2) $ n "0 1 [~ 2] 3" # sound "arpy"
+
+  d1 $ sometimes (# crush 2) $ n "0 1 [~ 2] 3" # sound "arpy"
+
+  d1 $ sound "bd*32" # speed (perlin + 0.5)
+
+  -- THIS - SAMPLE RANDOMNESS
+  d1 $ sound "amencutup*8" # n (irand 8)
+
+  d1 $ sound "arpy*4" # speed (rand + 0.5)
+
+  d1 $ s "bd*32" # speed (perlin2 (sine*4) + 1)
+
+  d1
+ $ s "[arpy*32]"
+ # lpf (range 60 5000 $ perlin2With (cosine*2) (sine*2))
+ # lpq 0.3
+
+ d1 $ s "bd!3 sd"
+
+ d1 $ s "bd _ _ ~ sd _"
+
+ d1 $ s "bd? sd"
+
+ d1 $ s "bd:3"
+
+ d1 $ s "bd(3,8)"
+
+ d1 $ s "{bd bd bd bd, cp cp hh}"
+
+ d1 $ s "bd*4%2"
+
+ d1 $ s "{bd cp hh}%8"
+
+
+d1 $ s "[bd*2,hh*3,[~ cp]*2, bass]"
+d1 $ s "[bd*3,hh*4,[~ cp]*2, bass*4]"
+
+d1 $ note "[[c3*3],[c e g c6*3]]" # s "superpiano"
+
+d2 $ s "cp cp cp*2"
+
+d1 $ s "bd hh? bd hh?0.8"
+
+hush
+
+
+d1 $ s "[bd(3,8), cp(2,8), hh(7,8), bass:1(7,16)]"
+
+d1 $ s "[bd(5,8), cp(4,8), hh(7,8), bass:1(7,16)]"
+
+d1 $ s "[bd(5,8), cp(1,8)?, hh(7,8), bass:1(8,16)]"
+
+-- The Euclidean Algorithm Generates Traditional Musical Rhythms by Toussaint
+-- (2,5) : A thirteenth century Persian rhythm called Khafif-e-ramal.
+-- (3,4) : The archetypal pattern of the Cumbia from Colombia, as well as a Calypso rhythm from Trinidad.
+-- (3,5,2) : Another thirteenth century Persian rhythm by the name of Khafif-e-ramal, as well as a Rumanian folk-dance rhythm.
+-- (3,7) : A Ruchenitza rhythm used in a Bulgarian folk-dance.
+-- (3,8) : The Cuban tresillo pattern.
+-- (4,7) : Another Ruchenitza Bulgarian folk-dance rhythm.
+-- (4,9) : The Aksak rhythm of Turkey.
+-- (4,11) : The metric pattern used by Frank Zappa in his piece titled Outside Now.
+-- (5,6) : Yields the York-Samai pattern, a popular Arab rhythm.
+-- (5,7) : The Nawakhat pattern, another popular Arab rhythm.
+-- (5,8) : The Cuban cinquillo pattern.
+-- (5,9) : A popular Arab rhythm called Agsag-Samai.
+-- (5,11) : The metric pattern used by Moussorgsky in Pictures at an Exhibition.
+-- (5,12) : The Venda clapping pattern of a South African children’s song.
+-- (5,16) : The Bossa-Nova rhythm necklace of Brazil.
+-- (7,8) : A typical rhythm played on the Bendir (frame drum).
+-- (7,12) : A common West African bell pattern.
+-- (7,16,14) : A Samba rhythm necklace from Brazil.
+-- (9,16) : A rhythm necklace used in the Central African Republic.
+-- (11,24,14) : A rhythm necklace of the Aka Pygmies of Central Africa.
+-- (13,24,5) : Another rhythm necklace of the Aka Pygmies of the upper Sangha.
+
+-- these two are the same
+d1 $ distrib [9,16] $ sound "east:2"
+d2 $ "e(9,16)" # sound "east:2"
+
+-- distributes across 5 of the euclid 9/16 beats
+d1 $ distrib [5, 9,16] $ sound "east:2"
+
+-- plays only the first 5 of the euclid 9,16 pattern
+d1 $ distrib [9,16, 5] $ sound "east:2"
+
+
+d1 $ s "{bd sd stab, cp arpy cr arpy}"
+
+d1 $ s "{bd*2, hh*4, bd hh 808:4}"
+
+d1 $ s "{bd hh 808:4}%8"
+d2 $ s "{bd cp 808:5}%4" # speed 2
+
+hush
+
+d13 $ s "{bd*2, hh*4, bd hh 808:4}"
