@@ -3,6 +3,11 @@
 
 x: note("g2@2 c a f e").s("piano").slow(2.75)
 
+arrange(
+  [4, "<c a f e>(3,8)"],
+  [2, "<g a>(5,8)"]
+).note()
+
 // === DRUMS ===
 
 // Kick drum - Four-on-the-floor

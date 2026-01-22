@@ -1982,3 +1982,37 @@ d1 $ n (stretch "<c4 c2>") # s "piano"
 d1 $ note "c a f e" # s "piano" # n 3
 d1 $ note "c a f e" # s "piano" # n 3
 d1 $ n "c a f e" # s "piano" 
+
+
+do
+  let drums = s "bd sd"
+  let bass = s "bass:1 bass:2"
+  seqPLoop [
+    (0, 4, drums),
+    (4, 8, bass),
+    (8, 12, drums # bass)
+  ]
+
+d1 $ qtrigger $ seqP [
+  (0, 12, sound "bd bd*2"),
+  (4, 12, sound "hh*2 [sn cp] cp future*4"),
+  (8, 12, sound (samples "arpy*8" (run 16)))
+]
+-- arrangements in strudel
+
+d1 $ qtrigger $ seqPLoop [
+  (0, 12, sound "bd bd*2"),
+  (4, 12, sound "hh*2 [sn cp] cp future*4"),
+  (8, 12, sound (samples "arpy*8" (run 16)))
+]
+
+
+do
+{
+  resetCycles;
+  d1 $ rotL 4 $ seqP [
+    (0, 12, sound "bd bd*2"),
+    (4, 12, sound "hh*2 [sn cp] cp future*4"),
+    (8, 12, sound (samples "arpy*8" (run 16)))
+  ]
+}
