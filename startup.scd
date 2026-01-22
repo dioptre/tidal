@@ -33,7 +33,7 @@ s.reboot { // server options are only updated on reboot
 		~dirt.loadSoundFiles("/Users/andrewgrosser/Documents/tidal/sounds/bbc/*");
 		// for example: ~dirt.loadSoundFiles("/Users/myUserName/Dirt/samples/*");
 		// s.sync; // optionally: wait for samples to be read
-		~dirt.start(57120, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 0, 0]);   // d1-d12 → speakers (ch 0-1), d13-d14 → headphones (ch 2-3), d15-d16 → speakers
+		~dirt.start(57120, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2]);   // d1-d12 → speakers (ch 0-1), d13-d14 → headphones (ch 2-3)
 
 		// optional, needed for convenient access from sclang:
 		(
@@ -42,7 +42,6 @@ s.reboot { // server options are only updated on reboot
 			~d7 = ~dirt.orbits[6]; ~d8 = ~dirt.orbits[7]; ~d9 = ~dirt.orbits[8];
 			~d10 = ~dirt.orbits[9]; ~d11 = ~dirt.orbits[10]; ~d12 = ~dirt.orbits[11];
 			~d13 = ~dirt.orbits[12]; ~d14 = ~dirt.orbits[13];
-			~d15 = ~dirt.orbits[14]; ~d16 = ~dirt.orbits[15];
 		);
 		~dirt.orbits.do { |x|
             var clouds = GlobalDirtEffect(\global_mi_clouds, [\cloudspitch, \cloudspos, \cloudssize, \cloudsdens, \cloudstex, \cloudswet, \cloudsgain, \cloudsspread, \cloudsrvb, \cloudsfb, \cloudsfreeze, \cloudsmode, \cloudslofi]);
@@ -52,6 +51,9 @@ s.reboot { // server options are only updated on reboot
               .addFirst(verb);
             x.initNodeTree;
         };
+
+        // Boost gain for speaker orbits (d1-d12) to match headphone volume
+        // ~dirt.orbits[0..11].do { |orbit| orbit.set(\amp, 1.5) };
 	};
 
 	s.latency = 0.3; // increase this if you get "late" messages
