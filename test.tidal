@@ -2259,9 +2259,9 @@ do
 
 -- More complex layering with different pulse durations:
 do
-  d1 $ s "bd(7,18)" # orbit 0
-  d2 $ fast 2 $ s "sn(5,14)" # orbit 1  -- twice as fast
-  d3 $ fast 4 $ s "hh(6,9)" # orbit 2   -- four times as fast
+  d1 $ s "bd(7,18)"
+  d2 $ fast 2 $ s "sn(5,14)"  -- twice as fast
+  d3 $ fast 4 $ s "hh(6,9)"   -- four times as fast
 
 -- Layering with pitched material (hypnotic minimalist texture):
 do
@@ -2279,12 +2279,12 @@ d1 $ s "hh(16,16)" -- all pulses filled
 
 -- Use density to create contrast between sections:
 do
-  d1 $ s "bd(3,8)" # orbit 0  -- verse: sparse
-  d2 $ s "sn(2,8)" # orbit 1
+  d1 $ s "bd(3,8)"  -- verse: sparse
+  d2 $ s "sn(2,8)"
 
 do
-  d1 $ s "bd(7,8)" # orbit 0  -- chorus: dense
-  d2 $ s "sn(5,8)" # orbit 1
+  d1 $ s "bd(7,8)"  -- chorus: dense
+  d2 $ s "sn(5,8)"
 
 -- ========== ROTATION ==========
 
@@ -2304,38 +2304,38 @@ do
 
 -- Classic four-on-the-floor techno with Euclidean embellishments:
 do
-  d1 $ s "bd(4,4)" # orbit 0                    -- steady kick
-  d2 $ s "{~ ~ cp ~}%4" # orbit 1               -- backbeat
-  d3 $ s "hh(7,16)" # gain 0.8 # orbit 2        -- Euclidean hi-hat groove
-  d4 $ s "rim(5,12)" # gain 0.6 # orbit 3       -- Euclidean rim clicks
+  d1 $ s "bd(4,4)"                              -- steady kick
+  d2 $ s "{~ ~ cp ~}%4"                         -- backbeat
+  d3 $ s "hh(7,16)" # gain 0.8                  -- Euclidean hi-hat groove
+  d4 $ s "rim(5,12)" # gain 0.6                 -- Euclidean rim clicks
 
 -- Drum & Bass with layered Euclidean patterns:
 do
   setcps (174/60/4)
-  d1 $ s "bd(3,8)" # orbit 0
-  d2 $ s "sn(5,16)" # orbit 1
-  d3 $ fast 2 $ s "hh(13,16)" # gain 0.7 # orbit 2
-  d4 $ s "bass:1(7,16)" # cutoff 800 # orbit 3
+  d1 $ s "bd(3,8)"
+  d2 $ s "sn(5,16)"
+  d3 $ fast 2 $ s "hh(13,16)" # gain 0.7
+  d4 $ s "bass:1(7,16)" # cutoff 800
 
 -- Blue Rondo à la Turk inspired pattern:
 do
   setcps (120/60/4)
-  d1 $ s "bd(4,9)" # orbit 0
-  d2 $ s "cp(2,9)" # orbit 1
-  d3 $ s "hh*9" # gain (range 0.6 0.9 $ slow 3 sine) # orbit 2
+  d1 $ s "bd(4,9)"
+  d2 $ s "cp(2,9)"
+  d3 $ s "hh*9" # gain (range 0.6 0.9 $ slow 3 sine)
 
 -- Ewe drumming inspired (West African):
 do
-  d1 $ s "bass:0(3,8)" # orbit 0                -- low drum
-  d2 $ s "drum:1(7,12)" # orbit 1               -- bell pattern
-  d3 $ s "drum:3(5,12)" # gain 0.8 # orbit 2    -- supporting drum
+  d1 $ s "bass:0(3,8)"                          -- low drum
+  d2 $ s "drum:1(7,12)"                         -- bell pattern
+  d3 $ s "drum:3(5,12)" # gain 0.8              -- supporting drum
 
 -- Tresillo reggaeton/Latin groove:
 do
   setcps (95/60/4)
-  d1 $ s "bd(3,8)" # orbit 0                    -- tresillo kick
-  d2 $ s "sn(5,16)" # orbit 1                   -- cinquillo snare
-  d3 $ fast 2 $ s "hh(7,8)" # gain 0.7 # orbit 2
+  d1 $ s "bd(3,8)"                              -- tresillo kick
+  d2 $ s "sn(5,16)"                             -- cinquillo snare
+  d3 $ fast 2 $ s "hh(7,8)" # gain 0.7
 
 -- ========== EUCLIDEAN + TRANSFORMATIONS ==========
 
@@ -2364,14 +2364,14 @@ d1 $ s "bd(3,8,1)" -- rotated 1 step
 d1 $ s "bd(3,8,2)" -- rotated 2 steps
 
 -- Compare these rotations:
-d1 $ s "bd(5,13)" # orbit 0      -- [3,2,3,2,3]
-d1 $ s "bd(5,13,1)" # orbit 0    -- [2,3,2,3,3]
-d1 $ s "bd(5,13,2)" # orbit 0    -- [3,2,3,3,2]
+d1 $ s "bd(5,13)"      -- [3,2,3,2,3]
+d1 $ s "bd(5,13,1)"    -- [2,3,2,3,3]
+d1 $ s "bd(5,13,2)"    -- [3,2,3,3,2]
 
 -- Use rotation in layered patterns for phasing effects:
 do
-  d1 $ s "cp(7,16)" # orbit 0
-  d2 $ s "cp(7,16,4)" # gain 0.6 # pan 0.3 # orbit 1  -- same pattern, rotated
+  d1 $ s "cp(7,16)"
+  d2 $ s "cp(7,16,4)" # gain 0.6 # pan 0.3  -- same pattern, rotated
 
 -- ========== REFERENCES ==========
 -- Article: "Euclidean Rhythms Part 1: Maximum Evenness, Maximum Groove" by Lawton Hall
