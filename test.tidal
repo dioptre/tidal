@@ -2016,3 +2016,11 @@ do
     (8, 12, sound (samples "arpy*8" (run 16)))
   ]
 }
+
+
+d1 $ weave 16 (sound "arpy" >| n (run 8))
+  [vowel "a e i",
+   vowel "i [i o] o u",
+   vowel "[e o]/3 [i o u]/2",
+   speed "1 2 3"
+  ]
