@@ -2146,3 +2146,64 @@ d1 $ sound "bd" # orbit 12
 d13 $ s "cp*4" |> orbit 99
 
 d13 $ s "cp*4" # orbit 12
+
+
+# Looper ?
+hush
+
+setcps (0.1/60/4)
+once $ s "looper"
+d1 $ s "loop"
+
+once $ s "looper" # lname "bubu"
+
+d1 $ s "bubu"
+
+d1 $ qt $ stack [s "olooper",s "loop",s "808 cp!3"]
+
+d1 $ qt $ stack [
+    s "rlooper" # n "<0 1 2 3>",
+    s "loop" # n "[0,1,2,3]",
+    s "808 cp!3"
+]
+
+
+d1 $ s "bd cp bd cp"
+once $ s "looper" # recordSource "out"
+d1 silence
+d2 $ s "loop"
+
+once $ s "freeLoops"
+-- Record from microphone input (channel 0, which is your default mic)
+once $ s "looper" # recordSource "in" # linput 0
+once $ s "looper" # recordSource "in" # linput 0
+
+-- Play it back
+d1 $ s "loop"
+
+
+-- Then play it back
+d1 $ s "loop"
+
+once $ s "freeLoops"
+
+once $ s "looper" # lname "bubu"
+
+d1 $ s "bubu"
+
+setcps 2
+
+once $ s "looper"
+d1 $ s "loop"
+
+d1 $ "bd drum! [bubble loop*3 control]" # leslie 0.3 # enhance 0.5
+
+d2 $ qtrigger 1 $ stack [s "olooper", s "loop", s "scream", s "gabba*7"]
+
+d3 $ s "seawolf*3 {loop! ~ scream:2}" # distort 1.2 # room 0.5
+
+d4 $ every 3 (fast 2) $ n "0 1 [~ 2] 3" # sound "arpy scream*6 {feel less}" # legato 0.3
+
+d5 $ "fire! ~ [sid*3 808*2]" # squiz 0.5 # decay 0.3
+
+d6 $ chop 16 $ "scream:3 loop*5 scream:4"  # detune 0.3

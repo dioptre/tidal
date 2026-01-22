@@ -24,6 +24,11 @@ instance Tidally where tidal = tidalInst
 -- You can also add your own aliases in this file. For example:
 -- fastsquizzed pat = fast 2 $ pat # squiz 1.5
 
+-- TidalLooper parameters
+linput = pI "linput"
+lname = pS "lname"
+recordSource = pS "recordSource"
+
 -- Extended channels d13-d16 for headphone/speaker routing, d17-d24 for more complex arrangements
 :{
 let d13 = streamReplace tidal 12 . (|> orbit 12)

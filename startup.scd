@@ -14,8 +14,8 @@ s.reboot { // server options are only updated on reboot
 	// Comment out this line to use the default system output device
 	s.options.outDevice = "Aggregate Device";  // Replace with your aggregate device name
 	s.options.numBuffers = 1024 * 256; // increase this if you need to load more samples
-	s.options.memSize = 8192 * 32; // increase this if you get "alloc failed" messages
-	s.options.numWireBufs = 256; // increase this if you get "exceeded number of interconnect buffers" messages
+	s.options.memSize = 8192 * 256; // 2 GB (max that boots without HashTable error)
+	s.options.numWireBufs = 512; // increased for looper (was 256)
 	s.options.maxNodes = 1024 * 32; // increase this if you are getting drop outs and the message "too many nodes"
 	s.options.numOutputBusChannels = 4; // 2 for speakers + 2 for headphones
 	s.options.numInputBusChannels = 2; // set this to your hardware output channel size, if necessary
@@ -27,10 +27,17 @@ s.reboot { // server options are only updated on reboot
         load("/Users/andrewgrosser/Documents/tidal/effects/convolveir/convolution-effect.scd");
         load("/Users/andrewgrosser/Documents/tidal/effects/compressor/compressor-effect.scd");
         load("/Users/andrewgrosser/Documents/tidal/effects/spectral-delay/spectral-delay-effect.scd");
+		~looper = TidalLooper(~dirt, numBuffers: 2, maxRecordingTime: 30);  // Only 2 buffers, 30 seconds each
+		// You can adjust looper parameters in runtime:
+        // ~looper.rLevel = 2.5;
+        // ~looper.pLevel = 0.8;
+        // ~looper.linput = 15; // Set this to your main input port.
+        // ~looper.lname = "mybuffer";
+        // ~looper.debugMode = true;
 		~dirt.loadSoundFiles;
 		~dirt.loadSoundFiles("/Users/andrewgrosser/Documents/tidal/samples-extra/*");   // load samples (path containing a wildcard can be passed in)
-		~dirt.loadSoundFiles("/Users/andrewgrosser/Documents/tidal/samples-strudel/*"); // load Strudel samples (VCSL + piano)
-		~dirt.loadSoundFiles("/Users/andrewgrosser/Documents/tidal/sounds/bbc/*");
+		// ~dirt.loadSoundFiles("/Users/andrewgrosser/Documents/tidal/samples-strudel/*"); // load Strudel samples (VCSL + piano)
+		// ~dirt.loadSoundFiles("/Users/andrewgrosser/Documents/tidal/sounds/bbc/*");
 		// for example: ~dirt.loadSoundFiles("/Users/myUserName/Dirt/samples/*");
 		// s.sync; // optionally: wait for samples to be read
 		~dirt.start(57120, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2]);   // d1-d12 → speakers (ch 0-1), d13-d14 → headphones (ch 2-3)

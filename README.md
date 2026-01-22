@@ -84,7 +84,78 @@ SuperDirt.start;
 ```
 s.record;
 s.stopRecording;
-```	
+```
+
+### TidalLooper
+
+Live audio looper for SuperDirt enabling real-time sampling and layering.
+
+#### Setup
+
+Already configured in `startup.scd`. Add to TidalCycles session:
+
+```haskell
+linput = pI "linput"
+lname = pS "lname"
+recordSource = pS "recordSource"
+```
+
+#### Basic Usage
+
+**Record** — You must have something playing to record:
+```haskell
+d1 $ s "bd cp bd cp"    -- Play a pattern first
+once $ s "looper"       -- Record one cycle
+d1 silence              -- Stop the original
+```
+
+**Playback**:
+```haskell
+d1 $ s "loop"           -- Play back the recorded loop
+```
+
+**Note**: You'll see `/b_alloc: memory allocation failed` errors - these are harmless and don't prevent the looper from working.
+
+**Multiple buffers** (0-1, configured for 2 buffers):
+```haskell
+d1 $ s "looper" # n "<0 1>"
+d2 $ s "loop" # n "[0,1]"
+```
+
+**Input routing**:
+```haskell
+d1 $ s "looper" # linput 13              -- Use input port 13
+d1 $ s "looper" # recordSource "in"      -- Sound card input (default)
+d1 $ s "looper" # recordSource "out" # orbit 1  -- Record from d2
+```
+
+**Buffer management**:
+```haskell
+once $ s "freeLoops"                     -- Clear all buffers
+once $ s "freeLoops" # lname "loop" # n "1"  -- Clear buffer 1
+once $ s "persistLoops" # lname "loop"   -- Save all buffers
+```
+
+#### Three Modes
+
+1. **Replace mode** (default `looper` or `rlooper`) — Overwrites buffer each cycle:
+```haskell
+d1 $ qt $ stack [s "rlooper" # n "0", s "loop" # n "0", s "808 cp!3"]
+```
+
+2. **Single-shot mode** (`slooper`) — Records once, ignores subsequent calls:
+```haskell
+d1 $ qt $ stack [s "slooper" # n "0", s "loop" # n "0", s "808 cp!3"]
+```
+
+3. **Overdub mode** (`olooper`) — Layers new audio on existing buffer:
+```haskell
+d1 $ qt $ stack [s "olooper", s "loop", s "808 cp!3"]
+```
+
+**Tip**: Use `qtrigger` or `qt` to ensure recording starts at cycle boundary.
+
+
 
 ### Debug Supercollider
 
