@@ -1061,7 +1061,7 @@ d1 $ s "hh*16"
    # convolvelevel (range 0.7 1.3 $ slow 3 saw)       -- Level variation
 
 -- Example 4: ALL PARAMETERS + LFO MODULATION
-d1 $ s "bass*8" # note "c2 e2 f2 g2"
+d1 $ s "bass*16" # note "c2 e2 f2 g2"
    # convolve (range 0.4 0.9 $ slow 8 sine)           -- LFO: wet/dry
    # convolveir "<45 46 47 48>"                        -- Pattern: club IRs
    # convolvedamp (range 0.2 0.8 $ slow 6 saw)        -- LFO: brightness
@@ -1271,7 +1271,7 @@ d4 $ s "sax"
 # amp "0.2"
 # cut "1"
 
-
+hush
 
 
 d1 $ s "peri: 8"
@@ -1282,10 +1282,12 @@ d1 $ s "peri:8 peri:7 peri:1 peri:2 peri:3 peri:4 peri:5 peri:6 peri:7 peri:8 pe
 d1 $ speed "<0.25 -0.5> <1.5 1.25 1.75>"
 # s "jungbass:3"
 # amp 0.2
+
 d2 $ crush "4 2 8 9 6 9" # s "ht"
 # lpf "<2000 4400 970 1000>"
 # lpq "<0.225 0.3 0.2>"
 # amp 0.1
+
 d3 $ s "psr*8" # n"<[0 5] [1 3 2] [4 5 7] [1]>"
 # hpf "<200 500 700 900>"
 # hpq "<0.3 0.2 0.4>"
@@ -1302,28 +1304,36 @@ d1 $ s "click(5,6) click(5, [7 91/2)" # n "0 1"
 # crush "3"
 # hpf 2000
 # hpq 0.4
+
 d2 $ s "click(5,6) click(5, (7 9]/2)" # n "4"
 # crush "3"
 # hpf 6000
 # hpq 0.5
+
 d3 $ s "glitch(5,9)" # n "35 • 2 5 8"
 # crush "4"
 # amp "0.2"
 # delay "0.2"
 # delayfb "0.6"
+
 d4 $ s "cp(5,9)"
 # crush "7 6 8 9 6 3"
 # hpf "<2000 300 300 1000>"
 # hpq "<0.4 0.3 0.2>"
 # amp 0.1
+
 d5 $ s "cp (5,9)"
 # n "5"
 # crush "7 6 8 9 6 3"
 # hpf "<3000 6000>"
 # hpq "<0.2 0.3 0.4>"
 # amp 0.1
+
 d6 $ s "bd"
 # crush "<3 7 5 8>"
+
+hush
+
 setcps (160/60/4)
 
 -- YOI WAVE FROM SAW with LFO cutoff/resonance and downsampling
@@ -1433,6 +1443,8 @@ d1 $ s "plaits*<8 12 16>" # note "<c2 [e2 g2] <f2 bf2> [c2 d2]>"
   # cutoff (range 300 2200 $ slow 8 $ sine)                                 -- Filter sweep
   # gain 0.9                                                                 -- Balanced level
   # room (range 0.2 0.45 $ slow 14 $ sine)                                  -- Reverb wash
+
+hush
 
 -- YOI WAVE - TIDES (tidal modulator as oscillator/LFO)
 d1 $ s "tides*<8 12 16>" # note "<c2 [e2 g2] <f2 bf2> [c2 d2]>"
@@ -1562,7 +1574,7 @@ d1 $ stack
   ] # gain 0.9
 
 
-d5 $ s "tabla:1*10" 
+d5 $ s "tabla:6*10" 
 -- #att "0.0001"
 -- # hold "0.1"
 -- # rel "0.001"
@@ -1579,7 +1591,7 @@ d2 silence
 d1 silence
 hush
 
-d1 $ slow 5.77 $ note "f-3 g-3 as-3 a-3 as-3 c-2 ds-2 d-2 ds-2 f-2 e-2 f-2 f-2 fs-2 f-2 fs-2 f-2" # s "superpiano"
+d1 $ slow 5.77 $ note "f3 g3 as3 a-3 as-3 c-2 ds-2 d-2 ds-2 f-2 e-2 f-2 f-2 fs-2 f-2 fs-2 f-2" # s "superpiano" 
 
 d1 $ slow 2.72 $ note "cs-3@4 cs-3 cs-3 cs-2 c-2 cs-2 cs-2 cs-2 d-2 d-2 a-3 a-3 a-1 a-3 as-3 as-3 f-3 f-3 f-3 f-3 fs-3 a-1 ~ ~ ~ ~ c-3"  
 # speed 2
@@ -1904,13 +1916,20 @@ do
 d1 $ n "c a f e"
   # sound "supermandolin"
 
+hush
+
 -- Now, let's play one per cycle:
 d1 $ n "<c a f e>"
   # sound "supermandolin"
 
 -- On top of that, put a copy of the sequence, offset in time and pitch:
-d1 $ n (off 0.125 (|+ 7) "<c a f e>")
+d1 $ n (off 0.271 (|+ 7) "<c a f e>")
   # sound "supermandolin"
+
+-- On top of that, put a copy of the sequence, offset in time and pitch:
+d2 $ n (off 0.542 (|+ 7) "<c a f e>")
+  # sound "supermandolin"
+
 
 --Add some structure to the original sequence:
 d1 $ n (off 0.125 (|+ 7)  "<c*2 a(3,8) f(3,8,2) e*2>")
@@ -2003,6 +2022,8 @@ d1 $ qtrigger $ seqP [
   (8, 12, sound (samples "arpy*8" (run 16)))
 ]
 -- arrangements in strudel
+
+setcps(120,16,4)
 
 d1 $ qtrigger $ seqPLoop [
   (0, 12, sound "bd bd*2"),
@@ -2173,9 +2194,13 @@ d1 $ qt $ stack [
 
 
 d1 $ s "bd cp bd cp"
+
 once $ s "looper" # recordSource "out"
-d1 silence
+
+d1 $ silence
 d2 $ s "loop"
+
+hush
 
 once $ s "freeLoops"
 -- Record from microphone input (channel 0, which is your default mic)
@@ -2351,7 +2376,9 @@ d1 $ degrade $ s "hh(11,16)"
 d1 $ s "bd(7,12)" # lpf (range 400 4000 $ slow 8 sine) # resonance 0.3
 
 -- Euclidean with pitch patterns:
-d1 $ n (scale "minor" "0 2 3 5 7") # s "superpiano(13,16)" # sustain 0.2
+d1 $ n (scale "minor" "0 2 3 5 7") # s "piano(13,16)" # sustain 0.2
+
+hush
 
 -- Multiple Euclidean patterns with different samples:
 d1 $ s "[bd(5,8), cp(3,7), hh(7,12), bass:1(7,16)]"

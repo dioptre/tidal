@@ -4,6 +4,7 @@
 
 -- Import all the boot functions and aliases.
 import Sound.Tidal.Boot
+import Control.Concurrent
 
 default (Rational, Integer, Double, Pattern String)
 

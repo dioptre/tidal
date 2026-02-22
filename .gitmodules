@@ -4,3 +4,6 @@
 [submodule "quarks/tidal-looper"]
 	path = quarks/tidal-looper
 	url = https://github.com/thgrund/tidal-looper.git
+[submodule "songs"]
+	path = songs
+	url = git@github.com:dioptre/songs.git
