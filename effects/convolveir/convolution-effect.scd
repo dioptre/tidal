@@ -7,7 +7,7 @@
 // Load impulse responses into buffers
 // IR files are located in: /Users/andrewgrosser/Documents/tidal/impulse-responses/
 ~impulseResponses = Dictionary.new;
-~irPath = "/Users/andrewgrosser/Documents/tidal/impulse-responses/";
+~irPath = Platform.userHomeDir +/+ "Documents/tidal/impulse-responses/";
 
 // 52 Diverse IRs from ViperFX Collection (CC BY-SA 4.0)
 // Source: https://github.com/AndroidAudioMods/ViperFX_RE
@@ -149,22 +149,25 @@ SynthDef(\dirt_convolve, { |out, dryBus, effectBus, convolvemix = 0.3, convolvei
 (
 // Alternative: Simple Convolution2 (less CPU efficient but simpler)
 SynthDef(\dirt_convolve2, { |out, dryBus, effectBus, convolvemix = 0.3|
-    var dry, wet, sig, irBuffer;
+    var dry, wet, sig, irBufferL, irBufferR, irData;
 
     dry = In.ar(dryBus, 2);
     sig = InFeedback.ar(effectBus, 2);
 
-    // Use a built-in short IR for testing
-    // In practice, load your own IR files
-    irBuffer = LocalBuf.newFrom(
-        Array.fill(44100, { |i|
-            // Simple synthetic IR (exponential decay with some modulation)
-            exp(i.neg / 8000) * SinOsc.ar(i / 100).range(0.8, 1)
-        }).dup
-    );
+    // Simple synthetic IR (exponential decay with some modulation)
+    // 32768 is a power of 2 (required by Convolution2)
+    irData = Array.fill(32768, { |i|
+        exp(i.neg / 8000) * (sin(i / 100) * 0.1 + 0.9)
+    });
 
-    // Apply convolution
-    wet = Convolution2.ar(sig, irBuffer, 0, 512);
+    irBufferL = LocalBuf.newFrom(irData);
+    irBufferR = LocalBuf.newFrom(irData);
+
+    // Apply convolution per channel
+    wet = [
+        Convolution2.ar(sig[0], irBufferL, 0, 512),
+        Convolution2.ar(sig[1], irBufferR, 0, 512)
+    ];
 
     // Mix dry/wet
     sig = XFade2.ar(dry, wet, convolvemix.linlin(0, 1, -1, 1));
