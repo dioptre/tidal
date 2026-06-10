@@ -37,6 +37,7 @@ if (Library.at(\startupLoaded).isNil) {
 	    load(Platform.userHomeDir +/+ "Documents/tidal/effects/compressor/compressor-effect.scd");
 	    load(Platform.userHomeDir +/+ "Documents/tidal/effects/spectral-delay/spectral-delay-effect.scd");
 		~looper = TidalLooper(~dirt, numBuffers: 2, maxRecordingTime: 30);  // Only 2 buffers, 30 seconds each
+		load(Platform.userHomeDir +/+ "Documents/ag/instrument/supercollider/boot.scd");
 		// You can adjust looper parameters in runtime:
 	    // ~looper.rLevel = 2.5;
 	    // ~looper.pLevel = 0.8;
