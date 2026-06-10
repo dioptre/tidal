@@ -45,9 +45,9 @@ let d13 = streamReplace tidal 12 . (|> orbit 12)
     d23 = streamReplace tidal 22 . (|> orbit 22)
     d24 = streamReplace tidal 23 . (|> orbit 23)
 :}
-:script "/home/a/Documents/tidal/mi-UGens/Setup/mi-ugens-params.hs"
-:script "/home/a/Documents/tidal/effects/convolveir/convolution-params.hs"
-:script "/home/a/Documents/tidal/effects/compressor/compressor-params.hs"
-:script "/home/a/Documents/tidal/effects/spectral-delay/spectral-delay-params.hs"
+:script "mi-UGens/Setup/mi-ugens-params.hs"
+:script "effects/convolveir/convolution-params.hs"
+:script "effects/compressor/compressor-params.hs"
+:script "effects/spectral-delay/spectral-delay-params.hs"
 :set prompt "tidal> "
 :set prompt-cont ""
