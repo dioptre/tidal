@@ -86,15 +86,15 @@ d1 $ n (cP "reflex_notes") # s "superpiano" # sustain 1.8 # gain 0
 :{
 d12 $ stack [
   -- Acoustic Gretsch Drums (keeps steady beat)
-  s "gretsch:0*4" # gain 0.7,
-  s "[~ gretsch:4]*2" # gain 0.7,
-  s "gretsch:12*8" # gain 0.5,
+  s "gretsch:0*4" # gain 0.5,
+  s "[~ gretsch:4]*2" # gain 0.3,
+  s "gretsch:12*8" # gain 0.1,
   
   -- Warm Chords on SuperPiano (8-cycle sheet music progression)
   s "superpiano" # note "<[g4'maj*4] [g4'maj*4] [g4'maj g4'maj c4'maj7 a4'seven] [g4'maj g4'maj c4'maj g4'maj] [a4'min7 g4'maj d4'seven d4'seven] [g4'maj*4] [d4'seven*4] [g4'maj*4]>" # sustain 2.5 # gain 0.3,
   
   -- Moog Bassline (8-cycle sheet music progression)
-  s "moog" # note "<[g2*4] [g2*4] [g2 g2 c2 cs2] [d2 d2 c2 b1] [a1 g1 d2 d2] [g2*4] [d2*4] [g2*4]>" # legato 0.85 # gain 0.8
+  s "moog" # note "<[g2*4] [g2*4] [g2 g2 c2 cs2] [d2 d2 c2 b1] [a1 g1 d2 d2] [g2*4] [d2*4] [g2*4]>" # legato 0.85 # gain 0.5
 ]
 # gain (cF 0 "reflex_song_6")
 :}
