@@ -78,15 +78,11 @@ d16 $ stack [
 :}
 
 -- Reflex Rhythm Game (Advance Nudge Target Head Cues + Silent Lead Pattern + Full Backing Track)
-:{
-d1 $ n "<[~@2 b4 a4@2 b4@2 g4] [~@2 b4 g4 a4 b4 ~@2] [~@2 b4 a4@2 b4@2 g4] [~@2 d5 b4@2 a4 ~@2] [~ b4@2 a4@2 g4@2 ~] [g4@2 b4 d5@2 b4@2 g4] [a4@2 c5 b4@2 a4@2 fs4] [g4@2 a4 b4@2 d5@2 ~]>" # s "arpy" # sustain 1.8 # gain 0
-:}
-
-:{
-d11 $ (0.5 <~) $ n "<[~@2 5 4@2 5@2 3] [~@2 5 3 4 5 ~@2] [~@2 5 4@2 5@2 3] [~@2 7 5@2 4 ~@2] [~ 5@2 4@2 3@2 ~] [3@2 5 7@2 5@2 3] [4@2 6 5@2 4@2 2] [3@2 4 5@2 7@2 ~]>" # s "arpy" # gain 0
-:}
+-- d1 reads the dynamically sent pattern from C++ over OSC (using cP "reflex_notes")
+d1 $ n (cP "reflex_notes") # s "superpiano" # sustain 1.8 # gain 0
 
 -- Here Comes The Sun Backing Track (d12 - 125 BPM, CPS = 0.5208)
+-- Only plays when reflex_song_6 is active (set to 1.0 by C++ game)
 :{
 d12 $ stack [
   -- Acoustic Gretsch Drums (keeps steady beat)
@@ -100,6 +96,7 @@ d12 $ stack [
   -- Moog Bassline (8-cycle sheet music progression)
   s "moog" # note "<[g2*4] [g2*4] [g2 g2 c2 cs2] [d2 d2 c2 b1] [a1 g1 d2 d2] [g2*4] [d2*4] [g2*4]>" # legato 0.85 # gain 0.8
 ]
+# gain (cF 0 "reflex_song_6")
 :}
 
 
