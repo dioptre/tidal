@@ -5,7 +5,9 @@ This is an example startup file. You can load it from your startup file
 
 
 (
-s.reboot { // server options are only updated on reboot
+if (Library.at(\startupLoaded).isNil) {
+	Library.put(\startupLoaded, true);
+
 	// configure the sound server: here you could add hardware specific options
 	// see http://doc.sccode.org/Classes/ServerOptions.html
 
@@ -29,11 +31,11 @@ s.reboot { // server options are only updated on reboot
         // load("/Users/andrewgrosser/Documents/tidal/effects/spectral-delay/spectral-delay-effect.scd");
 		// ~looper = TidalLooper(~dirt, numBuffers: 2, maxRecordingTime: 30);
 		// You can adjust looper parameters in runtime:
-        // ~looper.rLevel = 2.5;
-        // ~looper.pLevel = 0.8;
-        // ~looper.linput = 15; // Set this to your main input port.
-        // ~looper.lname = "mybuffer";
-        // ~looper.debugMode = true;
+	    // ~looper.rLevel = 2.5;
+	    // ~looper.pLevel = 0.8;
+	    // ~looper.linput = 15; // Set this to your main input port.
+	    // ~looper.lname = "mybuffer";
+	    // ~looper.debugMode = true;
 		~dirt.loadSoundFiles;
 		s.sync; // wait for sample loading to sync cleanly
 		~dirt.start(57120, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);   // d1-d16 → speakers
@@ -60,8 +62,8 @@ s.reboot { // server options are only updated on reboot
         };
         */
 
-        // Boost gain for speaker orbits (d1-d12) to match headphone volume
-        // ~dirt.orbits[0..11].do { |orbit| orbit.set(\amp, 1.5) };
+	    // Boost gain for speaker orbits (d1-d12) to match headphone volume
+	    // ~dirt.orbits[0..11].do { |orbit| orbit.set(\amp, 1.5) };
 	};
 
 	s.latency = 0.5; // increased for Aggregate Device latency
