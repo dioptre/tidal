@@ -11,23 +11,23 @@ s.reboot { // server options are only updated on reboot
 
 	// IMPORTANT: Set this to your Aggregate Device name created in Audio MIDI Setup
 	// To create: Open Audio MIDI Setup → + → Create Aggregate Device → Add both speakers and headphones
-	// Comment out this line to use the default system output device
-	s.options.outDevice = "Aggregate Device";  // Replace with your aggregate device name
+	s.options.outDevice = nil; // Use Mac default system output device
 	s.options.numBuffers = 1024 * 256; // increase this if you need to load more samples
 	s.options.memSize = 8192 * 256; // 2 GB (max that boots without HashTable error)
 	s.options.numWireBufs = 512; // increased for looper (was 256)
 	s.options.maxNodes = 1024 * 32; // increase this if you are getting drop outs and the message "too many nodes"
-	s.options.numOutputBusChannels = 4; // 2 for speakers + 2 for headphones
-	s.options.numInputBusChannels = 2; // set this to your hardware output channel size, if necessary
+	s.options.numOutputBusChannels = 2; // Stereo speakers
+	s.options.numInputBusChannels = 0;
+	// s.options.blockSize = 1024; // larger block = less CPU overhead, slightly more latency
 	// boot the server and start SuperDirt
 	s.waitForBoot {
 		~dirt.stop; // stop any old ones, avoid duplicate dirt (if it is nil, this won't do anything)
 		~dirt = SuperDirt(2, s); // two channels per orbit (stereo)
 		load("/Users/andrewgrosser/Library/Application Support/SuperCollider/synthdefs/mi-ugens.scd");
-        load("/Users/andrewgrosser/Documents/tidal/effects/convolveir/convolution-effect.scd");
-        load("/Users/andrewgrosser/Documents/tidal/effects/compressor/compressor-effect.scd");
-        load("/Users/andrewgrosser/Documents/tidal/effects/spectral-delay/spectral-delay-effect.scd");
-		~looper = TidalLooper(~dirt, numBuffers: 2, maxRecordingTime: 30);  // Only 2 buffers, 30 seconds each
+        // load("/Users/andrewgrosser/Documents/tidal/effects/convolveir/convolution-effect.scd");
+        // load("/Users/andrewgrosser/Documents/tidal/effects/compressor/compressor-effect.scd");
+        // load("/Users/andrewgrosser/Documents/tidal/effects/spectral-delay/spectral-delay-effect.scd");
+		// ~looper = TidalLooper(~dirt, numBuffers: 2, maxRecordingTime: 30);
 		// You can adjust looper parameters in runtime:
         // ~looper.rLevel = 2.5;
         // ~looper.pLevel = 0.8;
@@ -35,12 +35,11 @@ s.reboot { // server options are only updated on reboot
         // ~looper.lname = "mybuffer";
         // ~looper.debugMode = true;
 		~dirt.loadSoundFiles;
-		~dirt.loadSoundFiles("/Users/andrewgrosser/Documents/tidal/samples-extra/*");   // load samples (path containing a wildcard can be passed in)
-		// ~dirt.loadSoundFiles("/Users/andrewgrosser/Documents/tidal/samples-strudel/*"); // load Strudel samples (VCSL + piano)
-		// ~dirt.loadSoundFiles("/Users/andrewgrosser/Documents/tidal/sounds/bbc/*");
-		// for example: ~dirt.loadSoundFiles("/Users/myUserName/Dirt/samples/*");
-		// s.sync; // optionally: wait for samples to be read
-		~dirt.start(57120, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2]);   // d1-d12 → speakers (ch 0-1), d13-d14 → headphones (ch 2-3)
+		s.sync; // wait for sample loading to sync cleanly
+		~dirt.start(57120, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);   // d1-d16 → speakers
+
+        // Instrument installation — depth-bucket hand controller
+        load("/Users/andrewgrosser/Documents/spacehands/supercollider/boot.scd");
 
 		// optional, needed for convenient access from sclang:
 		(
@@ -50,7 +49,8 @@ s.reboot { // server options are only updated on reboot
 			~d10 = ~dirt.orbits[9]; ~d11 = ~dirt.orbits[10]; ~d12 = ~dirt.orbits[11];
 			~d13 = ~dirt.orbits[12]; ~d14 = ~dirt.orbits[13];
 		);
-		~dirt.orbits.do { |x|
+		/*
+        ~dirt.orbits.do { |x|
             var clouds = GlobalDirtEffect(\global_mi_clouds, [\cloudspitch, \cloudspos, \cloudssize, \cloudsdens, \cloudstex, \cloudswet, \cloudsgain, \cloudsspread, \cloudsrvb, \cloudsfb, \cloudsfreeze, \cloudsmode, \cloudslofi]);
             var verb = GlobalDirtEffect(\global_mi_verb, [\verbwet, \verbtime, \verbdamp, \verbhp, \verbfreeze, \verbdiff, \verbgain]);
             x.globalEffects = x.globalEffects
@@ -58,11 +58,12 @@ s.reboot { // server options are only updated on reboot
               .addFirst(verb);
             x.initNodeTree;
         };
+        */
 
         // Boost gain for speaker orbits (d1-d12) to match headphone volume
         // ~dirt.orbits[0..11].do { |orbit| orbit.set(\amp, 1.5) };
 	};
 
-	s.latency = 0.3; // increase this if you get "late" messages
+	s.latency = 0.5; // increased for Aggregate Device latency
 };
 );

@@ -1916,11 +1916,11 @@ do
 d1 $ n "c a f e"
   # sound "supermandolin"
 
+
 hush
 
 -- Now, let's play one per cycle:
-d1 $ n "<c a f e>"
-  # sound "supermandolin"
+d1 $ n "<c [a b] f e>" # sound "supermandolin"
 
 -- On top of that, put a copy of the sequence, offset in time and pitch:
 d1 $ n (off 0.271 (|+ 7) "<c a f e>")
@@ -2091,6 +2091,7 @@ d1 $ weave 16 (sound "arpy" >| n (run 8))
 
 
 d1 $ s "[bd*2,hh*3,[~ cp]*2, bass]"
+
 d1 $ s "[bd*3,hh*4,[~ cp]*2, bass*4]"
 
 d1 $ note "[[c3*3],[c e g c6*3]]" # s "superpiano"
@@ -2406,3 +2407,11 @@ do
 -- Original algorithm: Euclid of Alexandria (3rd century B.C.)
 -- Musical application: Eric Bjorklund (Los Alamos, 2003) for particle accelerator timing
 -- Key concept: Maximally even distribution creates grooves that balance regularity + syncopation
+
+-- d1 $ n "<[~@2 b4 a4@2 b4@2 g4] [~@2 b4 g4 a4 b4 ~@2] [~@2 b4 a4@2 b4@2 g4] [~@2 d5 b4@2 a4 ~@2] [~ b4@2 a4@2 g4@2 ~] ~ ~ ~>" # s "supermandolin" # sustain 1.8 # gain 1.45
+
+d1 $ n "<[~@2 b4 a4@2 b4@2 g4] [~@2 b4 g4 a4 b4 ~@2] [~@2 b4 a4@2 b4@2 g4] [~@2 d5 b4@2 a4 ~@2] [~ b4@2 a4@2 g4@2 ~] [g4@2 b4 d5@2 b4@2 g4] [a4@2 c5 b4@2 a4@2 fs4] [g4@2 a4 b4@2 d5@2 ~]>" # s "arpy" # sustain 1.8 # gain 0
+
+hush
+
+d1 $ n "c a f e" # s "arpy" # gain 0
